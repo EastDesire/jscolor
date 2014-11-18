@@ -1,11 +1,11 @@
 /**
  * jscolor, JavaScript Color Picker
  *
- * @version 1.4.2
+ * @version 1.4.4
  * @license GNU Lesser General Public License, http://www.gnu.org/copyleft/lesser.html
  * @author  Jan Odvarko, http://odvarko.cz
  * @created 2008-06-15
- * @updated 2013-11-25
+ * @updated 2014-11-18 by Thomas Han
  * @link    http://jscolor.com
  */
 
@@ -67,15 +67,15 @@ var jscolor = {
 
 
 	bind : function() {
-		var matchClass = new RegExp('(^|\\s)('+jscolor.bindClass+')\\s*(\\{[^}]*\\})?', 'i');
+		var matchClass = new RegExp('(^|\\s)('+jscolor.bindClass+')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
 		var e = document.getElementsByTagName('input');
 		for(var i=0; i<e.length; i+=1) {
 			var m;
 			if(!e[i].color && e[i].className && (m = e[i].className.match(matchClass))) {
 				var prop = {};
-				if(m[3]) {
+				if(m[4]) {
 					try {
-						prop = (new Function ('return (' + m[3] + ')'))();
+						prop = (new Function ('return (' + m[4] + ')'))();
 					} catch(eInvalidProp) {}
 				}
 				e[i].color = new jscolor.color(e[i], prop);
@@ -358,7 +358,7 @@ var jscolor = {
 		this.pickerInset = 1; // px
 		this.pickerInsetColor = 'ThreeDShadow ThreeDHighlight ThreeDHighlight ThreeDShadow'; // CSS color
 		this.pickerZIndex = 10000;
-
+		this.pickerParent = 'body';
 
 		for(var p in prop) {
 			if(prop.hasOwnProperty(p)) {
@@ -571,7 +571,7 @@ var jscolor = {
 
 		function removePicker() {
 			delete jscolor.picker.owner;
-			document.getElementsByTagName('body')[0].removeChild(jscolor.picker.boxB);
+			document.querySelector(THIS.pickerParent).removeChild(jscolor.picker.boxB);
 		}
 
 
@@ -795,7 +795,8 @@ var jscolor = {
 			redrawSld();
 
 			jscolor.picker.owner = THIS;
-			document.getElementsByTagName('body')[0].appendChild(p.boxB);
+			
+			document.querySelector(THIS.pickerParent).appendChild(p.boxB);
 		}
 
 
