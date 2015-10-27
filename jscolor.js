@@ -1,11 +1,11 @@
 /**
  * jscolor, JavaScript Color Picker
  *
- * @version 1.4.2
+ * @version 1.4.5
  * @license GNU Lesser General Public License, http://www.gnu.org/copyleft/lesser.html
  * @author  Jan Odvarko, http://odvarko.cz
  * @created 2008-06-15
- * @updated 2013-11-25
+ * @updated 2015-09-19
  * @link    http://jscolor.com
  */
 
@@ -67,15 +67,19 @@ var jscolor = {
 
 
 	bind : function() {
-		var matchClass = new RegExp('(^|\\s)('+jscolor.bindClass+')\\s*(\\{[^}]*\\})?', 'i');
+		var matchClass = new RegExp('(^|\\s)('+jscolor.bindClass+')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
 		var e = document.getElementsByTagName('input');
 		for(var i=0; i<e.length; i+=1) {
+			if(jscolor.isColorAttrSupported && e[i].type.toLowerCase() == 'color') {
+				// skip inputs of type 'color' if the browser supports this feature
+				continue;
+			}
 			var m;
 			if(!e[i].color && e[i].className && (m = e[i].className.match(matchClass))) {
 				var prop = {};
-				if(m[3]) {
+				if(m[4]) {
 					try {
-						prop = (new Function ('return (' + m[3] + ')'))();
+						prop = (new Function ('return (' + m[4] + ')'))();
 					} catch(eInvalidProp) {}
 				}
 				e[i].color = new jscolor.color(e[i], prop);
@@ -347,6 +351,7 @@ var jscolor = {
 		this.pickerMode = 'HSV'; // HSV | HVS
 		this.pickerPosition = 'bottom'; // left | right | top | bottom
 		this.pickerSmartPosition = true; // automatically adjust picker position when necessary
+		this.pickerFixedPosition = false; // set to true to stop picker from moving on scroll
 		this.pickerButtonHeight = 20; // px
 		this.pickerClosable = false;
 		this.pickerCloseText = 'Close';
@@ -696,7 +701,7 @@ var jscolor = {
 			p.box.style.height = dims[1] + 'px';
 
 			// picker border
-			p.boxB.style.position = 'absolute';
+			p.boxB.style.position = THIS.pickerFixedPosition ? 'fixed' : 'absolute';
 			p.boxB.style.clear = 'both';
 			p.boxB.style.left = x+'px';
 			p.boxB.style.top = y+'px';
@@ -946,6 +951,15 @@ var jscolor = {
 			leaveStyle = 1<<1,
 			leavePad = 1<<2,
 			leaveSld = 1<<3;
+
+		jscolor.isColorAttrSupported = false;
+		var el = document.createElement('input');
+		if(el.setAttribute) {
+			el.setAttribute('type', 'color');
+			if(el.type.toLowerCase() == 'color') {
+				jscolor.isColorAttrSupported = true;
+			}
+		}
 
 		// target
 		jscolor.addEvent(target, 'focus', function() {
