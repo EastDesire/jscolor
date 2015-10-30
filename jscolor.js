@@ -396,28 +396,49 @@ var jsc = {
 
 
 	getViewPos : function () {
-		if (typeof window.pageYOffset === 'number') {
+		// TODO: test in all browsers
+		var doc = document.documentElement;
+		return [
+			(window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0),
+			(window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0)
+		];
+		/*
+		if (typeof window.scrollY === 'number') {
+			alert('scrollY'); // TODO
+			return [window.scrollX, window.scrollY];
+		} else if (typeof window.pageYOffset === 'number') {
+			alert('pageYOffset'); // TODO
 			return [window.pageXOffset, window.pageYOffset];
 		} else if (document.body && (document.body.scrollLeft || document.body.scrollTop)) {
+			alert('document.body.scrollLeft'); // TODO
 			return [document.body.scrollLeft, document.body.scrollTop];
 		} else if (document.documentElement && (document.documentElement.scrollLeft || document.documentElement.scrollTop)) {
+			alert('document.documentElement.scrollLeft'); // TODO
 			return [document.documentElement.scrollLeft, document.documentElement.scrollTop];
 		} else {
 			return [0, 0];
 		}
+		*/
 	},
 
 
 	getViewSize : function () {
+		// TODO: test in all browsers
+		var doc = document.documentElement;
+		return [
+			(window.innerWidth || doc.clientWidth),
+			(window.innerHeight || doc.clientHeight),
+		];
+
+		/*
 		if (typeof window.innerWidth === 'number') {
 			return [window.innerWidth, window.innerHeight];
-		} else if (document.body && (document.body.clientWidth || document.body.clientHeight)) {
-			return [document.body.clientWidth, document.body.clientHeight];
 		} else if (document.documentElement && (document.documentElement.clientWidth || document.documentElement.clientHeight)) {
 			return [document.documentElement.clientWidth, document.documentElement.clientHeight];
 		} else {
 			return [0, 0];
 		}
+		*/
 	},
 
 
