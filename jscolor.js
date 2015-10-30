@@ -24,6 +24,7 @@ var jsc = {
 		jsc.attachDOMReadyEvent(jsc.init);
 		jsc.attachEvent(document, 'mousedown', jsc.onDocumentMouseDown);
 		jsc.attachEvent(document, 'touchstart', jsc.onDocumentTouchStart);
+		jsc.attachEvent(window, 'resize', jsc.onWindowResize);
 	},
 
 
@@ -319,27 +320,6 @@ var jsc = {
 	},
 
 
-	/*
-	// TODO
-	getElementPos : function (e) {
-		var e1=e, e2=e;
-		var x=0, y=0;
-		if (e1.offsetParent) {
-			do {
-				x += e1.offsetLeft;
-				y += e1.offsetTop;
-			} while (e1 = e1.offsetParent);
-		}
-		while ((e2 = e2.parentNode) && e2.nodeName.toLowerCase() !== 'body') {
-			x -= e2.scrollLeft;
-			y -= e2.scrollTop;
-		}
-		return [x, y];
-	},
-	*/
-
-
-	// TODO: test
 	getElementPos : function (e) {
 		var x=0, y=0;
 		var rect = e.getBoundingClientRect();
@@ -396,49 +376,109 @@ var jsc = {
 
 
 	getViewPos : function () {
-		// TODO: test in all browsers
 		var doc = document.documentElement;
 		return [
 			(window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0),
 			(window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0)
 		];
-		/*
-		if (typeof window.scrollY === 'number') {
-			alert('scrollY'); // TODO
-			return [window.scrollX, window.scrollY];
-		} else if (typeof window.pageYOffset === 'number') {
-			alert('pageYOffset'); // TODO
-			return [window.pageXOffset, window.pageYOffset];
-		} else if (document.body && (document.body.scrollLeft || document.body.scrollTop)) {
-			alert('document.body.scrollLeft'); // TODO
-			return [document.body.scrollLeft, document.body.scrollTop];
-		} else if (document.documentElement && (document.documentElement.scrollLeft || document.documentElement.scrollTop)) {
-			alert('document.documentElement.scrollLeft'); // TODO
-			return [document.documentElement.scrollLeft, document.documentElement.scrollTop];
-		} else {
-			return [0, 0];
-		}
-		*/
 	},
 
 
 	getViewSize : function () {
-		// TODO: test in all browsers
 		var doc = document.documentElement;
 		return [
 			(window.innerWidth || doc.clientWidth),
 			(window.innerHeight || doc.clientHeight),
 		];
+	},
 
-		/*
-		if (typeof window.innerWidth === 'number') {
-			return [window.innerWidth, window.innerHeight];
-		} else if (document.documentElement && (document.documentElement.clientWidth || document.documentElement.clientHeight)) {
-			return [document.documentElement.clientWidth, document.documentElement.clientHeight];
-		} else {
-			return [0, 0];
+
+	redrawPosition : function () {
+
+		if (jsc.picker && jsc.picker.owner) {
+			var thisObj = jsc.picker.owner;
+
+			var tp = jsc.getElementPos(thisObj.targetElement); // target pos
+			var ts = jsc.getElementSize(thisObj.targetElement); // target size
+			var vp = jsc.getViewPos(); // view pos
+			var vs = jsc.getViewSize(); // view size
+			var ps = jsc.getPickerOuterDims(thisObj); // picker size
+			var a, b, c;
+			switch (thisObj.position.toLowerCase()) {
+				case 'left': a=1; b=0; c=-1; break;
+				case 'right':a=1; b=0; c=1; break;
+				case 'top':  a=0; b=1; c=-1; break;
+				default:     a=0; b=1; c=1; break;
+			}
+			var l = (ts[b]+ps[b])/2;
+
+			// compute picker position
+			if (!thisObj.smartPosition) {
+				var pp = [
+					tp[a],
+					tp[b]+ts[b]-l+l*c
+				];
+			} else {
+				var pp = [
+					-vp[a]+tp[a]+ps[a] > vs[a] ?
+						(-vp[a]+tp[a]+ts[a]/2 > vs[a]/2 && tp[a]+ts[a]-ps[a] >= 0 ? tp[a]+ts[a]-ps[a] : tp[a]) :
+						tp[a],
+					-vp[b]+tp[b]+ts[b]+ps[b]-l+l*c > vs[b] ?
+						(-vp[b]+tp[b]+ts[b]/2 > vs[b]/2 && tp[b]+ts[b]-l-l*c >= 0 ? tp[b]+ts[b]-l-l*c : tp[b]+ts[b]-l+l*c) :
+						(tp[b]+ts[b]-l+l*c >= 0 ? tp[b]+ts[b]-l+l*c : tp[b]+ts[b]-l-l*c)
+				];
+			}
+
+			var x = pp[a];
+			var y = pp[b];
+			var positionValue = thisObj.fixed ? 'fixed' : 'absolute';
+			var contractShadow =
+				(pp[0] + ps[0] > tp[0] || pp[0] < tp[0] + ts[0]) &&
+				(pp[1] + ps[1] < tp[1] + ts[1]);
+
+			jsc._drawPosition(thisObj, x, y, positionValue, contractShadow);
 		}
-		*/
+	},
+
+
+	_drawPosition : function (thisObj, x, y, positionValue, contractShadow) {
+		var vShadow = contractShadow ? 0 : thisObj.shadowBlur; // px
+
+		jsc.picker.wrap.style.position = positionValue;
+		jsc.picker.wrap.style.left = x + 'px';
+		jsc.picker.wrap.style.top = y + 'px';
+
+		jsc.setBoxShadow(
+			jsc.picker.boxS,
+			thisObj.shadow ?
+				new jsc.BoxShadow(0, vShadow, thisObj.shadowBlur, 0, thisObj.shadowColor) :
+				null);
+	},
+
+
+	getPickerDims : function (thisObj) {
+		var displaySlider = !!jsc.getSliderComponent(thisObj);
+		var dims = [
+			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.width +
+				(displaySlider ? 2 * thisObj.insetWidth + jsc.getPadToSliderPadding(thisObj) + thisObj.sliderSize : 0),
+			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.height +
+				(thisObj.closable ? 2 * thisObj.insetWidth + thisObj.padding + thisObj.buttonHeight : 0)
+		];
+		return dims;
+	},
+
+
+	getPickerOuterDims : function (thisObj) {
+		var dims = jsc.getPickerDims(thisObj);
+		return [
+			dims[0] + 2 * thisObj.borderWidth,
+			dims[1] + 2 * thisObj.borderWidth
+		];
+	},
+
+
+	getPadToSliderPadding : function (thisObj) {
+		return Math.max(thisObj.padding, 1.5 * (2 * thisObj.pointerBorderWidth + thisObj.pointerThickness));
 	},
 
 
@@ -494,6 +534,16 @@ var jsc = {
 		} else {
 			// Do not hide picker on touch start, because it would hide it even if user just starts scrolling
 		}
+	},
+
+
+	onWindowResize : function (e) {
+		jsc.redrawPosition();
+	},
+
+
+	onParentScroll : function (e) {
+		jsc.redrawPosition();
 	},
 
 
@@ -961,7 +1011,6 @@ var jsc = {
 
 
 		this.hide = function () {
-			this._pickerVisible = false;
 			if (isPickerOwner()) {
 				detachPicker();
 			}
@@ -969,59 +1018,13 @@ var jsc = {
 
 
 		this.show = function () {
-			this._pickerVisible = true;
-			this.redraw();
+			drawPicker();
 		};
 
 
 		this.redraw = function () {
-			if (this._pickerVisible) {
-				var x = 0;
-				var y = 0;
-				var position = 'relative';
-				var contractShadow = false;
-
-				if (isContainerBody()) {
-					var tp = jsc.getElementPos(this.targetElement); // target pos
-					var ts = jsc.getElementSize(this.targetElement); // target size
-					var vp = jsc.getViewPos(); // view pos
-					var vs = jsc.getViewSize(); // view size
-					var ps = getPickerOuterDims(); // picker size
-					var a, b, c;
-					switch (this.position.toLowerCase()) {
-						case 'left': a=1; b=0; c=-1; break;
-						case 'right':a=1; b=0; c=1; break;
-						case 'top':  a=0; b=1; c=-1; break;
-						default:     a=0; b=1; c=1; break;
-					}
-					var l = (ts[b]+ps[b])/2;
-
-					// compute picker position
-					if (!this.smartPosition) {
-						var pp = [
-							tp[a],
-							tp[b]+ts[b]-l+l*c
-						];
-					} else {
-						var pp = [
-							-vp[a]+tp[a]+ps[a] > vs[a] ?
-								(-vp[a]+tp[a]+ts[a]/2 > vs[a]/2 && tp[a]+ts[a]-ps[a] >= 0 ? tp[a]+ts[a]-ps[a] : tp[a]) :
-								tp[a],
-							-vp[b]+tp[b]+ts[b]+ps[b]-l+l*c > vs[b] ?
-								(-vp[b]+tp[b]+ts[b]/2 > vs[b]/2 && tp[b]+ts[b]-l-l*c >= 0 ? tp[b]+ts[b]-l-l*c : tp[b]+ts[b]-l+l*c) :
-								(tp[b]+ts[b]-l+l*c >= 0 ? tp[b]+ts[b]-l+l*c : tp[b]+ts[b]-l-l*c)
-						];
-					}
-
-					position = THIS.fixed ? 'fixed' : 'absolute';
-					contractShadow =
-						(pp[0] + ps[0] > tp[0] || pp[0] < tp[0] + ts[0]) &&
-						(pp[1] + ps[1] < tp[1] + ts[1]);
-					x = pp[a];
-					y = pp[b];
-				}
-
-				drawPicker(x, y, position, contractShadow);
+			if (isPickerOwner()) {
+				drawPicker();
 			}
 		};
 
@@ -1202,7 +1205,7 @@ var jsc = {
 		}
 
 
-		function drawPicker (x, y, position, contractShadow) {
+		function drawPicker () {
 			if (!jsc.picker) {
 				jsc.picker = {
 					owner: null,
@@ -1261,20 +1264,16 @@ var jsc = {
 			var p = jsc.picker;
 
 			var displaySlider = !!jsc.getSliderComponent(THIS);
-			var dims = getPickerDims();
+			var dims = jsc.getPickerDims(THIS);
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
-			var padToSliderPadding = getPadToSliderPadding();
-			var vShadow = contractShadow ? 0 : THIS.shadowBlur; // px
+			var padToSliderPadding = jsc.getPadToSliderPadding(THIS);
 			var borderRadius = Math.min(
 				THIS.borderRadius,
 				Math.round(THIS.padding * Math.PI)); // px
 			var padCursor = 'crosshair';
 
 			// wrap
-			p.wrap.style.position = position;
 			p.wrap.style.clear = 'both';
-			p.wrap.style.left = x + 'px';
-			p.wrap.style.top = y + 'px';
 			p.wrap.style.width = (dims[0] + 2 * THIS.borderWidth) + 'px';
 			p.wrap.style.height = (dims[1] + 2 * THIS.borderWidth) + 'px';
 			p.wrap.style.zIndex = THIS.zIndex;
@@ -1289,11 +1288,6 @@ var jsc = {
 			p.boxS.style.width = '100%';
 			p.boxS.style.height = '100%';
 			jsc.setBorderRadius(p.boxS, borderRadius + 'px');
-			jsc.setBoxShadow(
-				p.boxS,
-				THIS.shadow ?
-					new jsc.BoxShadow(0, vShadow, THIS.shadowBlur, 0, THIS.shadowColor) :
-					null);
 
 			// picker border
 			p.boxB.style.position = 'relative';
@@ -1468,43 +1462,27 @@ var jsc = {
 				jsc.unsetClass(jsc.picker.owner.targetElement, THIS.activeClass);
 			}
 
+			// Set the new picker owner
 			jsc.picker.owner = THIS;
-			jsc.setClass(THIS.targetElement, THIS.activeClass);
+
+			// The redrawPosition() method needs picker.owner to be set, that's why we call it here,
+			// after setting the owner
+			if (isContainerBody()) {
+				jsc.redrawPosition();
+			} else {
+				jsc._drawPosition(THIS, 0, 0, 'relative', false);
+			}
 
 			if (p.wrap.parentNode != container) {
 				container.appendChild(p.wrap);
 			}
+
+			jsc.setClass(THIS.targetElement, THIS.activeClass);
 		}
 
 
 		function isContainerBody () {
 			return container.nodeName.toLowerCase() === 'body';
-		}
-
-
-		function getPickerDims () {
-			var displaySlider = !!jsc.getSliderComponent(THIS);
-			var dims = [
-				2 * THIS.insetWidth + 2 * THIS.padding + THIS.width +
-					(displaySlider ? 2 * THIS.insetWidth + getPadToSliderPadding() + THIS.sliderSize : 0),
-				2 * THIS.insetWidth + 2 * THIS.padding + THIS.height +
-					(THIS.closable ? 2 * THIS.insetWidth + THIS.padding + THIS.buttonHeight : 0)
-			];
-			return dims;
-		}
-
-
-		function getPickerOuterDims () {
-			var dims = getPickerDims();
-			return [
-				dims[0] + 2 * THIS.borderWidth,
-				dims[1] + 2 * THIS.borderWidth
-			];
-		}
-
-
-		function getPadToSliderPadding () {
-			return Math.max(THIS.padding, 1.5 * (2 * THIS.pointerBorderWidth + THIS.pointerThickness));
 		}
 
 
@@ -1625,8 +1603,6 @@ var jsc = {
 		// Find the style element
 		this.styleElement = jsc.fetchElement(this.styleElement);
 
-		this._pickerVisible = false;
-
 		var THIS = this;
 		var container =
 			this.container ?
@@ -1645,6 +1621,16 @@ var jsc = {
 				THIS.show();
 			}
 		});
+
+		// attach onParentScroll so that we can recompute the picker position
+		// when one of the offsetParents is scrolled
+		var elm = this.targetElement;
+		while ((elm = elm.offsetParent) && elm.nodeName.toLowerCase() !== 'body') {
+			if (!elm._jscEventsAttached) {
+				jsc.attachEvent(elm, 'scroll', jsc.onParentScroll);
+				elm._jscEventsAttached = true;
+			}
+		}
 
 		// valueElement
 		if (this.valueElement) {
