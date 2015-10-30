@@ -2,7 +2,7 @@
  * jscolor - JavaScript Color Picker
  *
  * @link    http://jscolor.com
- * @version 2.0.0
+ * @version 2.0.1
  * @license For open source use: GPLv3
  *          For commercial use: JSColor Commercial License
  * @author  East Desire
@@ -319,6 +319,8 @@ var jsc = {
 	},
 
 
+	/*
+	// TODO
 	getElementPos : function (e) {
 		var e1=e, e2=e;
 		var x=0, y=0;
@@ -332,6 +334,18 @@ var jsc = {
 			x -= e2.scrollLeft;
 			y -= e2.scrollTop;
 		}
+		return [x, y];
+	},
+	*/
+
+
+	// TODO: test
+	getElementPos : function (e) {
+		var x=0, y=0;
+		var rect = e.getBoundingClientRect();
+		var viewPos = jsc.getViewPos();
+		x = viewPos[0] + rect.left;
+		y = viewPos[1] + rect.top;
 		return [x, y];
 	},
 
