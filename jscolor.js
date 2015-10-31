@@ -94,6 +94,11 @@ var jsc = {
 	},
 
 
+	isElementType : function (elm, type) {
+		return elm.nodeName.toLowerCase() === type.toLowerCase();
+	},
+
+
 	getDataAttr : function (el, name) {
 		var attrName = 'data-' + name;
 		var attrValue = el.getAttribute(attrName);
@@ -646,8 +651,7 @@ var jsc = {
 
 	dispatchChange : function (thisObj) {
 		if (thisObj.valueElement) {
-			var nodeName = thisObj.valueElement.nodeName.toLowerCase();
-			if (nodeName === 'input') {
+			if (jsc.isElementType(thisObj.valueElement, 'input')) {
 				jsc.fireEvent(thisObj.valueElement, 'change');
 			}
 		}
@@ -1036,8 +1040,7 @@ var jsc = {
 			if (!this.valueElement) {
 				this.exportColor();
 			} else {
-				var nodeName = this.valueElement.nodeName.toLowerCase();
-				if (nodeName === 'input') {
+				if (jsc.isElementType(this.valueElement, 'input')) {
 					if (!this.refine) {
 						if (!this.fromString(this.valueElement.value, jsc.leaveValue)) {
 							this.styleElement.style.backgroundImage = this.styleElement._jscStyle.backgroundImage;
@@ -1071,8 +1074,7 @@ var jsc = {
 				if (this.uppercase) { value = value.toUpperCase(); }
 				if (this.hash) { value = '#' + value; }
 
-				var nodeName = this.valueElement.nodeName.toLowerCase();
-				if (nodeName === 'input') {
+				if (jsc.isElementType(this.valueElement, 'input')) {
 					this.valueElement.value = value;
 				} else {
 					this.valueElement.innerHTML = value;
@@ -1470,7 +1472,7 @@ var jsc = {
 
 			// The redrawPosition() method needs picker.owner to be set, that's why we call it here,
 			// after setting the owner
-			if (isContainerBody()) {
+			if (jsc.isElementType(container, 'body')) {
 				jsc.redrawPosition();
 			} else {
 				jsc._drawPosition(THIS, 0, 0, 'relative', false);
@@ -1482,40 +1484,6 @@ var jsc = {
 
 			jsc.setClass(THIS.targetElement, THIS.activeClass);
 		}
-
-
-		function isContainerBody () {
-			return container.nodeName.toLowerCase() === 'body';
-		}
-
-
-		/*
-		function getPadYComponent () {
-			switch (THIS.mode.charAt(1).toLowerCase()) {
-			case 'v':
-				return 'v';
-				break;
-			default:
-				return 's';
-				break;
-			}
-		}
-
-
-		function getSliderComponent () {
-			switch (THIS.mode.charAt(2).toLowerCase()) {
-			case 's':
-				return 's';
-				break;
-			case 'v':
-				return 'v';
-				break;
-			default:
-				return null;
-				break;
-			}
-		}
-		*/
 
 
 		function redrawPad () {
@@ -1627,8 +1595,7 @@ var jsc = {
 
 		// For BUTTON elements it's important to stop them from sending the form when clicked
 		// (e.g. in Safari)
-		if (this.targetElement.nodeName.toLowerCase() === 'button') {
-			// TODO: introduce method jsc.isElementType(elm, type)
+		if (jsc.isElementType(this.targetElement, 'button')) {
 			if (this.targetElement.onclick) {
 				var origCallback = this.targetElement.onclick;
 				this.targetElement.onclick = function (evt) {
@@ -1643,7 +1610,7 @@ var jsc = {
 		// attach onParentScroll so that we can recompute the picker position
 		// when one of the offsetParents is scrolled
 		var elm = this.targetElement;
-		while ((elm = elm.offsetParent) && elm.nodeName.toLowerCase() !== 'body') {
+		while ((elm = elm.offsetParent) && !jsc.isElementType(elm, 'body')) {
 			if (!elm._jscEventsAttached) {
 				jsc.attachEvent(elm, 'scroll', jsc.onParentScroll);
 				elm._jscEventsAttached = true;
@@ -1652,8 +1619,7 @@ var jsc = {
 
 		// valueElement
 		if (this.valueElement) {
-			var nodeName = this.valueElement.nodeName.toLowerCase();
-			if (nodeName === 'input') {
+			if (jsc.isElementType(this.valueElement, 'input')) {
 				var updateField = function () {
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
 					jsc.dispatchFineChange(THIS);
