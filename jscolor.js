@@ -543,7 +543,10 @@ var jsc = {
 
 
 	onParentScroll : function (e) {
-		jsc.redrawPosition();
+		// hide the picker when offsetParent is scrolled
+		if (jsc.picker && jsc.picker.owner) {
+			jsc.picker.owner.hide();
+		}
 	},
 
 
