@@ -1,39 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>jscolor Example</title>
+	<title>jscolor Example</title>
 </head>
 <body style="text-align:center;">
 
 
 
-    <script src="jscolor.js"></script>
+	<script src="jscolor.js"></script>
 
 
 
-    <h2>Example 1</h2>
+	<h2>Example 1</h2>
 	Color: <input class="jscolor" value="ff4400">
 
 
 
-    <h2>Example 2</h2>
+	<h2>Example 2</h2>
 
-    <button class="jscolor"
-            data-jscolor="{value:'000000', valueElement:'chosen-value', onFineChange:'setTextColor(this)'}">
-    Pick text color
-    </button>
+	<button class="jscolor {valueElement:'chosen-value', onFineChange:'setTextColor(this)'}">
+		Pick text color
+	</button>
 
-    HEX value: <input id="chosen-value">
+	HEX value: <input id="chosen-value" value="000000">
 
-    <script>
-    function setTextColor(picker) {
+	<script>
+	function setTextColor(picker) {
 		document.getElementsByTagName('body')[0].style.color = '#' + picker.toString()
-    }
-    </script>
+	}
+	</script>
 
 
 
-    <p style="margin-top:3em;">Check out <a href="http://jscolor.com/examples/">more examples at jscolor.com</a>!</p>
+	<p style="margin-top:3em;">Check out <a href="http://jscolor.com/examples/">more examples at jscolor.com</a>!</p>
 
 
 
