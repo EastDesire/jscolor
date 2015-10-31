@@ -287,6 +287,11 @@ var jsc = {
 	},
 
 
+	getStyle : function (elm) {
+		return window.getComputedStyle ? window.getComputedStyle(elm) : elm.currentStyle;
+	},
+
+
 	setStyle : (function () {
 		var helper = document.createElement('div');
 		var getSupportedProp = function (names) {
@@ -325,12 +330,16 @@ var jsc = {
 	},
 
 
-	getElementPos : function (e) {
+	getElementPos : function (e, relativeToViewport) {
 		var x=0, y=0;
 		var rect = e.getBoundingClientRect();
-		var viewPos = jsc.getViewPos();
-		x = viewPos[0] + rect.left;
-		y = viewPos[1] + rect.top;
+		x = rect.left;
+		y = rect.top;
+		if (!relativeToViewport) {
+			var viewPos = jsc.getViewPos();
+			x += viewPos[0];
+			y += viewPos[1];
+		}
 		return [x, y];
 	},
 
@@ -403,9 +412,19 @@ var jsc = {
 		if (jsc.picker && jsc.picker.owner) {
 			var thisObj = jsc.picker.owner;
 
-			var tp = jsc.getElementPos(thisObj.targetElement); // target pos
+			var tp, vp;
+
+			if (thisObj.fixed) {
+				// Fixed elements are positioned relative to viewport,
+				// therefore we can ignore the scroll offset
+				tp = jsc.getElementPos(thisObj.targetElement, true); // target pos
+				vp = [0, 0]; // view pos
+			} else {
+				tp = jsc.getElementPos(thisObj.targetElement); // target pos
+				vp = jsc.getViewPos(); // view pos
+			}
+
 			var ts = jsc.getElementSize(thisObj.targetElement); // target size
-			var vp = jsc.getViewPos(); // view pos
 			var vs = jsc.getViewSize(); // view size
 			var ps = jsc.getPickerOuterDims(thisObj); // picker size
 			var a, b, c;
@@ -987,7 +1006,6 @@ var jsc = {
 		this.smartPosition = true; // automatically change picker position when there is not enough space for it
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
-		this.fixed = false; // set to true to stop picker from moving on scroll
 		this.closable = false; // whether to display the Close button
 		this.closeText = 'Close';
 		this.buttonColor = '#000000'; // CSS color
@@ -1607,15 +1625,23 @@ var jsc = {
 			}
 		}
 
-		// attach onParentScroll so that we can recompute the picker position
-		// when one of the offsetParents is scrolled
 		var elm = this.targetElement;
-		while ((elm = elm.offsetParent) && !jsc.isElementType(elm, 'body')) {
-			if (!elm._jscEventsAttached) {
-				jsc.attachEvent(elm, 'scroll', jsc.onParentScroll);
-				elm._jscEventsAttached = true;
+		do {
+			// if the target element or one of its offsetParents has fixed position,
+			// then use fixed positioning instead
+			if (jsc.getStyle(elm).position.toLowerCase() === 'fixed') {
+				this.fixed = true;
 			}
-		}
+
+			if (elm !== this.targetElement) {
+				// attach onParentScroll so that we can recompute the picker position
+				// when one of the offsetParents is scrolled
+				if (!elm._jscEventsAttached) {
+					jsc.attachEvent(elm, 'scroll', jsc.onParentScroll);
+					elm._jscEventsAttached = true;
+				}
+			}
+		} while ((elm = elm.offsetParent) && !jsc.isElementType(elm, 'body'));
 
 		// valueElement
 		if (this.valueElement) {
