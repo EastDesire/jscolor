@@ -1625,6 +1625,21 @@ var jsc = {
 			}
 		});
 
+		// For BUTTON elements it's important to stop them from sending the form when clicked
+		// (e.g. in Safari)
+		if (this.targetElement.nodeName.toLowerCase() === 'button') {
+			// TODO: introduce method jsc.isElementType(elm, type)
+			if (this.targetElement.onclick) {
+				var origCallback = this.targetElement.onclick;
+				this.targetElement.onclick = function (evt) {
+					origCallback.call(this, evt);
+					return false;
+				};
+			} else {
+				this.targetElement.onclick = function () { return false; };
+			}
+		}
+
 		// attach onParentScroll so that we can recompute the picker position
 		// when one of the offsetParents is scrolled
 		var elm = this.targetElement;
