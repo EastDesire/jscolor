@@ -1627,9 +1627,13 @@ var jsc = {
 
 		var elm = this.targetElement;
 		do {
-			// if the target element or one of its offsetParents has fixed position,
+			// If the target element or one of its offsetParents has fixed position,
 			// then use fixed positioning instead
-			if (jsc.getStyle(elm).position.toLowerCase() === 'fixed') {
+			//
+			// Note: In Firefox, getComputedStyle returns null in a hidden iframe,
+			// that's why we need to check if the returned style object is non-empty
+			var currStyle = jsc.getStyle(elm);
+			if (currStyle && currStyle.position.toLowerCase() === 'fixed') {
 				this.fixed = true;
 			}
 
