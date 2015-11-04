@@ -1101,11 +1101,7 @@ var jsc = {
 			if (!(flags & jsc.leaveStyle) && this.styleElement) {
 				this.styleElement.style.backgroundImage = 'none';
 				this.styleElement.style.backgroundColor = '#' + this.toString();
-				this.styleElement.style.color =
-					0.213 * this.rgb[0] +
-					0.715 * this.rgb[1] +
-					0.072 * this.rgb[2]
-					< (255 / 2) ? '#FFF' : '#000';
+				this.styleElement.style.color = this.isLight() ? '#000' : '#FFF';
 			}
 			if (!(flags & jsc.leavePad) && isPickerOwner()) {
 				redrawPad();
@@ -1121,9 +1117,18 @@ var jsc = {
 		// v: 0-100
 		//
 		this.fromHSV = function (h, s, v, flags) { // null = don't change
-			if (h !== null) { h = Math.max(0, Math.min(360, h)); }
-			if (s !== null) { s = Math.max(0, Math.min(100, this.maxS, s), this.minS); }
-			if (v !== null) { v = Math.max(0, Math.min(100, this.maxV, v), this.minV); }
+			if (h !== null) {
+				if (isNaN(h)) { return false; }
+				h = Math.max(0, Math.min(360, h));
+			}
+			if (s !== null) {
+				if (isNaN(s)) { return false; }
+				s = Math.max(0, Math.min(100, this.maxS, s), this.minS);
+			}
+			if (v !== null) {
+				if (isNaN(v)) { return false; }
+				v = Math.max(0, Math.min(100, this.maxV, v), this.minV);
+			}
 
 			this.rgb = HSV_RGB(
 				h===null ? this.hsv[0] : (this.hsv[0]=h),
@@ -1140,9 +1145,18 @@ var jsc = {
 		// b: 0-255
 		//
 		this.fromRGB = function (r, g, b, flags) { // null = don't change
-			if (r !== null) { r = Math.max(0, Math.min(255, r)); }
-			if (g !== null) { g = Math.max(0, Math.min(255, g)); }
-			if (b !== null) { b = Math.max(0, Math.min(255, b)); }
+			if (r !== null) {
+				if (isNaN(r)) { return false; }
+				r = Math.max(0, Math.min(255, r));
+			}
+			if (g !== null) {
+				if (isNaN(g)) { return false; }
+				g = Math.max(0, Math.min(255, g));
+			}
+			if (b !== null) {
+				if (isNaN(b)) { return false; }
+				b = Math.max(0, Math.min(255, b));
+			}
 
 			var hsv = RGB_HSV(
 				r===null ? this.rgb[0] : r,
@@ -1167,19 +1181,22 @@ var jsc = {
 		};
 
 
-		this.fromString = function (hex, flags) {
-			var m = hex.match(/^\W*([0-9A-F]{3}([0-9A-F]{3})?)\W*$/i);
-			if (!m) {
-				return false;
-			} else {
-				if (m[1].length === 6) { // 6-char notation
+		this.fromString = function (str, flags) {
+			var m;
+			if (m = str.match(/^\W*([0-9A-F]{3}([0-9A-F]{3})?)\W*$/i)) {
+				// HEX notation
+				//
+
+				if (m[1].length === 6) {
+					// 6-char notation
 					this.fromRGB(
 						parseInt(m[1].substr(0,2),16),
 						parseInt(m[1].substr(2,2),16),
 						parseInt(m[1].substr(4,2),16),
 						flags
 					);
-				} else { // 3-char notation
+				} else {
+					// 3-char notation
 					this.fromRGB(
 						parseInt(m[1].charAt(0) + m[1].charAt(0),16),
 						parseInt(m[1].charAt(1) + m[1].charAt(1),16),
@@ -1188,7 +1205,25 @@ var jsc = {
 					);
 				}
 				return true;
+
+			} else if (m = str.match(/^\W*rgba?\(([^)]*)\)\W*$/i)) {
+				var params = m[1].split(',');
+				var re = /^\s*(\d*)(\.\d+)?\s*$/;
+				var mR, mG, mB;
+				if (
+					params.length >= 3 &&
+					(mR = params[0].match(re)) &&
+					(mG = params[1].match(re)) &&
+					(mB = params[2].match(re))
+				) {
+					var r = parseFloat((mR[1] || '0') + (mR[2] || ''));
+					var g = parseFloat((mG[1] || '0') + (mG[2] || ''));
+					var b = parseFloat((mB[1] || '0') + (mB[2] || ''));
+					this.fromRGB(r, g, b, flags);
+					return true;
+				}
 			}
+			return false;
 		};
 
 
@@ -1197,6 +1232,30 @@ var jsc = {
 				(0x100 | Math.round(this.rgb[0])).toString(16).substr(1) +
 				(0x100 | Math.round(this.rgb[1])).toString(16).substr(1) +
 				(0x100 | Math.round(this.rgb[2])).toString(16).substr(1)
+			);
+		};
+
+
+		this.toHEXString = function () {
+			return '#' + this.toString().toUpperCase();
+		};
+
+
+		this.toRGBString = function () {
+			return ('rgb(' +
+				Math.round(this.rgb[0]) + ',' +
+				Math.round(this.rgb[1]) + ',' +
+				Math.round(this.rgb[2]) + ')'
+			);
+		};
+
+
+		this.isLight = function () {
+			return (
+				0.213 * this.rgb[0] +
+				0.715 * this.rgb[1] +
+				0.072 * this.rgb[2] >
+				255 / 2
 			);
 		};
 
