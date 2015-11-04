@@ -620,8 +620,8 @@ var jsc = {
 		case 'pad':
 			// if the slider is at the bottom, move it up
 			switch (jsc.getSliderComponent(thisObj)) {
-			case 's': if (thisObj.hsv[1] === 0) { thisObj.fromHSV(null, 1.0, null); }; break;
-			case 'v': if (thisObj.hsv[2] === 0) { thisObj.fromHSV(null, null, 1.0); }; break;
+			case 's': if (thisObj.hsv[1] === 0) { thisObj.fromHSV(null, 100, null); }; break;
+			case 'v': if (thisObj.hsv[2] === 0) { thisObj.fromHSV(null, null, 100); }; break;
 			}
 			jsc.setPad(thisObj, e, 0, 0);
 			break;
@@ -695,8 +695,8 @@ var jsc = {
 		var x = ofsX + pointerAbs.x - jsc._pointerOrigin.x - thisObj.padding - thisObj.insetWidth;
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 
-		var xVal = x * (6 / (thisObj.width - 1));
-		var yVal = 1 - y / (thisObj.height - 1);
+		var xVal = x * (360 / (thisObj.width - 1));
+		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
 		switch (jsc.getPadYComponent(thisObj)) {
 		case 's': thisObj.fromHSV(xVal, yVal, null, jsc.leaveSld); break;
@@ -709,7 +709,7 @@ var jsc = {
 		var pointerAbs = jsc.getAbsPointerPos(e);
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 
-		var yVal = 1 - y / (thisObj.height - 1);
+		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
 		switch (jsc.getSliderComponent(thisObj)) {
 		case 's': thisObj.fromHSV(null, yVal, null, jsc.leavePad); break;
@@ -986,15 +986,15 @@ var jsc = {
 		this.uppercase = true; // whether to uppercase the color code
 		this.onFineChange = null; // called instantly every time the color changes (value can be either a function or a string with javascript code)
 		this.activeClass = 'jscolor-active'; // class to be set to the target element when a picker window is open on it
-		this.minS = 0.0; // min allowed saturation (0.0 - 1.0)
-		this.maxS = 1.0; // max allowed saturation (0.0 - 1.0)
-		this.minV = 0.0; // min allowed value (brightness) (0.0 - 1.0)
-		this.maxV = 1.0; // max allowed value (brightness) (0.0 - 1.0)
+		this.minS = 0; // min allowed saturation (0 - 100)
+		this.maxS = 100; // max allowed saturation (0 - 100)
+		this.minV = 0; // min allowed value (brightness) (0 - 100)
+		this.maxV = 100; // max allowed value (brightness) (0 - 100)
 
 		// Accessing the picked color
 		//
-		this.hsv = [0.0, 0.0, 1.0]; // read-only  [0-6, 0-1, 0-1]
-		this.rgb = [1.0, 1.0, 1.0]; // read-only  [0-1, 0-1, 0-1]
+		this.hsv = [0, 0, 100]; // read-only  [0-360, 0-100, 0-100]
+		this.rgb = [255, 255, 255]; // read-only  [0-255, 0-255, 0-255]
 
 		// Color Picker options
 		//
@@ -1105,7 +1105,7 @@ var jsc = {
 					0.213 * this.rgb[0] +
 					0.715 * this.rgb[1] +
 					0.072 * this.rgb[2]
-					< 0.5 ? '#FFF' : '#000';
+					< (255 / 2) ? '#FFF' : '#000';
 			}
 			if (!(flags & jsc.leavePad) && isPickerOwner()) {
 				redrawPad();
@@ -1116,10 +1116,14 @@ var jsc = {
 		};
 
 
+		// h: 0-360
+		// s: 0-100
+		// v: 0-100
+		//
 		this.fromHSV = function (h, s, v, flags) { // null = don't change
-			if (h !== null) { h = Math.max(0.0, Math.min(6.0, h)); }
-			if (s !== null) { s = Math.max(0.0, Math.min(1.0, this.maxS, s), this.minS); }
-			if (v !== null) { v = Math.max(0.0, Math.min(1.0, this.maxV, v), this.minV); }
+			if (h !== null) { h = Math.max(0, Math.min(360, h)); }
+			if (s !== null) { s = Math.max(0, Math.min(100, this.maxS, s), this.minS); }
+			if (v !== null) { v = Math.max(0, Math.min(100, this.maxV, v), this.minV); }
 
 			this.rgb = HSV_RGB(
 				h===null ? this.hsv[0] : (this.hsv[0]=h),
@@ -1131,10 +1135,14 @@ var jsc = {
 		};
 
 
+		// r: 0-255
+		// g: 0-255
+		// b: 0-255
+		//
 		this.fromRGB = function (r, g, b, flags) { // null = don't change
-			if (r !== null) { r = Math.max(0.0, Math.min(1.0, r)); }
-			if (g !== null) { g = Math.max(0.0, Math.min(1.0, g)); }
-			if (b !== null) { b = Math.max(0.0, Math.min(1.0, b)); }
+			if (r !== null) { r = Math.max(0, Math.min(255, r)); }
+			if (g !== null) { g = Math.max(0, Math.min(255, g)); }
+			if (b !== null) { b = Math.max(0, Math.min(255, b)); }
 
 			var hsv = RGB_HSV(
 				r===null ? this.rgb[0] : r,
@@ -1142,12 +1150,12 @@ var jsc = {
 				b===null ? this.rgb[2] : b
 			);
 			if (hsv[0] !== null) {
-				this.hsv[0] = Math.max(0.0, Math.min(6.0, hsv[0]));
+				this.hsv[0] = Math.max(0, Math.min(360, hsv[0]));
 			}
 			if (hsv[2] !== 0) {
-				this.hsv[1] = hsv[1]===null ? null : Math.max(0.0, this.minS, Math.min(1.0, this.maxS, hsv[1]));
+				this.hsv[1] = hsv[1]===null ? null : Math.max(0, this.minS, Math.min(100, this.maxS, hsv[1]));
 			}
-			this.hsv[2] = hsv[2]===null ? null : Math.max(0.0, this.minV, Math.min(1.0, this.maxV, hsv[2]));
+			this.hsv[2] = hsv[2]===null ? null : Math.max(0, this.minV, Math.min(100, this.maxV, hsv[2]));
 
 			// update RGB according to final HSV, as some values might be trimmed
 			var rgb = HSV_RGB(this.hsv[0], this.hsv[1], this.hsv[2]);
@@ -1166,16 +1174,16 @@ var jsc = {
 			} else {
 				if (m[1].length === 6) { // 6-char notation
 					this.fromRGB(
-						parseInt(m[1].substr(0,2),16) / 255,
-						parseInt(m[1].substr(2,2),16) / 255,
-						parseInt(m[1].substr(4,2),16) / 255,
+						parseInt(m[1].substr(0,2),16),
+						parseInt(m[1].substr(2,2),16),
+						parseInt(m[1].substr(4,2),16),
 						flags
 					);
 				} else { // 3-char notation
 					this.fromRGB(
-						parseInt(m[1].charAt(0) + m[1].charAt(0),16) / 255,
-						parseInt(m[1].charAt(1) + m[1].charAt(1),16) / 255,
-						parseInt(m[1].charAt(2) + m[1].charAt(2),16) / 255,
+						parseInt(m[1].charAt(0) + m[1].charAt(0),16),
+						parseInt(m[1].charAt(1) + m[1].charAt(1),16),
+						parseInt(m[1].charAt(2) + m[1].charAt(2),16),
 						flags
 					);
 				}
@@ -1186,37 +1194,64 @@ var jsc = {
 
 		this.toString = function () {
 			return (
-				(0x100 | Math.round(255*this.rgb[0])).toString(16).substr(1) +
-				(0x100 | Math.round(255*this.rgb[1])).toString(16).substr(1) +
-				(0x100 | Math.round(255*this.rgb[2])).toString(16).substr(1)
+				(0x100 | Math.round(this.rgb[0])).toString(16).substr(1) +
+				(0x100 | Math.round(this.rgb[1])).toString(16).substr(1) +
+				(0x100 | Math.round(this.rgb[2])).toString(16).substr(1)
 			);
 		};
 
 
+		// r: 0-255
+		// g: 0-255
+		// b: 0-255
+		//
+		// returns: [ 0-360, 0-100, 0-100 ]
+		//
 		function RGB_HSV (r, g, b) {
+			r /= 255;
+			g /= 255;
+			b /= 255;
 			var n = Math.min(Math.min(r,g),b);
 			var v = Math.max(Math.max(r,g),b);
 			var m = v - n;
-			if (m === 0) { return [ null, 0, v ]; }
+			if (m === 0) { return [ null, 0, 100 * v ]; }
 			var h = r===n ? 3+(b-g)/m : (g===n ? 5+(r-b)/m : 1+(g-r)/m);
-			return [ h===6?0:h, m/v, v ];
+			return [
+				60 * (h===6?0:h),
+				100 * (m/v),
+				100 * v
+			];
 		}
 
 
+		// h: 0-360
+		// s: 0-100
+		// v: 0-100
+		//
+		// returns: [ 0-255, 0-255, 0-255 ]
+		//
 		function HSV_RGB (h, s, v) {
-			if (h === null) { return [ v, v, v ]; }
+			var u = 255 * (v / 100);
+
+			if (h === null) {
+				return [ u, u, u ];
+			}
+
+			h /= 60;
+			s /= 100;
+
 			var i = Math.floor(h);
 			var f = i%2 ? h-i : 1-(h-i);
-			var m = v * (1 - s);
-			var n = v * (1 - s*f);
+			var m = u * (1 - s);
+			var n = u * (1 - s * f);
 			switch (i) {
 				case 6:
-				case 0: return [v,n,m];
-				case 1: return [n,v,m];
-				case 2: return [m,v,n];
-				case 3: return [m,n,v];
-				case 4: return [n,m,v];
-				case 5: return [v,m,n];
+				case 0: return [u,n,m];
+				case 1: return [n,u,m];
+				case 2: return [m,u,n];
+				case 3: return [m,n,u];
+				case 4: return [n,m,u];
+				case 5: return [u,m,n];
 			}
 		}
 
@@ -1510,8 +1545,8 @@ var jsc = {
 			case 's': var yComponent = 1; break;
 			case 'v': var yComponent = 2; break;
 			}
-			var x = Math.round((THIS.hsv[0] / 6) * (THIS.width - 1));
-			var y = Math.round((1 - THIS.hsv[yComponent]) * (THIS.height - 1));
+			var x = Math.round((THIS.hsv[0] / 360) * (THIS.width - 1));
+			var y = Math.round((1 - THIS.hsv[yComponent] / 100) * (THIS.height - 1));
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
 			var ofs = -Math.floor(crossOuterSize / 2);
 			jsc.picker.cross.style.left = (x + ofs) + 'px';
@@ -1520,24 +1555,24 @@ var jsc = {
 			// redraw the slider
 			switch (jsc.getSliderComponent(THIS)) {
 			case 's':
-				var rgb1 = HSV_RGB(THIS.hsv[0], 1, THIS.hsv[2]);
+				var rgb1 = HSV_RGB(THIS.hsv[0], 100, THIS.hsv[2]);
 				var rgb2 = HSV_RGB(THIS.hsv[0], 0, THIS.hsv[2]);
 				var color1 = 'rgb(' +
-					Math.round(255 * rgb1[0]) + ',' +
-					Math.round(255 * rgb1[1]) + ',' +
-					Math.round(255 * rgb1[2]) + ')';
+					Math.round(rgb1[0]) + ',' +
+					Math.round(rgb1[1]) + ',' +
+					Math.round(rgb1[2]) + ')';
 				var color2 = 'rgb(' +
-					Math.round(255 * rgb2[0]) + ',' +
-					Math.round(255 * rgb2[1]) + ',' +
-					Math.round(255 * rgb2[2]) + ')';
+					Math.round(rgb2[0]) + ',' +
+					Math.round(rgb2[1]) + ',' +
+					Math.round(rgb2[2]) + ')';
 				jsc.picker.sldGrad.draw(THIS.sliderSize, THIS.height, color1, color2);
 				break;
 			case 'v':
-				var rgb = HSV_RGB(THIS.hsv[0], THIS.hsv[1], 1);
+				var rgb = HSV_RGB(THIS.hsv[0], THIS.hsv[1], 100);
 				var color1 = 'rgb(' +
-					Math.round(255 * rgb[0]) + ',' +
-					Math.round(255 * rgb[1]) + ',' +
-					Math.round(255 * rgb[2]) + ')';
+					Math.round(rgb[0]) + ',' +
+					Math.round(rgb[1]) + ',' +
+					Math.round(rgb[2]) + ')';
 				var color2 = '#000';
 				jsc.picker.sldGrad.draw(THIS.sliderSize, THIS.height, color1, color2);
 				break;
@@ -1551,7 +1586,7 @@ var jsc = {
 			case 's': var yComponent = 1; break;
 			case 'v': var yComponent = 2; break;
 			}
-			var y = Math.round((1 - THIS.hsv[yComponent]) * (THIS.height - 1));
+			var y = Math.round((1 - THIS.hsv[yComponent] / 100) * (THIS.height - 1));
 			jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
 		}
 
