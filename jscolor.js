@@ -2,10 +2,9 @@
  * jscolor - JavaScript Color Picker
  *
  * @link    http://jscolor.com
- * @version 2.0.1
  * @license For open source use: GPLv3
  *          For commercial use: JSColor Commercial License
- * @author  East Desire
+ * @author  Jan Odvarko
  *
  * See usage examples at http://jscolor.com/examples/
  */
