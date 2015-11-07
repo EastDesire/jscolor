@@ -13,7 +13,7 @@
 "use strict";
 
 
-window.jscolor = (function (parentObject) {
+if (!window.jscolor) { window.jscolor = (function () {
 
 
 var jsc = {
@@ -507,28 +507,20 @@ var jsc = {
 
 	getPadYComponent : function (thisObj) {
 		switch (thisObj.mode.charAt(1).toLowerCase()) {
-		case 'v':
-			return 'v';
-			break;
-		default:
-			return 's';
-			break;
+			case 'v': return 'v'; break;
 		}
+		return 's';
 	},
 
 
 	getSliderComponent : function (thisObj) {
-		switch (thisObj.mode.charAt(2).toLowerCase()) {
-		case 's':
-			return 's';
-			break;
-		case 'v':
-			return 'v';
-			break;
-		default:
-			return null;
-			break;
+		if (thisObj.mode.length > 2) {
+			switch (thisObj.mode.charAt(2).toLowerCase()) {
+				case 's': return 's'; break;
+				case 'v': return 'v'; break;
+			}
 		}
+		return null;
 	},
 
 
@@ -536,11 +528,14 @@ var jsc = {
 		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 
-		if (target._jscControlName) {
+		if (target._jscLinkedInstance) {
+			if (target._jscLinkedInstance.showOnClick) {
+				target._jscLinkedInstance.show();
+			}
+		} else if (target._jscControlName) {
 			jsc.onControlPointerStart(e, target, target._jscControlName, 'mouse');
 		} else {
 			// Mouse is outside the picker controls -> hide the color picker!
-			// This also gets triggered on touch devices in case user doesn't start scrolling, which is what we want.
 			if (jsc.picker && jsc.picker.owner) {
 				jsc.picker.owner.hide();
 			}
@@ -552,10 +547,16 @@ var jsc = {
 		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 
-		if (target._jscControlName) {
+		if (target._jscLinkedInstance) {
+			if (target._jscLinkedInstance.showOnClick) {
+				target._jscLinkedInstance.show();
+			}
+		} else if (target._jscControlName) {
 			jsc.onControlPointerStart(e, target, target._jscControlName, 'touch');
 		} else {
-			// Do not hide picker on touch start, because it would hide it even if user just starts scrolling
+			if (jsc.picker && jsc.picker.owner) {
+				jsc.picker.owner.hide();
+			}
 		}
 	},
 
@@ -566,7 +567,7 @@ var jsc = {
 
 
 	onParentScroll : function (e) {
-		// hide the picker when offsetParent is scrolled
+		// hide the picker when one of the parent elements is scrolled
 		if (jsc.picker && jsc.picker.owner) {
 			jsc.picker.owner.hide();
 		}
@@ -1060,16 +1061,20 @@ var jsc = {
 				if (jsc.isElementType(this.valueElement, 'input')) {
 					if (!this.refine) {
 						if (!this.fromString(this.valueElement.value, jsc.leaveValue)) {
-							this.styleElement.style.backgroundImage = this.styleElement._jscStyle.backgroundImage;
-							this.styleElement.style.backgroundColor = this.styleElement._jscStyle.backgroundColor;
-							this.styleElement.style.color = this.styleElement._jscStyle.color;
+							if (this.styleElement) {
+								this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
+								this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
+								this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
+							}
 							this.exportColor(jsc.leaveValue | jsc.leaveStyle);
 						}
 					} else if (!this.required && /^\s*$/.test(this.valueElement.value)) {
 						this.valueElement.value = '';
-						this.styleElement.style.backgroundImage = this.styleElement._jscStyle.backgroundImage;
-						this.styleElement.style.backgroundColor = this.styleElement._jscStyle.backgroundColor;
-						this.styleElement.style.color = this.styleElement._jscStyle.color;
+						if (this.styleElement) {
+							this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
+							this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
+							this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
+						}
 						this.exportColor(jsc.leaveValue | jsc.leaveStyle);
 
 					} else if (this.fromString(this.valueElement.value)) {
@@ -1097,10 +1102,12 @@ var jsc = {
 					this.valueElement.innerHTML = value;
 				}
 			}
-			if (!(flags & jsc.leaveStyle) && this.styleElement) {
-				this.styleElement.style.backgroundImage = 'none';
-				this.styleElement.style.backgroundColor = '#' + this.toString();
-				this.styleElement.style.color = this.isLight() ? '#000' : '#FFF';
+			if (!(flags & jsc.leaveStyle)) {
+				if (this.styleElement) {
+					this.styleElement.style.backgroundImage = 'none';
+					this.styleElement.style.backgroundColor = '#' + this.toString();
+					this.styleElement.style.color = this.isLight() ? '#000' : '#FFF';
+				}
 			}
 			if (!(flags & jsc.leavePad) && isPickerOwner()) {
 				redrawPad();
@@ -1259,6 +1266,37 @@ var jsc = {
 		};
 
 
+		this._processParentElementsInDOM = function () {
+			if (this._linkedElementsProcessed) { return; }
+			this._linkedElementsProcessed = true;
+
+			var elm = this.targetElement;
+			do {
+				// If the target element or one of its parent nodes has fixed position,
+				// then use fixed positioning instead
+				//
+				// Note: In Firefox, getComputedStyle returns null in a hidden iframe,
+				// that's why we need to check if the returned style object is non-empty
+				var currStyle = jsc.getStyle(elm);
+				if (currStyle && currStyle.position.toLowerCase() === 'fixed') {
+					this.fixed = true;
+				}
+
+				if (elm !== this.targetElement) {
+					// Ensure to attach onParentScroll only once to each parent element
+					// (multiple targetElements can share the same parent nodes)
+					//
+					// Note: It's not just offsetParents that can be scrollable,
+					// that's why we loop through all parent nodes
+					if (!elm._jscEventsAttached) {
+						jsc.attachEvent(elm, 'scroll', jsc.onParentScroll);
+						elm._jscEventsAttached = true;
+					}
+				}
+			} while ((elm = elm.parentNode) && !jsc.isElementType(elm, 'body'));
+		};
+
+
 		// r: 0-255
 		// g: 0-255
 		// b: 0-255
@@ -1322,6 +1360,12 @@ var jsc = {
 
 
 		function drawPicker () {
+
+			// At this point, when drawing the picker, we know what the parent elements are
+			// and we can do all related DOM operations, such as registering events on them
+			// or checking their positioning
+			THIS._processParentElementsInDOM();
+
 			if (!jsc.picker) {
 				jsc.picker = {
 					owner: null,
@@ -1639,13 +1683,16 @@ var jsc = {
 
 
 		function redrawSld () {
-			// redraw the slider pointer
-			switch (jsc.getSliderComponent(THIS)) {
-			case 's': var yComponent = 1; break;
-			case 'v': var yComponent = 2; break;
+			var sldComponent = jsc.getSliderComponent(THIS);
+			if (sldComponent) {
+				// redraw the slider pointer
+				switch (sldComponent) {
+				case 's': var yComponent = 1; break;
+				case 'v': var yComponent = 2; break;
+				}
+				var y = Math.round((1 - THIS.hsv[yComponent] / 100) * (THIS.height - 1));
+				jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
 			}
-			var y = Math.round((1 - THIS.hsv[yComponent] / 100) * (THIS.height - 1));
-			jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
 		}
 
 
@@ -1674,11 +1721,11 @@ var jsc = {
 			jsc.warn('Invalid target element: \'' + targetElement + '\'');
 		}
 
-		if (this.targetElement._jscIsTarget) {
-			jsc.warn('Cannot instantiate jscolor twice on the same element. Skipping.');
+		if (this.targetElement._jscLinkedInstance) {
+			jsc.warn('Cannot link jscolor twice to the same element. Skipping.');
 			return;
 		}
-		this.targetElement._jscIsTarget = true;
+		this.targetElement._jscLinkedInstance = this;
 
 		// Find the value element
 		this.valueElement = jsc.fetchElement(this.valueElement);
@@ -1691,18 +1738,6 @@ var jsc = {
 			jsc.fetchElement(this.container) :
 			document.getElementsByTagName('body')[0];
 		var sliderPtrSpace = 3; // px
-
-		// targetElement
-		jsc.attachEvent(this.targetElement, 'click', function (e) {
-			if (!e) { e = window.event; }
-
-			if (THIS.showOnClick) {
-				if (e.stopPropagation) { e.stopPropagation(); }
-				e.cancelBubble = true;
-
-				THIS.show();
-			}
-		});
 
 		// For BUTTON elements it's important to stop them from sending the form when clicked
 		// (e.g. in Safari)
@@ -1718,6 +1753,7 @@ var jsc = {
 			}
 		}
 
+		/*
 		var elm = this.targetElement;
 		do {
 			// If the target element or one of its offsetParents has fixed position,
@@ -1739,6 +1775,7 @@ var jsc = {
 				}
 			}
 		} while ((elm = elm.offsetParent) && !jsc.isElementType(elm, 'body'));
+		*/
 
 		// valueElement
 		if (this.valueElement) {
@@ -1756,7 +1793,7 @@ var jsc = {
 
 		// styleElement
 		if (this.styleElement) {
-			this.styleElement._jscStyle = {
+			this.styleElement._jscOrigStyle = {
 				backgroundImage : this.styleElement.style.backgroundImage,
 				backgroundColor : this.styleElement.style.backgroundColor,
 				color : this.styleElement.style.color
@@ -1803,4 +1840,4 @@ jsc.register();
 return jsc.jscolor;
 
 
-})();
+})(); }
