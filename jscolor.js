@@ -1108,6 +1108,12 @@ var jsc = {
 					this.styleElement.style.backgroundColor = '#' + this.toString();
 					this.styleElement.style.color = this.isLight() ? '#000' : '#FFF';
 				}
+
+			// Make pallet transparent
+			if (jsc.picker && jsc.picker.pad) {
+				jsc.picker.pad.style.opacity = Math.max.apply(Math, this.rgb)/255;
+			}
+
 			}
 			if (!(flags & jsc.leavePad) && isPickerOwner()) {
 				redrawPad();
@@ -1469,6 +1475,7 @@ var jsc = {
 			p.pad.style.position = 'relative';
 			p.pad.style.width = THIS.width + 'px';
 			p.pad.style.height = THIS.height + 'px';
+			p.pad.style.opacity = Math.max.apply(Math, THIS.rgb)/255; // make pad transparent up to selected color
 
 			// pad palettes (HSV and HVS)
 			p.padPal.draw(THIS.width, THIS.height, jsc.getPadYComponent(THIS));
@@ -1479,6 +1486,7 @@ var jsc = {
 			p.padB.style.top = THIS.padding + 'px';
 			p.padB.style.border = THIS.insetWidth + 'px solid';
 			p.padB.style.borderColor = THIS.insetColor;
+			p.padB.style.backgroundColor = '#000000'; // if there is no lightness in slider – it will be black
 
 			// pad mouse area
 			p.padM._jscInstance = THIS;
