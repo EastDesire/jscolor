@@ -1106,7 +1106,14 @@ var jsc = {
 				if (this.styleElement) {
 					this.styleElement.style.backgroundImage = 'none';
 					this.styleElement.style.backgroundColor = '#' + this.toString();
-					this.styleElement.style.color = this.isLight() ? '#000' : '#FFF';
+
+					if (this.isLight()) {
+						this.styleElement.style.color = '#000';
+						jsc.unsetClass(this.styleElement, 'dark');
+					} else {
+						this.styleElement.style.color = '#FFF';
+						jsc.setClass(this.styleElement, 'dark');
+					}
 				}
 			}
 			if (!(flags & jsc.leavePad) && isPickerOwner()) {
