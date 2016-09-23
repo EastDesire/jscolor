@@ -22,7 +22,6 @@ var jsc = {
 	register : function () {
 		jsc.attachDOMReadyEvent(jsc.init);
 		jsc.attachEvent(document, 'mousedown', jsc.onDocumentMouseDown);
-		jsc.attachEvent(document, 'touchstart', jsc.onDocumentTouchStart);
 		jsc.attachEvent(window, 'resize', jsc.onWindowResize);
 	},
 
@@ -543,20 +542,12 @@ var jsc = {
 	},
 
 
-	onDocumentTouchStart : function (e) {
+	onControlTouchStart : function (e) {
 		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 
-		if (target._jscLinkedInstance) {
-			if (target._jscLinkedInstance.showOnClick) {
-				target._jscLinkedInstance.show();
-			}
-		} else if (target._jscControlName) {
+		if (target._jscControlName) {
 			jsc.onControlPointerStart(e, target, target._jscControlName, 'touch');
-		} else {
-			if (jsc.picker && jsc.picker.owner) {
-				jsc.picker.owner.hide();
-			}
 		}
 	},
 
@@ -1636,6 +1627,8 @@ var jsc = {
 			if (p.wrap.parentNode != container) {
 				container.appendChild(p.wrap);
 			}
+
+			jsc.attachEvent(p.wrap, 'touchstart', jsc.onControlTouchStart);
 
 			jsc.setClass(THIS.targetElement, THIS.activeClass);
 		}
