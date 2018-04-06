@@ -1,0 +1,19 @@
+{
+  "name": "jscolor",
+  "version": "2.0.4",
+  "description": "Web Color Picker that aims to be super easy both for developers and end users. http://jscolor.com",
+  "main": "jscolor.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EastDesire/jscolor.git"
+  },
+  "author": "EastDesire",
+  "license": "GPLv3",
+  "bugs": {
+    "url": "https://github.com/EastDesire/jscolor/issues"
+  },
+  "homepage": "https://github.com/EastDesire/jscolor#readme"
+}
