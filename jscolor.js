@@ -35,7 +35,7 @@ var jsc = {
 
 
 	tryInstallOnElements : function (elms, className) {
-		var matchClass = new RegExp('(^|\\s)(' + className + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
+		var matchClass = jsc.getClassMatchRegExp(className);
 
 		for (var i = 0; i < elms.length; i += 1) {
 			if (elms[i].type !== undefined && elms[i].type.toLowerCase() == 'color') {
@@ -65,6 +65,19 @@ var jsc = {
 					}
 				}
 				targetElm.jscolor = new jsc.jscolor(targetElm, opts);
+			}
+		}
+	},
+
+
+	tryUninstallOnElements : function (elms, className) {
+		var matchClass = jsc.getClassMatchRegExp(className);
+
+		for (var i = 0; i < elms.length; i += 1) {
+			if (elms[i].jscolor) {
+				var targetElm = elms[i];
+				targetElm.jscolor.destroy();
+				delete targetElm.jscolor;
 			}
 		}
 	},
@@ -123,6 +136,11 @@ var jsc = {
 		} else if (el.detachEvent) {
 			el.detachEvent('on' + evnt, func);
 		}
+	},
+
+
+	getClassMatchRegExp : function (className) {
+		return new RegExp('(^|\\s)(' + className + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
 	},
 
 
@@ -1271,6 +1289,47 @@ var jsc = {
 
 
 		/**
+		 * Destroy the color picker
+		 */
+		this.destroy = function () {
+			// hide the color picker
+			if (isPickerOwner()) {
+				detachPicker();
+			}
+
+			// restore original targetElement properties
+			if (this.targetElement) {
+				this.targetElement._jscLinkedInstance = null;
+
+				if (this.targetElement.hasOwnProperty('_origOnclick')) {
+					this.targetElement.onclick = this.targetElement._origOnclick;
+				}
+			}
+
+			// restore original valueElement properties
+			if (this.valueElement) {
+				jsc.detachEvent(this.valueElement, 'keyup', updateField);
+				jsc.detachEvent(this.valueElement, 'input', updateField);
+				jsc.detachEvent(this.valueElement, 'blur', blurValue);
+
+				if (this.valueElement.hasOwnProperty('_jscOrigValue')) {
+					this.valueElement.value = this.valueElement._jscOrigValue;
+				}
+				if (this.valueElement.hasOwnProperty('_jscOrigAutocomplete')) {
+					this.valueElement.setAttribute('autocomplete', this.valueElement._jscOrigAutocomplete);
+				}
+			}
+
+			// restore original styleElement properties
+			if (this.styleElement && this.styleElement.hasOwnProperty('_jscOrigStyle')) {
+				this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
+				this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
+				this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
+			}
+		};
+
+
+		/**
 		 * Hide the color picker
 		 */
 		this.hide = function () {
@@ -1976,6 +2035,12 @@ var jsc = {
 		}
 
 
+		function updateField () {
+			THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
+			jsc.dispatchFineChange(THIS);
+		}
+
+
 		function blurValue () {
 			THIS.importColor();
 		}
@@ -2018,12 +2083,14 @@ var jsc = {
 		// (e.g. in Safari)
 		if (jsc.isElementType(this.targetElement, 'button')) {
 			if (this.targetElement.onclick) {
+				this.targetElement._origOnclick = this.targetElement.onclick;
 				var origCallback = this.targetElement.onclick;
 				this.targetElement.onclick = function (evt) {
 					origCallback.call(this, evt);
 					return false;
 				};
 			} else {
+				this.targetElement._origOnclick = null;
 				this.targetElement.onclick = function () { return false; };
 			}
 		}
@@ -2031,10 +2098,9 @@ var jsc = {
 		// valueElement
 		if (this.valueElement) {
 			if (jsc.isElementType(this.valueElement, 'input')) {
-				var updateField = function () {
-					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
-					jsc.dispatchFineChange(THIS);
-				};
+				this.valueElement._jscOrigValue = this.valueElement.value;
+				this.valueElement._jscOrigAutocomplete = this.valueElement.getAttribute('autocomplete');
+
 				jsc.attachEvent(this.valueElement, 'keyup', updateField);
 				jsc.attachEvent(this.valueElement, 'input', updateField);
 				jsc.attachEvent(this.valueElement, 'blur', blurValue);
@@ -2082,6 +2148,15 @@ jsc.jscolor.installByClassName = function (className) {
 
 	jsc.tryInstallOnElements(inputElms, className);
 	jsc.tryInstallOnElements(buttonElms, className);
+};
+
+
+jsc.jscolor.uninstallByClassName = function (className) {
+	var inputElms = document.getElementsByTagName('input');
+	var buttonElms = document.getElementsByTagName('button');
+
+	jsc.tryUninstallOnElements(inputElms, className);
+	jsc.tryUninstallOnElements(buttonElms, className);
 };
 
 
