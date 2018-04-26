@@ -11,7 +11,10 @@ jscolor is a web color picker component that aims to be super easy both for deve
 Color: <input class="jscolor" value="ab2567">
 ```
 
-Explore more examples at http://jscolor.com/examples/
+
+## Usage examples
+
+Explore various examples of usage at http://jscolor.com/examples/
 
 
 ## Features
