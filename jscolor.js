@@ -59,7 +59,7 @@ var jsc = {
 				var opts = {};
 				if (optsStr) {
 					try {
-						opts = (new Function ('return (' + optsStr + ')'))();
+						opts = JSON.parse(optsStr);
 					} catch(eParseError) {
 						jsc.warn('Error parsing jscolor options: ' + eParseError + ':\n' + optsStr);
 					}
@@ -679,13 +679,9 @@ var jsc = {
 
 	dispatchFineChange : function (thisObj) {
 		if (thisObj.onFineChange) {
-			var callback;
-			if (typeof thisObj.onFineChange === 'string') {
-				callback = new Function (thisObj.onFineChange);
-			} else {
-				callback = thisObj.onFineChange;
+			if (jsc.isElementType(thisObj.valueElement, 'input')) {
+				jsc.fireEvent(thisObj.valueElement, 'keypress');
 			}
-			callback.call(thisObj);
 		}
 	},
 
@@ -854,7 +850,7 @@ var jsc = {
 					break;
 				}
 			};
-			
+
 			paletteObj.elm = vmlContainer;
 			paletteObj.draw = drawFunc;
 		}
@@ -925,7 +921,7 @@ var jsc = {
 				grad.color = color1;
 				grad.color2 = color2;
 			};
-			
+
 			sliderObj.elm = vmlContainer;
 			sliderObj.draw = drawFunc;
 		}
