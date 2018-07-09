@@ -32,10 +32,5 @@ Explore various examples of usage at http://jscolor.com/examples/
   Whether you need to change the color picker's size/colors or attach a function to the onchange event, jscolor can be fine-tuned to perfectly suit your web project.
 
 
-## Pull requests
-
-At the moment, **all pull requests on this repository are ignored**. Apologies to all contributors who already have submitted pull requests.
-
-
 ## Website
 For more info on jscolor project, see [jscolor website](http://jscolor.com)
