@@ -34,3 +34,8 @@ Explore various examples of usage at http://jscolor.com/examples/
 
 ## Website
 For more info on jscolor project, see [jscolor website](http://jscolor.com)
+
+## Pull requests
+
+Please do not submit any pull requests (see CONTRIBUTING.md)
+Sorry for inconvenience caused.
