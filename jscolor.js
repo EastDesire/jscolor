@@ -973,7 +973,7 @@ var jsc = {
 	// var myColor = new jscolor(<targetElement> [, <options>])
 	//
 
-	jscolor : function (targetElement, options) {
+	jscolor : function (targetElement, opts) {
 
 		// General options
 		//
@@ -1023,15 +1023,23 @@ var jsc = {
 		this.shadowColor = 'rgba(0,0,0,0.2)'; // CSS color
 		this.pointerColor = '#4C4C4C'; // px
 		this.pointerBorderColor = '#FFFFFF'; // px
-        this.pointerBorderWidth = 1; // px
-        this.pointerThickness = 2; // px
+		this.pointerBorderWidth = 1; // px
+		this.pointerThickness = 2; // px
 		this.zIndex = 1000;
 		this.container = null; // where to append the color picker (BODY element by default)
 
 
-		for (var opt in options) {
-			if (options.hasOwnProperty(opt)) {
-				this[opt] = options[opt];
+		// let's set custom default options, if specified
+		for (var opt in jsc.jscolor.options) {
+			if (jsc.jscolor.options.hasOwnProperty(opt)) {
+				this[opt] = jsc.jscolor.options[opt];
+			}
+		}
+
+		// let's set options for this color picker, if specified
+		for (var opt in opts) {
+			if (opts.hasOwnProperty(opt)) {
+				this[opt] = opts[opt];
 			}
 		}
 
@@ -1826,14 +1834,22 @@ var jsc = {
 //================================
 // Public properties and methods
 //================================
+//
+// These will be publicly available via jscolor.<name>
+//
 
 
-// By default, search for all elements with class="jscolor" and install a color picker on them.
+// By default, we'll search for all elements with class="jscolor" and install a color picker on them.
 //
 // You can change what class name will be looked for by setting the property jscolor.lookupClass
 // anywhere in your HTML document. To completely disable the automatic lookup, set it to null.
 //
 jsc.jscolor.lookupClass = 'jscolor';
+
+
+// Custom default options for all color pickers, e.g. { hash: true, width: 300 }
+// You can set it in your HTML document using jscolor.options property
+jsc.jscolor.options = {};
 
 
 jsc.jscolor.installByClassName = function (className) {
