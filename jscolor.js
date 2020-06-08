@@ -13,24 +13,18 @@
 "use strict";
 
 
-if (!window.jscolor) { window.jscolor = (function () {
+if (!window.jscolor) {
 
+window.jscolor = (function () { // BEGIN window.jscolor
 
 var jsc = {
 
 
 	register : function () {
-		jsc.attachDOMReadyEvent(jsc.init);
+		jsc.attachDOMReadyEvent(jsc.jscolor.init);
 		jsc.attachEvent(document, 'mousedown', jsc.onDocumentMouseDown);
 		jsc.attachEvent(document, 'touchstart', jsc.onDocumentTouchStart);
 		jsc.attachEvent(window, 'resize', jsc.onWindowResize);
-	},
-
-
-	init : function () {
-		if (jsc.jscolor.lookupClass) {
-			jsc.jscolor.installByClassName(jsc.jscolor.lookupClass);
-		}
 	},
 
 
@@ -44,15 +38,24 @@ var jsc = {
 					continue;
 				}
 			}
-			var m;
-			if (!elms[i].jscolor && elms[i].className && (m = elms[i].className.match(matchClass))) {
+
+			if (elms[i].jscolor) {
+				// jscolor is already installed on this element
+				continue;
+			}
+
+			var m, dataOpts;
+
+			if (
+				(dataOpts = jsc.getDataAttr(elms[i], 'jscolor')) !== null ||
+				(elms[i].className && (m = elms[i].className.match(matchClass)))
+			) {
 				var targetElm = elms[i];
 				var optsStr = null;
 
-				var dataOptions = jsc.getDataAttr(targetElm, 'jscolor');
-				if (dataOptions !== null) {
-					optsStr = dataOptions;
-				} else if (m[4]) {
+				if (dataOpts !== null) {
+					optsStr = dataOpts;
+				} else if (m && m[4]) {
 					optsStr = m[4];
 				}
 
@@ -972,6 +975,8 @@ var jsc = {
 	// Usage:
 	// var myColor = new jscolor(<targetElement> [, <options>])
 	//
+	// (you can use both 'new jscolor' and 'new JSColor')
+	//
 
 	jscolor : function (targetElement, opts) {
 
@@ -1852,6 +1857,15 @@ jsc.jscolor.lookupClass = 'jscolor';
 jsc.jscolor.options = {};
 
 
+// Initialize jscolor on current DOM
+jsc.jscolor.init = function () {
+	if (jsc.jscolor.lookupClass) {
+		jsc.jscolor.installByClassName(jsc.jscolor.lookupClass);
+	}
+};
+
+
+// Install jscolor on all elements that have the specified class name
 jsc.jscolor.installByClassName = function (className) {
 	var inputElms = document.getElementsByTagName('input');
 	var buttonElms = document.getElementsByTagName('button');
@@ -1867,4 +1881,8 @@ jsc.register();
 return jsc.jscolor;
 
 
-})(); }
+})(); // END window.jscolor
+
+window.JSColor = window.jscolor; // 'JSColor' is an alias to 'jscolor'
+
+} // endif
