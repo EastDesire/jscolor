@@ -8,7 +8,7 @@ jscolor is a web color picker component that aims to be super easy both for deve
 ```html
 <script src="jscolor.js"></script>
 
-Color: <input class="jscolor" value="ab2567">
+Color: <input data-jscolor="" value="ab2567">
 ```
 
 
@@ -25,7 +25,7 @@ Explore various examples of usage at http://jscolor.com/examples/
 
 * **Cross-browser:**
   All modern browsers are supported, including:
-  Firefox, Chrome, Safari, Opera, Internet Explorer 7 and above and others...
+  Edge, Firefox, Chrome, Safari, Opera, Internet Explorer 7 and above and others...
 
 
 * **Highly customizable:**
@@ -38,4 +38,4 @@ For more info on jscolor project, see [jscolor website](http://jscolor.com)
 ## Pull requests
 
 Please do not submit any pull requests (see CONTRIBUTING.md)
-Sorry for inconvenience caused.
+Sorry for any inconvenience caused.
