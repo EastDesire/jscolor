@@ -1457,15 +1457,19 @@ var jsc = {
 			var padCursor = 'crosshair';
 
 			// wrap
+			p.wrap.className = 'jscolor-picker-wrap';
 			p.wrap.style.clear = 'both';
 			p.wrap.style.width = (dims[0] + 2 * THIS.borderWidth) + 'px';
 			p.wrap.style.height = (dims[1] + 2 * THIS.borderWidth) + 'px';
 			p.wrap.style.zIndex = THIS.zIndex;
 
 			// picker
+			p.box.className = 'jscolor-picker';
 			p.box.style.width = dims[0] + 'px';
 			p.box.style.height = dims[1] + 'px';
 
+			// picker shadow
+			p.boxS.className = 'jscolor-picker-shadow';
 			p.boxS.style.position = 'absolute';
 			p.boxS.style.left = '0';
 			p.boxS.style.top = '0';
@@ -1474,6 +1478,7 @@ var jsc = {
 			jsc.setBorderRadius(p.boxS, borderRadius + 'px');
 
 			// picker border
+			p.boxB.className = 'jscolor-picker-border';
 			p.boxB.style.position = 'relative';
 			p.boxB.style.border = THIS.borderWidth + 'px solid';
 			p.boxB.style.borderColor = THIS.borderColor;
@@ -1613,6 +1618,7 @@ var jsc = {
 				var outsetColor = insetColors.length < 2 ? insetColors[0] : insetColors[1] + ' ' + insetColors[0] + ' ' + insetColors[0] + ' ' + insetColors[1];
 				p.btn.style.borderColor = outsetColor;
 			}
+			p.btn.className = 'jscolor-btn-close';
 			p.btn.style.display = THIS.closable ? 'block' : 'none';
 			p.btn.style.position = 'absolute';
 			p.btn.style.left = THIS.padding + 'px';
