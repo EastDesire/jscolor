@@ -1,6 +1,6 @@
 {
   "name": "jscolor",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "description": "Web Color Picker that aims to be super easy both for developers and end users. http://jscolor.com",
   "main": "jscolor.js",
   "scripts": {
