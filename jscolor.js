@@ -409,6 +409,15 @@ var jsc = {
 	},
 
 
+	setOption : function (option, value) {
+		if (typeof this[option] === 'undefined') {
+			jsc.warn('Unrecognized option \'' + option + '\'');
+			return false;
+		}
+		this[option] = value;
+	},
+
+
 	redrawPosition : function () {
 
 		if (jsc.picker && jsc.picker.owner) {
@@ -1037,14 +1046,14 @@ var jsc = {
 		// let's set custom default options, if specified
 		for (var opt in jsc.jscolor.options) {
 			if (jsc.jscolor.options.hasOwnProperty(opt)) {
-				this[opt] = jsc.jscolor.options[opt];
+				jsc.setOption.call(this, opt, jsc.jscolor.options[opt]);
 			}
 		}
 
 		// let's set options for this color picker, if specified
 		for (var opt in opts) {
 			if (opts.hasOwnProperty(opt)) {
-				this[opt] = opts[opt];
+				jsc.setOption.call(this, opt, opts[opt]);
 			}
 		}
 
@@ -1848,7 +1857,7 @@ var jsc = {
 // Public properties and methods
 //================================
 //
-// These will be publicly available via jscolor.<name>
+// These will be publicly available via jscolor.<name> and JSColor.<name>
 //
 
 
