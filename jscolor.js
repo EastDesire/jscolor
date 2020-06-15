@@ -24,6 +24,7 @@ var jsc = {
 		jsc.attachDOMReadyEvent(jsc.jscolor.init);
 		jsc.attachEvent(document, 'mousedown', jsc.onDocumentMouseDown);
 		jsc.attachEvent(document, 'touchstart', jsc.onDocumentTouchStart);
+		jsc.attachEvent(document, 'keyup', jsc.onDocumentKeyUp);
 		jsc.attachEvent(window, 'resize', jsc.onWindowResize);
 	},
 
@@ -573,6 +574,20 @@ var jsc = {
 	},
 
 
+	onDocumentKeyUp : function (e) {
+		if (!e) { e = window.event; }
+
+		if (
+			(e.code && e.code === 'Enter' || e.keyCode === 13) ||
+			(e.code && e.code === 'Escape' || e.keyCode === 27)
+		) {
+			if (jsc.picker && jsc.picker.owner) {
+				jsc.picker.owner.hide();
+			}
+		}
+	},
+
+
 	onWindowResize : function (e) {
 		jsc.redrawPosition();
 	},
@@ -1036,24 +1051,67 @@ var jsc = {
 		this.shadowBlur = 15; // px
 		this.shadowColor = 'rgba(0,0,0,0.2)'; // CSS color
 		this.pointerColor = '#4C4C4C'; // px
-		this.pointerBorderColor = '#FFFFFF'; // px
+		this.pointerBorderColor = '#FFFFFF'; // CSS color
 		this.pointerBorderWidth = 1; // px
 		this.pointerThickness = 2; // px
 		this.zIndex = 1000;
 		this.container = null; // where to append the color picker (BODY element by default)
 
 
-		// let's set custom default options, if specified
-		for (var opt in jsc.jscolor.options) {
-			if (jsc.jscolor.options.hasOwnProperty(opt)) {
-				jsc.setOption.call(this, opt, jsc.jscolor.options[opt]);
+		// let's process the DEPRECATED jscolor.options property (this will be later removed)
+		if (jsc.jscolor.options) {
+			// let's set custom default options, if specified
+			for (var opt in jsc.jscolor.options) {
+				if (jsc.jscolor.options.hasOwnProperty(opt)) {
+					jsc.setOption.call(this, opt, jsc.jscolor.options[opt]);
+				}
 			}
 		}
 
-		// let's set options for this color picker, if specified
+
+		// let's apply configuration presets
+		//
+		var presetsArr = [];
+
+		if (opts.preset) {
+			if (typeof opts.preset === 'string') {
+				presetsArr = opts.preset.split(/\s+/);
+			} else if (Array.isArray(opts.preset)) {
+				presetsArr = opts.preset.slice(); // to clone
+			} else {
+				jsc.warn('Unrecognized preset value');
+			}
+		}
+
+		// always use the 'default' preset as a baseline
+		presetsArr.push('default');
+
+		// let's apply the presets in reverse order, so that should there be any overlapping options,
+		// then the formerly listed preset overrides the latter
+		for (var i = presetsArr.length - 1; i >= 0; i -= 1) {
+			var pres = presetsArr[i];
+			if (!pres) {
+				continue; // preset is empty string
+			}
+			if (!jsc.jscolor.presets.hasOwnProperty(pres)) {
+				jsc.warn('Unknown preset \'' + pres + '\'');
+				continue;
+			}
+			for (var opt in jsc.jscolor.presets[pres]) {
+				if (jsc.jscolor.presets[pres].hasOwnProperty(opt)) {
+					jsc.setOption.call(this, opt, jsc.jscolor.presets[pres][opt]);
+				}
+			}
+		}
+
+
+		// let's set specific options for this color picker
+		var nonProperties = ['preset']; // these options won't be set as instance properties
 		for (var opt in opts) {
 			if (opts.hasOwnProperty(opt)) {
-				jsc.setOption.call(this, opt, opts[opt]);
+				if (nonProperties.indexOf(opt) === -1) {
+					jsc.setOption.call(this, opt, opts[opt]);
+				}
 			}
 		}
 
@@ -1291,13 +1349,17 @@ var jsc = {
 		};
 
 
-		this.isLight = function () {
+		this.toGrayscale = function () {
 			return (
 				0.213 * this.rgb[0] +
 				0.715 * this.rgb[1] +
-				0.072 * this.rgb[2] >
-				255 / 2
+				0.072 * this.rgb[2]
 			);
+		};
+
+
+		this.isLight = function () {
+			return this.toGrayscale() > 255 / 2;
 		};
 
 
@@ -1742,7 +1804,7 @@ var jsc = {
 		}
 
 
-		function blurValue () {
+		function handleValueBlur () {
 			THIS.importColor();
 		}
 
@@ -1821,13 +1883,13 @@ var jsc = {
 		// valueElement
 		if (this.valueElement) {
 			if (jsc.isElementType(this.valueElement, 'input')) {
-				var updateField = function () {
+				var handleValueInput = function () {
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
 					jsc.dispatchFineChange(THIS);
 				};
-				jsc.attachEvent(this.valueElement, 'keyup', updateField);
-				jsc.attachEvent(this.valueElement, 'input', updateField);
-				jsc.attachEvent(this.valueElement, 'blur', blurValue);
+				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput);
+				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
+				jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
 				this.valueElement.setAttribute('autocomplete', 'off');
 			}
 		}
@@ -1861,6 +1923,37 @@ var jsc = {
 //
 
 
+// Initializes jscolor on current DOM tree
+jsc.jscolor.init = function () {
+	if (jsc.jscolor.lookupClass) {
+		jsc.jscolor.installByClassName(jsc.jscolor.lookupClass);
+	}
+};
+
+
+jsc.jscolor.presets = {};
+
+jsc.jscolor.presets['default'] = {}; // baseline for customization
+
+jsc.jscolor.presets['light'] = { backgroundColor:'#FFFFFF', insetColor:'#BBBBBB' }; // default color scheme
+jsc.jscolor.presets['dark'] = { backgroundColor:'#333333', insetColor:'#999999' };
+
+jsc.jscolor.presets['small'] = { width:101, height:101 };
+jsc.jscolor.presets['medium'] = { width:181, height:101 }; // default size
+jsc.jscolor.presets['large'] = { width:271, height:151 };
+
+jsc.jscolor.presets['thin'] = { borderWidth:1, insetWidth:1, pointerBorderWidth:1 }; // default thickness
+jsc.jscolor.presets['thick'] = { borderWidth:2, insetWidth:2, pointerBorderWidth:2 };
+
+
+// DEPRECATED. Use jscolor.presets.default instead.
+//
+// Custom default options for all color pickers, e.g. { hash: true, width: 300 }
+jsc.jscolor.options = {};
+
+
+// DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
+//
 // By default, we'll search for all elements with class="jscolor" and install a color picker on them.
 //
 // You can change what class name will be looked for by setting the property jscolor.lookupClass
@@ -1869,19 +1962,8 @@ var jsc = {
 jsc.jscolor.lookupClass = 'jscolor';
 
 
-// Custom default options for all color pickers, e.g. { hash: true, width: 300 }
-// You can set it in your HTML document using jscolor.options property
-jsc.jscolor.options = {};
-
-
-// Initialize jscolor on current DOM
-jsc.jscolor.init = function () {
-	if (jsc.jscolor.lookupClass) {
-		jsc.jscolor.installByClassName(jsc.jscolor.lookupClass);
-	}
-};
-
-
+// DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
+//
 // Install jscolor on all elements that have the specified class name
 jsc.jscolor.installByClassName = function (className) {
 	var inputElms = document.getElementsByTagName('input');
