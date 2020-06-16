@@ -1261,10 +1261,10 @@ var jsc = {
 
 
 		/* TODO: rem
-		this.exportColor = function () {
+		this.exposeColor = function () {
 			if (!(this.valueElement && jsc.isElementType(this.valueElement, 'input'))) {
 				// not an input element -> no value to be imported
-				this.exportCurrentColor();
+				this.exposeCurrentColor();
 				return;
 			}
 
@@ -1277,7 +1277,7 @@ var jsc = {
 					this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 					this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 				}
-				this.exportCurrentColor(jsc.leaveValue | jsc.leaveStyle);
+				this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				return;
 			}
 
@@ -1289,22 +1289,22 @@ var jsc = {
 						this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 						this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 					}
-					this.exportCurrentColor(jsc.leaveValue | jsc.leaveStyle);
+					this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				}
 				return;
 			}
 
 			// try to parse input's value
-			this.fromString(this.valueElement.value) || this.exportCurrentColor();
+			this.fromString(this.valueElement.value) || this.exposeCurrentColor();
 		};
 		*/
 
 
-		this.exportColor = function (str) {
-			/*
-			if (!(this.valueElement && jsc.isElementType(this.valueElement, 'input'))) {
-				// not an input element -> no value to be imported
-				this.exportCurrentColor();
+		this.exposeColor = function (str) {
+			/* TODO: remove
+			if (!(this.valueElement && this.valueElement.value !== undefined)) {
+				// no value to be imported
+				this.exposeCurrentColor();
 				return;
 			}
 			*/
@@ -1317,7 +1317,7 @@ var jsc = {
 					this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 					this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 				}
-				this.exportCurrentColor(jsc.leaveValue | jsc.leaveStyle);
+				this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				return;
 			}
 
@@ -1329,19 +1329,19 @@ var jsc = {
 						this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 						this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 					}
-					this.exportCurrentColor(jsc.leaveValue | jsc.leaveStyle);
+					this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				}
 				return;
 			}
 
 			if (!this.fromString(str)) {
-				// could not parse the color - let's just export the current color
-				this.exportCurrentColor();
+				// could not parse the color - let's just expose the current color
+				this.exposeCurrentColor();
 			}
 		};
 
 
-		this.exportCurrentColor = function (flags) {
+		this.exposeCurrentColor = function (flags) {
 
 			if (!(flags & jsc.leaveValue) && this.valueElement) {
 				var value = this.toString();
@@ -1418,7 +1418,7 @@ var jsc = {
 				v===null ? this.hsv[2] : (this.hsv[2]=v)
 			);
 
-			this.exportCurrentColor(flags);
+			this.exposeCurrentColor(flags);
 		};
 
 
@@ -1464,7 +1464,7 @@ var jsc = {
 			this.rgb[1] = rgb[1];
 			this.rgb[2] = rgb[2];
 
-			this.exportCurrentColor(flags);
+			this.exposeCurrentColor(flags);
 		};
 
 
@@ -1949,7 +1949,7 @@ var jsc = {
 
 		function handleValueBlur () {
 			// TODO: test
-			THIS.exportColor(THIS.valueElement.value);
+			THIS.exposeColor(THIS.valueElement.value);
 		}
 
 
@@ -2059,9 +2059,15 @@ var jsc = {
 		var initValue = '';
 
 		if (this.value !== null) {
-			initValue = this.value;
-		} else if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
-			initValue = this.valueElement.value;
+			initValue = this.value; // get initial color from the 'value' property
+		}
+
+		if (this.valueElement && this.valueElement.value !== undefined) {
+			if (this.value !== null) {
+				this.valueElement.value = this.value; // sync valueElement's value with the 'value' property
+			} else {
+				initValue = this.valueElement.value; // get initial color from valueElement's value
+			}
 		}
 
 		if (this.format === null) {
@@ -2069,7 +2075,7 @@ var jsc = {
 			this.format = color ? color.format : 'hex';
 		}
 
-		this.exportColor(initValue);
+		this.exposeColor(initValue);
 
 
 		/*
@@ -2103,30 +2109,30 @@ var jsc = {
 
 
 			// initialize the picker based on the 'value' option
-			this.exportColor(this.value);
+			this.exposeColor(this.value);
 
 		} else if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
 			// initialize the picker based on valueElement's 'value' attribute
-			this.exportColor(this.valueElement.value);
+			this.exposeColor(this.valueElement.value);
 
 		} else {
-			// nothing to import the color from -> let's just export the current color
-			this.exportCurrentColor();
+			// nothing to import the color from -> let's just expose the current color
+			this.exposeCurrentColor();
 		}
 
 
 
 		if (this.value !== null) {
 			// initialize the picker based on the 'value' option
-			this.exportColor(this.value);
+			this.exposeColor(this.value);
 
 		} else if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
 			// initialize the picker based on valueElement's 'value' attribute
-			this.exportColor(this.valueElement.value);
+			this.exposeColor(this.valueElement.value);
 
 		} else {
-			// nothing to import the color from -> let's just export the current color
-			this.exportCurrentColor();
+			// nothing to import the color from -> let's just expose the current color
+			this.exposeCurrentColor();
 		}
 		*/
 	}
