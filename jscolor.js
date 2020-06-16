@@ -13,29 +13,24 @@
 "use strict";
 
 
-if (!window.jscolor) { window.jscolor = (function () {
+if (!window.jscolor) {
 
+window.jscolor = (function () { // BEGIN window.jscolor
 
 var jsc = {
 
 
 	register : function () {
-		jsc.attachDOMReadyEvent(jsc.init);
+		jsc.attachDOMReadyEvent(jsc.jscolor.init);
 		jsc.attachEvent(document, 'mousedown', jsc.onDocumentMouseDown);
 		jsc.attachEvent(document, 'touchstart', jsc.onDocumentTouchStart);
+		jsc.attachEvent(document, 'keyup', jsc.onDocumentKeyUp);
 		jsc.attachEvent(window, 'resize', jsc.onWindowResize);
 	},
 
 
-	init : function () {
-		if (jsc.jscolor.lookupClass) {
-			jsc.jscolor.installByClassName(jsc.jscolor.lookupClass);
-		}
-	},
-
-
 	tryInstallOnElements : function (elms, className) {
-		var matchClass = jsc.getClassMatchRegExp(className);
+		var matchClass = new RegExp('(^|\\s)(' + className + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
 
 		for (var i = 0; i < elms.length; i += 1) {
 			if (elms[i].type !== undefined && elms[i].type.toLowerCase() == 'color') {
@@ -44,15 +39,24 @@ var jsc = {
 					continue;
 				}
 			}
-			var m;
-			if (!elms[i].jscolor && elms[i].className && (m = elms[i].className.match(matchClass))) {
+
+			if (elms[i].jscolor) {
+				// jscolor is already installed on this element
+				continue;
+			}
+
+			var m, dataOpts;
+
+			if (
+				(dataOpts = jsc.getDataAttr(elms[i], 'jscolor')) !== null ||
+				(elms[i].className && (m = elms[i].className.match(matchClass)))
+			) {
 				var targetElm = elms[i];
 				var optsStr = null;
 
-				var dataOptions = jsc.getDataAttr(targetElm, 'jscolor');
-				if (dataOptions !== null) {
-					optsStr = dataOptions;
-				} else if (m[4]) {
+				if (dataOpts !== null) {
+					optsStr = dataOpts;
+				} else if (m && m[4]) {
 					optsStr = m[4];
 				}
 
@@ -65,19 +69,6 @@ var jsc = {
 					}
 				}
 				targetElm.jscolor = new jsc.jscolor(targetElm, opts);
-			}
-		}
-	},
-
-
-	tryUninstallOnElements : function (elms, className) {
-		var matchClass = jsc.getClassMatchRegExp(className);
-
-		for (var i = 0; i < elms.length; i += 1) {
-			if (elms[i].jscolor) {
-				var targetElm = elms[i];
-				targetElm.jscolor.destroy();
-				delete targetElm.jscolor;
 			}
 		}
 	},
@@ -136,11 +127,6 @@ var jsc = {
 		} else if (el.detachEvent) {
 			el.detachEvent('on' + evnt, func);
 		}
-	},
-
-
-	getClassMatchRegExp : function (className) {
-		return new RegExp('(^|\\s)(' + className + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
 	},
 
 
@@ -424,6 +410,15 @@ var jsc = {
 	},
 
 
+	setOption : function (option, value) {
+		if (typeof this[option] === 'undefined') {
+			jsc.warn('Unrecognized option \'' + option + '\'');
+			return false;
+		}
+		this[option] = value;
+	},
+
+
 	redrawPosition : function () {
 
 		if (jsc.picker && jsc.picker.owner) {
@@ -579,6 +574,20 @@ var jsc = {
 	},
 
 
+	onDocumentKeyUp : function (e) {
+		if (!e) { e = window.event; }
+
+		if (
+			(e.code && e.code === 'Enter' || e.keyCode === 13) ||
+			(e.code && e.code === 'Escape' || e.keyCode === 27)
+		) {
+			if (jsc.picker && jsc.picker.owner) {
+				jsc.picker.owner.hide();
+			}
+		}
+	},
+
+
 	onWindowResize : function (e) {
 		jsc.redrawPosition();
 	},
@@ -638,8 +647,8 @@ var jsc = {
 		case 'pad':
 			// if the slider is at the bottom, move it up
 			switch (jsc.getSliderComponent(thisObj)) {
-			case 's': if (thisObj.hsv[1] === 0) { thisObj.fromHSV(null, 100, null); }; break;
-			case 'v': if (thisObj.hsv[2] === 0) { thisObj.fromHSV(null, null, 100); }; break;
+			case 's': if (thisObj.hsv[1] === 0) { thisObj.fromHSVA(null, 100, null, null); }; break;
+			case 'v': if (thisObj.hsv[2] === 0) { thisObj.fromHSVA(null, null, 100, null); }; break;
 			}
 			jsc.setPad(thisObj, e, 0, 0);
 			break;
@@ -717,8 +726,8 @@ var jsc = {
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
 		switch (jsc.getPadYComponent(thisObj)) {
-		case 's': thisObj.fromHSV(xVal, yVal, null, jsc.leaveSld); break;
-		case 'v': thisObj.fromHSV(xVal, null, yVal, jsc.leaveSld); break;
+		case 's': thisObj.fromHSVA(xVal, yVal, null, null, jsc.leaveSld); break;
+		case 'v': thisObj.fromHSVA(xVal, null, yVal, null, jsc.leaveSld); break;
 		}
 	},
 
@@ -730,8 +739,8 @@ var jsc = {
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
 		switch (jsc.getSliderComponent(thisObj)) {
-		case 's': thisObj.fromHSV(null, yVal, null, jsc.leavePad); break;
-		case 'v': thisObj.fromHSV(null, null, yVal, jsc.leavePad); break;
+		case 's': thisObj.fromHSVA(null, yVal, null, null, jsc.leavePad); break;
+		case 'v': thisObj.fromHSVA(null, null, yVal, null, jsc.leavePad); break;
 		}
 	},
 
@@ -986,352 +995,130 @@ var jsc = {
 	})(),
 
 
-	/**
-	 * Creates a new color picker instance
-	 *
-	 * @param {(string|HTMLElement)} targetElement - The color picker will be shown next to this HTML element upon clicking it.
-	 *   The value can be either a HTML element or its ID.
-	 *
-	 * @param {object} [options] - List of configuration options for this color picker instance. E.g. <code>{width:80, backgroundColor:'#999'}</code>
-	 *
-	 * @constructor
-	 */
-	jscolor : function (targetElement, options) {
+	//
+	// Usage:
+	// var myColor = new jscolor(<targetElement> [, <options>])
+	//
+	// (you can use both 'new jscolor' and 'new JSColor')
+	//
 
+	jscolor : function (targetElement, opts) {
 
-		//////////////////////////////////////////////////////
 		// General options
 		//
-
-		/**
-		 * Initial HEX color. To change it later, use methods fromString(), fromHSV() and fromRGB().
-		 * @type {string}
-		 */
-		this.value = null;
-
-		/**
-		 * HTML Element that will be used to display and input the color code. If not specified, will default to targetElement.
-		 * @type {(string|HTMLElement)}
-		 */
-		this.valueElement = targetElement;
-
-		/**
-		 * HTML Element that will preview the picked color using CSS backgroundColor. If not specified, will default to targetElement.
-		 * @type {(string|HTMLElement)}
-		 */
-		this.styleElement = targetElement;
-
-		/**
-		 * Whether the associated text INPUT can be left empty.
-		 * @type {boolean}
-		 * @default true
-		 */
-		this.required = true;
-
-		/**
-		 * Whether to refine the entered color code (e.g. convert it to uppercase and remove trailing whitespace)
-		 * @type {boolean}
-		 * @default true
-		 */
-		this.refine = true;
-
-		/**
-		 * Whether to prefix the HEX color code with # symbol
-		 * @type {boolean}
-		 * @default false
-		 */
-		this.hash = false;
-
-		/**
-		 * Whether to uppercase the color code
-		 * @type {boolean}
-		 * @default true
-		 */
-		this.uppercase = true;
-
-		/**
-		 * A callback function to be called instantly every time the color changes (the value can be either a function or a string with javascript code)
-		 * @type {function|string}
-		 */
-		this.onFineChange = null;
-
-
-		//////////////////////////////////////////////////////
-		// Accessing the picked color
-		//
-
-		/**
-		 * Array containing the current color in the following format: [hue, saturation, value]. The ranges are: [0-360, 0-100, 0-100]
-		 * @type {array}
-		 * @readonly
-		 * @default [0, 0, 100]
-		 */
-		this.hsv = [0, 0, 100];
-
-		/**
-		 * Array containing the current color in the following format: [red, green, blue]. The ranges are: [0-255, 0-255, 0-255]
-		 * @type {array}
-		 * @readonly
-		 * @default [255, 255, 255]
-		 */
-		this.rgb = [255, 255, 255];
-
-
-		//////////////////////////////////////////////////////
-		// Color Picker options
-		//
-
-		/**
-		 * Width of the color palette (in px)
-		 * @type {number}
-		 * @default 181
-		 */
-		this.width = 181;
-
-		/**
-		 * Height of the color palette (in px)
-		 * @type {number}
-		 * @default 101
-		 */
-		this.height = 101;
-
-		/**
-		 * Whether to display the color picker when user clicks on its target element
-		 * @type {boolean}
-		 * @default true
-		 */
-		this.showOnClick = true;
-
-		/**
-		 * Layout of the color picker controls. Possible values: 'HSV', 'HVS', 'HS', 'HV'
-		 * @type {string}
-		 * @default 'HSV'
-		 */
-		this.mode = 'HSV';
-
-		/**
-		 * Position relative to the target element. Possible values: 'left', 'right', 'top', 'bottom'
-		 * @type {string}
-		 * @default 'bottom'
-		 */
-		this.position = 'bottom';
-
-		/**
-		 * Automatically change picker's position when there is not enough space for it.
-		 * @type {boolean}
-		 * @default true
-		 */
-		this.smartPosition = true;
-
-		/**
-		 * Size of the slider control (in px)
-		 * @type {number}
-		 * @default 16
-		 */
-		this.sliderSize = 16;
-
-		/**
-		 * Size of the cross-shaped pointer (in px)
-		 * @type {number}
-		 * @default 8
-		 */
-		this.crossSize = 8;
-
-		/**
-		 * Whether to display the Close button
-		 * @type {boolean}
-		 * @default false
-		 */
-		this.closable = false;
-
-		/**
-		 * Text displayed in the Close button
-		 * @type {string}
-		 * @default 'Close'
-		 */
-		this.closeText = 'Close';
-
-		/**
-		 * Button color (must be a valid CSS color)
-		 * @type {string}
-		 * @default '#000000'
-		 */
-		this.buttonColor = '#000000';
-
-		/**
-		 * Height of the button (in px)
-		 * @type {number}
-		 * @default 18
-		 */
-		this.buttonHeight = 18;
-
-		/**
-		 * Color picker's padding (in px)
-		 * @type {number}
-		 * @default 12
-		 */
-		this.padding = 12;
-
-		/**
-		 * Background color of the color picker (must be a valid CSS color)
-		 * @type {string}
-		 * @default '#FFFFFF'
-		 */
-		this.backgroundColor = '#FFFFFF';
-
-		/**
-		 * Thickness of the color picker's border (in px)
-		 * @type {number}
-		 * @default 1
-		 */
-		this.borderWidth = 1;
-
-		/**
-		 * Border color of the color picker box (must be a valid CSS color)
-		 * @type {string}
-		 * @default '#BBBBBB'
-		 */
-		this.borderColor = '#BBBBBB';
-
-		/**
-		 * Border radius of the color picker (in px)
-		 * @type {number}
-		 * @default 8
-		 */
-		this.borderRadius = 8;
-
-		/**
-		 * Thickness of the color picker's inner borders (in px)
-		 * @type {number}
-		 * @default 1
-		 */
-		this.insetWidth = 1;
-
-		/**
-		 * Color of the color picker's inner borders (must be a valid CSS color)
-		 * @type {string}
-		 * @default '#BBBBBB'
-		 */
-		this.insetColor = '#BBBBBB';
-
-		/**
-		 * Whether to display the shadow
-		 * @type {boolean}
-		 * @default true
-		 */
-		this.shadow = true;
-
-		/**
-		 * Blur radius of the shadow (in px)
-		 * @type {number}
-		 * @default 15
-		 */
-		this.shadowBlur = 15;
-
-		/**
-		 * Color of the shadow (must be a valid CSS color)
-		 * @type {string}
-		 * @default 'rgba(0,0,0,0.2)'
-		 */
-		this.shadowColor = 'rgba(0,0,0,0.2)';
-
-		/**
-		 * Color of the pointers in the palette and slider (must be a valid CSS color)
-		 * @type {string}
-		 * @default '#4C4C4C'
-		 */
-		this.pointerColor = '#4C4C4C';
-
-		/**
-		 * Border color of the pointers in the palette and slider (must be a valid CSS color)
-		 * @type {string}
-		 * @default '#FFFFFF'
-		 */
-		this.pointerBorderColor = '#FFFFFF';
-
-		/**
-		 * Border size of the pointers in the palette and slider (in px)
-		 * @type {number}
-		 * @default 1
-		 */
-        this.pointerBorderWidth = 1;
-
-		/**
-		 * Thickness of the pointers in the palette and slider (in px)
-		 * @type {number}
-		 * @default 2
-		 */
-        this.pointerThickness = 2;
-
-		/**
-		 * Z-index of the color picker
-		 * @type {number}
-		 * @default 1000
-		 */
-		this.zIndex = 1000;
-
-
-		// Misc
-		//
-		this.activeClass = 'jscolor-active'; // class name to be set to the target element when a picker window is open on it
-		this.container = null; // where to append the color picker (BODY element by default)
+		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
+		this.valueElement = targetElement; // element that will be used to display and input the color code
+		this.styleElement = targetElement; // element that will preview the picked color using CSS backgroundColor
+		this.required = true; // whether the associated text <input> can be left empty
+		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
+		this.hash = false; // whether to prefix the HEX color code with # symbol
+		this.uppercase = true; // whether to show the color code in upper case
+		this.onFineChange = null; // called instantly every time the color changes (value can be either a function or a string with javascript code)
+		this.activeClass = 'jscolor-active'; // class to be set to the target element when a picker window is open on it
+		this.overwriteImportant = false; // whether to overwrite colors of styleElement using !important
 		this.minS = 0; // min allowed saturation (0 - 100)
 		this.maxS = 100; // max allowed saturation (0 - 100)
 		this.minV = 0; // min allowed value (brightness) (0 - 100)
 		this.maxV = 100; // max allowed value (brightness) (0 - 100)
+		this.minA = 0.0; // min allowed alpha (opacity) (0.0 - 1.0)
+		this.maxA = 1.0; // max allowed alpha (opacity) (0.0 - 1.0)
+
+		// Accessing the picked color
+		//
+		this.hsv = [0, 0, 100]; // (read-only)  hue, saturation, value  [0-360, 0-100, 0-100]
+		this.rgb = [255, 255, 255]; // (read-only)  red, green, blue  [0-255, 0-255, 0-255]
+		this.alpha = 1.0; // (read-only) alpha channel (opacity)  0.0-1.0
+
+		// Color Picker options
+		//
+		this.width = 181; // width of color palette (in px)
+		this.height = 101; // height of color palette (in px)
+		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
+		this.mode = 'HSV'; // HSV | HVS | HS | HV - layout of the color picker controls
+		this.position = 'bottom'; // left | right | top | bottom - position relative to the target element
+		this.smartPosition = true; // automatically change picker position when there is not enough space for it
+		this.sliderSize = 16; // px
+		this.crossSize = 8; // px
+		this.closable = false; // whether to display the Close button
+		this.closeText = 'Close';
+		this.buttonColor = '#000000'; // CSS color
+		this.buttonHeight = 18; // px
+		this.padding = 12; // px
+		this.backgroundColor = '#FFFFFF'; // CSS color
+		this.borderWidth = 1; // px
+		this.borderColor = '#BBBBBB'; // CSS color
+		this.borderRadius = 8; // px
+		this.insetWidth = 1; // px
+		this.insetColor = '#BBBBBB'; // CSS color
+		this.shadow = true; // whether to display shadow
+		this.shadowBlur = 15; // px
+		this.shadowColor = 'rgba(0,0,0,0.2)'; // CSS color
+		this.pointerColor = '#4C4C4C'; // px
+		this.pointerBorderColor = '#FFFFFF'; // CSS color
+		this.pointerBorderWidth = 1; // px
+		this.pointerThickness = 2; // px
+		this.zIndex = 1000;
+		this.container = null; // where to append the color picker (BODY element by default)
 
 
-		for (var opt in options) {
-			if (options.hasOwnProperty(opt)) {
-				this[opt] = options[opt];
+		// let's process the DEPRECATED jscolor.options property (this will be later removed)
+		if (jsc.jscolor.options) {
+			// let's set custom default options, if specified
+			for (var opt in jsc.jscolor.options) {
+				if (jsc.jscolor.options.hasOwnProperty(opt)) {
+					jsc.setOption.call(this, opt, jsc.jscolor.options[opt]);
+				}
 			}
 		}
 
 
-		/**
-		 * Destroy the color picker
-		 */
-		this.destroy = function () {
-			// hide the color picker
-			if (isPickerOwner()) {
-				detachPicker();
+		// let's apply configuration presets
+		//
+		var presetsArr = [];
+
+		if (opts.preset) {
+			if (typeof opts.preset === 'string') {
+				presetsArr = opts.preset.split(/\s+/);
+			} else if (Array.isArray(opts.preset)) {
+				presetsArr = opts.preset.slice(); // to clone
+			} else {
+				jsc.warn('Unrecognized preset value');
 			}
+		}
 
-			// restore original targetElement properties
-			if (this.targetElement) {
-				this.targetElement._jscLinkedInstance = null;
+		// always use the 'default' preset as a baseline
+		presetsArr.push('default');
 
-				if (this.targetElement.hasOwnProperty('_origOnclick')) {
-					this.targetElement.onclick = this.targetElement._origOnclick;
+		// let's apply the presets in reverse order, so that should there be any overlapping options,
+		// then the formerly listed preset overrides the latter
+		for (var i = presetsArr.length - 1; i >= 0; i -= 1) {
+			var pres = presetsArr[i];
+			if (!pres) {
+				continue; // preset is empty string
+			}
+			if (!jsc.jscolor.presets.hasOwnProperty(pres)) {
+				jsc.warn('Unknown preset \'' + pres + '\'');
+				continue;
+			}
+			for (var opt in jsc.jscolor.presets[pres]) {
+				if (jsc.jscolor.presets[pres].hasOwnProperty(opt)) {
+					jsc.setOption.call(this, opt, jsc.jscolor.presets[pres][opt]);
 				}
 			}
+		}
 
-			// restore original valueElement properties
-			if (this.valueElement) {
-				jsc.detachEvent(this.valueElement, 'keyup', updateField);
-				jsc.detachEvent(this.valueElement, 'input', updateField);
-				jsc.detachEvent(this.valueElement, 'blur', blurValue);
 
-				if (this.valueElement.hasOwnProperty('_jscOrigValue')) {
-					this.valueElement.value = this.valueElement._jscOrigValue;
-				}
-				if (this.valueElement.hasOwnProperty('_jscOrigAutocomplete')) {
-					this.valueElement.setAttribute('autocomplete', this.valueElement._jscOrigAutocomplete);
+		// let's set specific options for this color picker
+		var nonProperties = ['preset']; // these options won't be set as instance properties
+		for (var opt in opts) {
+			if (opts.hasOwnProperty(opt)) {
+				if (nonProperties.indexOf(opt) === -1) {
+					jsc.setOption.call(this, opt, opts[opt]);
 				}
 			}
-
-			// restore original styleElement properties
-			if (this.styleElement && this.styleElement.hasOwnProperty('_jscOrigStyle')) {
-				this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
-				this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
-				this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
-			}
-		};
+		}
 
 
-		/**
-		 * Hide the color picker
-		 */
 		this.hide = function () {
 			if (isPickerOwner()) {
 				detachPicker();
@@ -1339,9 +1126,6 @@ var jsc = {
 		};
 
 
-		/**
-		 * Show the color picker
-		 */
 		this.show = function () {
 			drawPicker();
 		};
@@ -1397,16 +1181,28 @@ var jsc = {
 				if (this.hash) { value = '#' + value; }
 
 				if (jsc.isElementType(this.valueElement, 'input')) {
-					this.valueElement.value = value;
+					if (this.valueElement.value !== value) {
+						this.valueElement.value = value;
+					}
 				} else {
 					this.valueElement.innerHTML = value;
 				}
 			}
 			if (!(flags & jsc.leaveStyle)) {
 				if (this.styleElement) {
+					var bgColor = '#' + this.toString();
+					var fgColor = this.isLight() ? '#000' : '#FFF';
+
 					this.styleElement.style.backgroundImage = 'none';
-					this.styleElement.style.backgroundColor = '#' + this.toString();
-					this.styleElement.style.color = this.isLight() ? '#000' : '#FFF';
+					this.styleElement.style.backgroundColor = bgColor;
+					this.styleElement.style.color = fgColor;
+
+					if (this.overwriteImportant) {
+						this.styleElement.setAttribute('style',
+							'background: ' + bgColor + ' !important; ' +
+							'color: ' + fgColor + ' !important;'
+						);
+					}
 				}
 			}
 			if (!(flags & jsc.leavePad) && isPickerOwner()) {
@@ -1418,15 +1214,12 @@ var jsc = {
 		};
 
 
-		/**
-		 * Set current color based on the passed HSV components (Hue, Saturation, Value).
-		 * If you want to set only some of the components, set the other ones to null, which will leave them unchanged.
-		 *
-		 * @param {?number} h - hue in range 0 - 360
-		 * @param {?number} s - saturation in range 0 - 100
-		 * @param {?number} v - value in range 0 - 100
-		 */
-		this.fromHSV = function (h, s, v, flags) {
+		// h: 0-360
+		// s: 0-100
+		// v: 0-100
+		// a: 0.0-1.0
+		//
+		this.fromHSVA = function (h, s, v, a, flags) { // null = don't change
 			if (h !== null) {
 				if (isNaN(h)) { return false; }
 				h = Math.max(0, Math.min(360, h));
@@ -1439,6 +1232,10 @@ var jsc = {
 				if (isNaN(v)) { return false; }
 				v = Math.max(0, Math.min(100, this.maxV, v), this.minV);
 			}
+			if (a !== null) {
+				if (isNaN(a)) { return false; }
+				this.alpha = Math.max(0, Math.min(1, this.maxA, a), this.minA);
+			}
 
 			this.rgb = HSV_RGB(
 				h===null ? this.hsv[0] : (this.hsv[0]=h),
@@ -1450,15 +1247,12 @@ var jsc = {
 		};
 
 
-		/**
-		 * Set current color based on the passed RGB components (Red, Green, Blue).
-		 * If you want to set only some of the components, set the other ones to null, which will leave them unchanged.
-		 *
-		 * @param {?number} r - red component in range 0 - 255
-		 * @param {?number} g - green component in range 0 - 255
-		 * @param {?number} b - blue component in range 0 - 255
-		 */
-		this.fromRGB = function (r, g, b, flags) {
+		// r: 0-255
+		// g: 0-255
+		// b: 0-255
+		// a: 0.0-1.0
+		//
+		this.fromRGBA = function (r, g, b, a, flags) { // null = don't change
 			if (r !== null) {
 				if (isNaN(r)) { return false; }
 				r = Math.max(0, Math.min(255, r));
@@ -1470,6 +1264,10 @@ var jsc = {
 			if (b !== null) {
 				if (isNaN(b)) { return false; }
 				b = Math.max(0, Math.min(255, b));
+			}
+			if (a !== null) {
+				if (isNaN(a)) { return false; }
+				this.alpha = Math.max(0, Math.min(1, this.maxA, a), this.minA);
 			}
 
 			var hsv = RGB_HSV(
@@ -1495,11 +1293,28 @@ var jsc = {
 		};
 
 
-		/**
-		 * Set current color based on the passed string.
-		 *
-		 * @param {string} str - Color code. Either in HEX format (three-letter or six-letter notation) or in CSS rgb() notation.
-		 */
+		// DEPRECATED. Use .fromHSVA() instead
+		//
+		// h: 0-360
+		// s: 0-100
+		// v: 0-100
+		//
+		this.fromHSV = function (h, s, v, flags) { // null = don't change
+			return this.fromHSVA(h, s, v, null, flags);
+		};
+
+
+		// DEPRECATED. Use .fromRGBA() instead
+		//
+		// r: 0-255
+		// g: 0-255
+		// b: 0-255
+		//
+		this.fromRGB = function (r, g, b, flags) { // null = don't change
+			return this.fromRGBA(r, g, b, null, flags);
+		};
+
+
 		this.fromString = function (str, flags) {
 			var m;
 			if (m = str.match(/^\W*([0-9A-F]{3}([0-9A-F]{3})?)\W*$/i)) {
@@ -1508,18 +1323,20 @@ var jsc = {
 
 				if (m[1].length === 6) {
 					// 6-char notation
-					this.fromRGB(
+					this.fromRGBA(
 						parseInt(m[1].substr(0,2),16),
 						parseInt(m[1].substr(2,2),16),
 						parseInt(m[1].substr(4,2),16),
+						null,
 						flags
 					);
 				} else {
 					// 3-char notation
-					this.fromRGB(
+					this.fromRGBA(
 						parseInt(m[1].charAt(0) + m[1].charAt(0),16),
 						parseInt(m[1].charAt(1) + m[1].charAt(1),16),
 						parseInt(m[1].charAt(2) + m[1].charAt(2),16),
+						null,
 						flags
 					);
 				}
@@ -1528,7 +1345,7 @@ var jsc = {
 			} else if (m = str.match(/^\W*rgba?\(([^)]*)\)\W*$/i)) {
 				var params = m[1].split(',');
 				var re = /^\s*(\d*)(\.\d+)?\s*$/;
-				var mR, mG, mB;
+				var mR, mG, mB, mA;
 				if (
 					params.length >= 3 &&
 					(mR = params[0].match(re)) &&
@@ -1538,7 +1355,16 @@ var jsc = {
 					var r = parseFloat((mR[1] || '0') + (mR[2] || ''));
 					var g = parseFloat((mG[1] || '0') + (mG[2] || ''));
 					var b = parseFloat((mB[1] || '0') + (mB[2] || ''));
-					this.fromRGB(r, g, b, flags);
+					var a = null; // alpha
+
+					if (
+						params.length >= 4 &&
+						(mA = params[3].match(re))
+					) {
+						a = parseFloat((mA[1] || '0') + (mA[2] || ''));
+					}
+
+					this.fromRGBA(r, g, b, a, flags);
 					return true;
 				}
 			}
@@ -1546,57 +1372,50 @@ var jsc = {
 		};
 
 
-		/**
-		 * Return the current color as a HEX string.
-		 *
-		 * @returns {string} - Current color in HEX format (without the # character)
-		 */
 		this.toString = function () {
 			return (
-				(0x100 | Math.round(this.rgb[0])).toString(16).substr(1) +
-				(0x100 | Math.round(this.rgb[1])).toString(16).substr(1) +
-				(0x100 | Math.round(this.rgb[2])).toString(16).substr(1)
+				('0' + Math.round(this.rgb[0]).toString(16)).substr(-2) +
+				('0' + Math.round(this.rgb[1]).toString(16)).substr(-2) +
+				('0' + Math.round(this.rgb[2]).toString(16)).substr(-2)
 			);
 		};
 
 
-		/**
-		 * Return the current color as a HEX string with # character
-		 *
-		 * @returns {string} - Current color in uppercase HEX format and including the # character.
-		 */
 		this.toHEXString = function () {
 			return '#' + this.toString().toUpperCase();
 		};
 
 
-		/**
-		 * Return the current color in CSS rgb() notation
-		 *
-		 * @returns {string} - Current color in CSS rgb() notation
-		 */
 		this.toRGBString = function () {
 			return ('rgb(' +
 				Math.round(this.rgb[0]) + ',' +
 				Math.round(this.rgb[1]) + ',' +
-				Math.round(this.rgb[2]) + ')'
+				Math.round(this.rgb[2]) +
+			')');
+		};
+
+
+		this.toRGBAString = function () {
+			return ('rgba(' +
+				Math.round(this.rgb[0]) + ',' +
+				Math.round(this.rgb[1]) + ',' +
+				Math.round(this.rgb[2]) + ',' +
+				(Math.round(this.alpha * 100) / 100) +
+			')');
+		};
+
+
+		this.toGrayscale = function () {
+			return (
+				0.213 * this.rgb[0] +
+				0.715 * this.rgb[1] +
+				0.072 * this.rgb[2]
 			);
 		};
 
 
-		/**
-		 * Returns true if the current color is light enough to make good contrast with black, and
-		 * returns false if the current color is dark enough to make good contrast with white.
-		 *
-		 * @returns {boolean} - True if the current color is light
-		 */
 		this.isLight = function () {
-			return (
-				0.213 * this.rgb[0] +
-				0.715 * this.rgb[1] +
-				0.072 * this.rgb[2] >
-				255 / 2
-			);
+			return this.toGrayscale() > 255 / 2;
 		};
 
 
@@ -1767,15 +1586,19 @@ var jsc = {
 			var padCursor = 'crosshair';
 
 			// wrap
+			p.wrap.className = 'jscolor-picker-wrap';
 			p.wrap.style.clear = 'both';
 			p.wrap.style.width = (dims[0] + 2 * THIS.borderWidth) + 'px';
 			p.wrap.style.height = (dims[1] + 2 * THIS.borderWidth) + 'px';
 			p.wrap.style.zIndex = THIS.zIndex;
 
 			// picker
+			p.box.className = 'jscolor-picker';
 			p.box.style.width = dims[0] + 'px';
 			p.box.style.height = dims[1] + 'px';
 
+			// picker shadow
+			p.boxS.className = 'jscolor-picker-shadow';
 			p.boxS.style.position = 'absolute';
 			p.boxS.style.left = '0';
 			p.boxS.style.top = '0';
@@ -1784,6 +1607,7 @@ var jsc = {
 			jsc.setBorderRadius(p.boxS, borderRadius + 'px');
 
 			// picker border
+			p.boxB.className = 'jscolor-picker-border';
 			p.boxB.style.position = 'relative';
 			p.boxB.style.border = THIS.borderWidth + 'px solid';
 			p.boxB.style.borderColor = THIS.borderColor;
@@ -1923,6 +1747,7 @@ var jsc = {
 				var outsetColor = insetColors.length < 2 ? insetColors[0] : insetColors[1] + ' ' + insetColors[0] + ' ' + insetColors[0] + ' ' + insetColors[1];
 				p.btn.style.borderColor = outsetColor;
 			}
+			p.btn.className = 'jscolor-btn-close';
 			p.btn.style.display = THIS.closable ? 'block' : 'none';
 			p.btn.style.position = 'absolute';
 			p.btn.style.left = THIS.padding + 'px';
@@ -2035,13 +1860,7 @@ var jsc = {
 		}
 
 
-		function updateField () {
-			THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
-			jsc.dispatchFineChange(THIS);
-		}
-
-
-		function blurValue () {
+		function handleValueBlur () {
 			THIS.importColor();
 		}
 
@@ -2083,27 +1902,50 @@ var jsc = {
 		// (e.g. in Safari)
 		if (jsc.isElementType(this.targetElement, 'button')) {
 			if (this.targetElement.onclick) {
-				this.targetElement._origOnclick = this.targetElement.onclick;
 				var origCallback = this.targetElement.onclick;
 				this.targetElement.onclick = function (evt) {
 					origCallback.call(this, evt);
 					return false;
 				};
 			} else {
-				this.targetElement._origOnclick = null;
 				this.targetElement.onclick = function () { return false; };
 			}
 		}
 
+		/*
+		var elm = this.targetElement;
+		do {
+			// If the target element or one of its offsetParents has fixed position,
+			// then use fixed positioning instead
+			//
+			// Note: In Firefox, getComputedStyle returns null in a hidden iframe,
+			// that's why we need to check if the returned style object is non-empty
+			var currStyle = jsc.getStyle(elm);
+			if (currStyle && currStyle.position.toLowerCase() === 'fixed') {
+				this.fixed = true;
+			}
+
+			if (elm !== this.targetElement) {
+				// attach onParentScroll so that we can recompute the picker position
+				// when one of the offsetParents is scrolled
+				if (!elm._jscEventsAttached) {
+					jsc.attachEvent(elm, 'scroll', jsc.onParentScroll);
+					elm._jscEventsAttached = true;
+				}
+			}
+		} while ((elm = elm.offsetParent) && !jsc.isElementType(elm, 'body'));
+		*/
+
 		// valueElement
 		if (this.valueElement) {
 			if (jsc.isElementType(this.valueElement, 'input')) {
-				this.valueElement._jscOrigValue = this.valueElement.value;
-				this.valueElement._jscOrigAutocomplete = this.valueElement.getAttribute('autocomplete');
-
-				jsc.attachEvent(this.valueElement, 'keyup', updateField);
-				jsc.attachEvent(this.valueElement, 'input', updateField);
-				jsc.attachEvent(this.valueElement, 'blur', blurValue);
+				var handleValueInput = function () {
+					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
+					jsc.dispatchFineChange(THIS);
+				};
+				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput);
+				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
+				jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
 				this.valueElement.setAttribute('autocomplete', 'off');
 			}
 		}
@@ -2132,9 +1974,43 @@ var jsc = {
 //================================
 // Public properties and methods
 //================================
+//
+// These will be publicly available via jscolor.<name> and JSColor.<name>
+//
 
 
-// By default, search for all elements with class="jscolor" and install a color picker on them.
+// Initializes jscolor on current DOM tree
+jsc.jscolor.init = function () {
+	if (jsc.jscolor.lookupClass) {
+		jsc.jscolor.installByClassName(jsc.jscolor.lookupClass);
+	}
+};
+
+
+jsc.jscolor.presets = {};
+
+jsc.jscolor.presets['default'] = {}; // baseline for customization
+
+jsc.jscolor.presets['light'] = { backgroundColor:'#FFFFFF', insetColor:'#BBBBBB' }; // default color scheme
+jsc.jscolor.presets['dark'] = { backgroundColor:'#333333', insetColor:'#999999' };
+
+jsc.jscolor.presets['small'] = { width:101, height:101 };
+jsc.jscolor.presets['medium'] = { width:181, height:101 }; // default size
+jsc.jscolor.presets['large'] = { width:271, height:151 };
+
+jsc.jscolor.presets['thin'] = { borderWidth:1, insetWidth:1, pointerBorderWidth:1 }; // default thickness
+jsc.jscolor.presets['thick'] = { borderWidth:2, insetWidth:2, pointerBorderWidth:2 };
+
+
+// DEPRECATED. Use jscolor.presets.default instead.
+//
+// Custom default options for all color pickers, e.g. { hash: true, width: 300 }
+jsc.jscolor.options = {};
+
+
+// DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
+//
+// By default, we'll search for all elements with class="jscolor" and install a color picker on them.
 //
 // You can change what class name will be looked for by setting the property jscolor.lookupClass
 // anywhere in your HTML document. To completely disable the automatic lookup, set it to null.
@@ -2142,6 +2018,9 @@ var jsc = {
 jsc.jscolor.lookupClass = 'jscolor';
 
 
+// DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
+//
+// Install jscolor on all elements that have the specified class name
 jsc.jscolor.installByClassName = function (className) {
 	var inputElms = document.getElementsByTagName('input');
 	var buttonElms = document.getElementsByTagName('button');
@@ -2151,19 +2030,14 @@ jsc.jscolor.installByClassName = function (className) {
 };
 
 
-jsc.jscolor.uninstallByClassName = function (className) {
-	var inputElms = document.getElementsByTagName('input');
-	var buttonElms = document.getElementsByTagName('button');
-
-	jsc.tryUninstallOnElements(inputElms, className);
-	jsc.tryUninstallOnElements(buttonElms, className);
-};
-
-
 jsc.register();
 
 
 return jsc.jscolor;
 
 
-})(); }
+})(); // END window.jscolor
+
+window.JSColor = window.jscolor; // 'JSColor' is an alias to 'jscolor'
+
+} // endif
