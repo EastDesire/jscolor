@@ -485,6 +485,61 @@ var jsc = {
 	},
 
 
+	// r: 0-255
+	// g: 0-255
+	// b: 0-255
+	//
+	// returns: [ 0-360, 0-100, 0-100 ]
+	//
+	RGB_HSV : function (r, g, b) {
+		r /= 255;
+		g /= 255;
+		b /= 255;
+		var n = Math.min(Math.min(r,g),b);
+		var v = Math.max(Math.max(r,g),b);
+		var m = v - n;
+		if (m === 0) { return [ null, 0, 100 * v ]; }
+		var h = r===n ? 3+(b-g)/m : (g===n ? 5+(r-b)/m : 1+(g-r)/m);
+		return [
+			60 * (h===6?0:h),
+			100 * (m/v),
+			100 * v
+		];
+	},
+
+
+	// h: 0-360
+	// s: 0-100
+	// v: 0-100
+	//
+	// returns: [ 0-255, 0-255, 0-255 ]
+	//
+	HSV_RGB : function (h, s, v) {
+		var u = 255 * (v / 100);
+
+		if (h === null) {
+			return [ u, u, u ];
+		}
+
+		h /= 60;
+		s /= 100;
+
+		var i = Math.floor(h);
+		var f = i%2 ? h-i : 1-(h-i);
+		var m = u * (1 - s);
+		var n = u * (1 - s * f);
+		switch (i) {
+			case 6:
+			case 0: return [u,n,m];
+			case 1: return [n,u,m];
+			case 2: return [m,u,n];
+			case 3: return [m,n,u];
+			case 4: return [n,m,u];
+			case 5: return [u,m,n];
+		}
+	},
+
+
 	redrawPosition : function () {
 
 		if (jsc.picker && jsc.picker.owner) {
@@ -1205,10 +1260,11 @@ var jsc = {
 		};
 
 
-		this.importExportColor = function () {
+		/* TODO: rem
+		this.exportColor = function () {
 			if (!(this.valueElement && jsc.isElementType(this.valueElement, 'input'))) {
 				// not an input element -> no value to be imported
-				this.exportColor();
+				this.exportCurrentColor();
 				return;
 			}
 
@@ -1221,7 +1277,7 @@ var jsc = {
 					this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 					this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 				}
-				this.exportColor(jsc.leaveValue | jsc.leaveStyle);
+				this.exportCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				return;
 			}
 
@@ -1233,19 +1289,63 @@ var jsc = {
 						this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 						this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 					}
-					this.exportColor(jsc.leaveValue | jsc.leaveStyle);
+					this.exportCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				}
 				return;
 			}
 
 			// try to parse input's value
-			this.fromString(this.valueElement.value) || this.exportColor();
+			this.fromString(this.valueElement.value) || this.exportCurrentColor();
+		};
+		*/
+
+
+		this.exportColor = function (str) {
+			/*
+			if (!(this.valueElement && jsc.isElementType(this.valueElement, 'input'))) {
+				// not an input element -> no value to be imported
+				this.exportCurrentColor();
+				return;
+			}
+			*/
+
+			// leave empty value (or just whitespace)
+			if (!this.required && /^\s*$/.test(str)) {
+				// input's value is empty -> restore the original style
+				if (this.styleElement) {
+					this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
+					this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
+					this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
+				}
+				this.exportCurrentColor(jsc.leaveValue | jsc.leaveStyle);
+				return;
+			}
+
+			if (!this.refine) {
+				if (!this.fromString(str, jsc.leaveValue)) {
+					// input's value could not be parsed -> restore the original style
+					if (this.styleElement) {
+						this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
+						this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
+						this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
+					}
+					this.exportCurrentColor(jsc.leaveValue | jsc.leaveStyle);
+				}
+				return;
+			}
+
+			if (!this.fromString(str)) {
+				// could not parse the color - let's just export the current color
+				this.exportCurrentColor();
+			}
 		};
 
 
-		this.exportColor = function (flags) {
+		this.exportCurrentColor = function (flags) {
+
 			if (!(flags & jsc.leaveValue) && this.valueElement) {
 				var value = this.toString();
+
 				// TODO: this is only for 'hex' format
 				if (!this.uppercase) { value = value.toLowerCase(); }
 				if (!this.hash) { value = value.replace(/^#/, ''); }
@@ -1258,6 +1358,7 @@ var jsc = {
 					this.valueElement.innerHTML = value;
 				}
 			}
+
 			if (!(flags & jsc.leaveStyle)) {
 				if (this.styleElement) {
 					var bgColor = this.toHEXString();
@@ -1275,9 +1376,11 @@ var jsc = {
 					}
 				}
 			}
+
 			if (!(flags & jsc.leavePad) && isPickerOwner()) {
 				redrawPad();
 			}
+
 			if (!(flags & jsc.leaveSld) && isPickerOwner()) {
 				redrawSld();
 			}
@@ -1307,13 +1410,13 @@ var jsc = {
 				this.alpha = Math.max(0, Math.min(1, this.maxA, a), this.minA);
 			}
 
-			this.rgb = HSV_RGB(
+			this.rgb = jsc.HSV_RGB(
 				h===null ? this.hsv[0] : (this.hsv[0]=h),
 				s===null ? this.hsv[1] : (this.hsv[1]=s),
 				v===null ? this.hsv[2] : (this.hsv[2]=v)
 			);
 
-			this.exportColor(flags);
+			this.exportCurrentColor(flags);
 		};
 
 
@@ -1340,7 +1443,7 @@ var jsc = {
 				this.alpha = Math.max(0, Math.min(1, this.maxA, a), this.minA);
 			}
 
-			var hsv = RGB_HSV(
+			var hsv = jsc.RGB_HSV(
 				r===null ? this.rgb[0] : r,
 				g===null ? this.rgb[1] : g,
 				b===null ? this.rgb[2] : b
@@ -1354,12 +1457,12 @@ var jsc = {
 			this.hsv[2] = hsv[2]===null ? null : Math.max(0, this.minV, Math.min(100, this.maxV, hsv[2]));
 
 			// update RGB according to final HSV, as some values might be trimmed
-			var rgb = HSV_RGB(this.hsv[0], this.hsv[1], this.hsv[2]);
+			var rgb = jsc.HSV_RGB(this.hsv[0], this.hsv[1], this.hsv[2]);
 			this.rgb[0] = rgb[0];
 			this.rgb[1] = rgb[1];
 			this.rgb[2] = rgb[2];
 
-			this.exportColor(flags);
+			this.exportCurrentColor(flags);
 		};
 
 
@@ -1485,61 +1588,6 @@ var jsc = {
 				}
 			} while ((elm = elm.parentNode) && !jsc.isElementType(elm, 'body'));
 		};
-
-
-		// r: 0-255
-		// g: 0-255
-		// b: 0-255
-		//
-		// returns: [ 0-360, 0-100, 0-100 ]
-		//
-		function RGB_HSV (r, g, b) {
-			r /= 255;
-			g /= 255;
-			b /= 255;
-			var n = Math.min(Math.min(r,g),b);
-			var v = Math.max(Math.max(r,g),b);
-			var m = v - n;
-			if (m === 0) { return [ null, 0, 100 * v ]; }
-			var h = r===n ? 3+(b-g)/m : (g===n ? 5+(r-b)/m : 1+(g-r)/m);
-			return [
-				60 * (h===6?0:h),
-				100 * (m/v),
-				100 * v
-			];
-		}
-
-
-		// h: 0-360
-		// s: 0-100
-		// v: 0-100
-		//
-		// returns: [ 0-255, 0-255, 0-255 ]
-		//
-		function HSV_RGB (h, s, v) {
-			var u = 255 * (v / 100);
-
-			if (h === null) {
-				return [ u, u, u ];
-			}
-
-			h /= 60;
-			s /= 100;
-
-			var i = Math.floor(h);
-			var f = i%2 ? h-i : 1-(h-i);
-			var m = u * (1 - s);
-			var n = u * (1 - s * f);
-			switch (i) {
-				case 6:
-				case 0: return [u,n,m];
-				case 1: return [n,u,m];
-				case 2: return [m,u,n];
-				case 3: return [m,n,u];
-				case 4: return [n,m,u];
-				case 5: return [u,m,n];
-			}
-		}
 
 
 		function detachPicker () {
@@ -1853,8 +1901,8 @@ var jsc = {
 			// redraw the slider
 			switch (jsc.getSliderComponent(THIS)) {
 			case 's':
-				var rgb1 = HSV_RGB(THIS.hsv[0], 100, THIS.hsv[2]);
-				var rgb2 = HSV_RGB(THIS.hsv[0], 0, THIS.hsv[2]);
+				var rgb1 = jsc.HSV_RGB(THIS.hsv[0], 100, THIS.hsv[2]);
+				var rgb2 = jsc.HSV_RGB(THIS.hsv[0], 0, THIS.hsv[2]);
 				var color1 = 'rgb(' +
 					Math.round(rgb1[0]) + ',' +
 					Math.round(rgb1[1]) + ',' +
@@ -1866,7 +1914,7 @@ var jsc = {
 				jsc.picker.sldGrad.draw(THIS.sliderSize, THIS.height, color1, color2);
 				break;
 			case 'v':
-				var rgb = HSV_RGB(THIS.hsv[0], THIS.hsv[1], 100);
+				var rgb = jsc.HSV_RGB(THIS.hsv[0], THIS.hsv[1], 100);
 				var color1 = 'rgb(' +
 					Math.round(rgb[0]) + ',' +
 					Math.round(rgb[1]) + ',' +
@@ -1898,7 +1946,8 @@ var jsc = {
 
 
 		function handleValueBlur () {
-			THIS.importExportColor();
+			// TODO: test
+			THIS.exportColor(THIS.valueElement.value);
 		}
 
 
@@ -2008,27 +2057,31 @@ var jsc = {
 
 			if (this.value) {
 				// detect format from picker's 'value' option
-				var color = parseColorString(this.value);
+				var color = jsc.parseColorString(this.value);
 				if (color) {
 					this.format = color.format;
 				}
 
 			} else if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
 				// detect format from input's 'value' attribute
-				var color = parseColorString(this.valueElement.value);
+				var color = jsc.parseColorString(this.valueElement.value);
 				if (color) {
 					this.format = color.format;
 				}
 			}
 		}
 
-		if (this.value) {
-			// Try to set the color from picker's 'value' option and if unsuccessful,
-			// export the current color
-			this.fromString(this.value) || this.exportColor();
-		} else {
+
+		if (this.value !== null) {
+			this.exportColor(this.value);
+
+		} else if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
 			// no 'value' option specified - try to find the color in input's 'value' attribute
-			this.importExportColor();
+			this.exportColor(this.valueElement.value);
+
+		} else {
+			// nothing to import the color from -> let's just export the current color
+			this.exportCurrentColor();
 		}
 	}
 
