@@ -1128,8 +1128,7 @@ var jsc = {
 		// General options
 		//
 		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
-		this.format = null; // null | 'hex' | 'rgb' | 'rgba' - Format of the input/output value. null = auto-detect from value format
-		this.anyFormat = false; // when True, format will keep adapting according to current input value
+		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
 		this.valueElement = targetElement; // element that will be used to display and input the color code
 		this.styleElement = targetElement; // element that will preview the picked color using CSS backgroundColor
 		this.required = true; // whether the associated text <input> can be left empty
@@ -1300,8 +1299,7 @@ var jsc = {
 			if (!(flags & jsc.leaveValue) && this.valueElement) {
 				var value = this.toString();
 
-				if (this.format.toLowerCase() === 'hex') {
-					// TODO: test
+				if (this._currentFormat === 'hex') {
 					if (!this.uppercase) { value = value.toLowerCase(); }
 					if (!this.hash) { value = value.replace(/^#/, ''); }
 				}
@@ -1449,8 +1447,8 @@ var jsc = {
 			if (!color) {
 				return false; // could not parse
 			}
-			if (this.anyFormat) {
-				this.format = color.format; // adapt format
+			if (this.format.toLowerCase() === 'any') {
+				this._currentFormat = color.format; // adapt format
 			}
 			this.fromRGBA(
 				color.rgba[0],
@@ -1465,7 +1463,7 @@ var jsc = {
 
 		this.toString = function (format) {
 			if (format === undefined) {
-				format = this.format; // format not specified -> use the current format
+				format = this._currentFormat; // format not specified -> use the current format
 			}
 			switch (format.toLowerCase()) {
 				case 'hex': return this.toHEXString(); break;
@@ -1937,8 +1935,13 @@ var jsc = {
 
 		// Find the value element
 		this.valueElement = jsc.fetchElement(this.valueElement);
+
 		// Find the style element
 		this.styleElement = jsc.fetchElement(this.styleElement);
+
+		// current input/output format (notation)
+		this._currentFormat = null;
+
 
 		var THIS = this;
 
@@ -1946,7 +1949,9 @@ var jsc = {
 			this.container ?
 			jsc.fetchElement(this.container) :
 			document.getElementsByTagName('body')[0];
+
 		var sliderPtrSpace = 3; // px
+
 
 		// For BUTTON elements it's important to stop them from sending the form when clicked
 		// (e.g. in Safari)
@@ -1961,30 +1966,6 @@ var jsc = {
 				this.targetElement.onclick = function () { return false; };
 			}
 		}
-
-		/*
-		var elm = this.targetElement;
-		do {
-			// If the target element or one of its offsetParents has fixed position,
-			// then use fixed positioning instead
-			//
-			// Note: In Firefox, getComputedStyle returns null in a hidden iframe,
-			// that's why we need to check if the returned style object is non-empty
-			var currStyle = jsc.getStyle(elm);
-			if (currStyle && currStyle.position.toLowerCase() === 'fixed') {
-				this.fixed = true;
-			}
-
-			if (elm !== this.targetElement) {
-				// attach onParentScroll so that we can recompute the picker position
-				// when one of the offsetParents is scrolled
-				if (!elm._jscEventsAttached) {
-					jsc.attachEvent(elm, 'scroll', jsc.onParentScroll);
-					elm._jscEventsAttached = true;
-				}
-			}
-		} while ((elm = elm.offsetParent) && !jsc.isElementType(elm, 'body'));
-		*/
 
 		// valueElement
 		if (this.valueElement) {
@@ -2026,10 +2007,14 @@ var jsc = {
 			}
 		}
 
-		// if format not specified, then auto-detect it from initial value
-		if (this.format === null) {
+		// determine current format
+		if (['auto', 'any'].indexOf(this.format.toLowerCase()) > -1) {
+			// format is 'auto' or 'any' -> let's auto-detect current format
 			var color = jsc.parseColorString(initValue);
-			this.format = color ? color.format : 'hex';
+			this._currentFormat = color ? color.format : 'hex';
+		} else {
+			// format is specified
+			this._currentFormat = this.format.toLowerCase();
 		}
 
 		this.processColorInput(initValue);
