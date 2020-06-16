@@ -1129,6 +1129,7 @@ var jsc = {
 		//
 		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
 		this.format = null; // null | 'hex' | 'rgb' | 'rgba' - Format of the input/output value. null = auto-detect from value format
+		this.anyFormat = false; // when True, format will keep adapting according to current input value
 		this.valueElement = targetElement; // element that will be used to display and input the color code
 		this.styleElement = targetElement; // element that will preview the picked color using CSS backgroundColor
 		this.required = true; // whether the associated text <input> can be left empty
@@ -1448,6 +1449,9 @@ var jsc = {
 			if (!color) {
 				return false; // could not parse
 			}
+			if (this.anyFormat) {
+				this.format = color.format; // adapt format
+			}
 			this.fromRGBA(
 				color.rgba[0],
 				color.rgba[1],
@@ -1461,7 +1465,7 @@ var jsc = {
 
 		this.toString = function (format) {
 			if (format === undefined) {
-				format = this.format;
+				format = this.format; // format not specified -> use the current format
 			}
 			switch (format.toLowerCase()) {
 				case 'hex': return this.toHEXString(); break;
