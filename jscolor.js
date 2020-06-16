@@ -2058,9 +2058,9 @@ jsc.jscolor.presets['default'] = {}; // baseline for customization
 jsc.jscolor.presets['light'] = { backgroundColor:'#FFFFFF', insetColor:'#BBBBBB' }; // default color scheme
 jsc.jscolor.presets['dark'] = { backgroundColor:'#333333', insetColor:'#999999' };
 
-jsc.jscolor.presets['small'] = { width:101, height:101 };
-jsc.jscolor.presets['medium'] = { width:181, height:101 }; // default size
-jsc.jscolor.presets['large'] = { width:271, height:151 };
+jsc.jscolor.presets['small'] = { width:101, height:101, padding:8 };
+jsc.jscolor.presets['medium'] = { width:181, height:101, padding:12 }; // default size
+jsc.jscolor.presets['large'] = { width:271, height:151, padding:12 };
 
 jsc.jscolor.presets['thin'] = { borderWidth:1, insetWidth:1, pointerBorderWidth:1 }; // default thickness
 jsc.jscolor.presets['thick'] = { borderWidth:2, insetWidth:2, pointerBorderWidth:2 };
