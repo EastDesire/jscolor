@@ -1136,7 +1136,6 @@ var jsc = {
 		this.hash = false; // whether to prefix the HEX color code with # symbol
 		this.uppercase = true; // whether to show the color code in upper case
 		this.onFineChange = null; // called instantly every time the color changes (value can be either a function or a string with javascript code)
-		this.activeClass = 'jscolor-active'; // class to be set to the target element when a picker window is open on it
 		this.overwriteImportant = false; // whether to overwrite colors of styleElement using !important
 		this.minS = 0; // min allowed saturation (0 - 100)
 		this.maxS = 100; // max allowed saturation (0 - 100)
@@ -1548,7 +1547,7 @@ var jsc = {
 
 
 		function detachPicker () {
-			jsc.unsetClass(THIS.targetElement, THIS.activeClass);
+			jsc.unsetClass(THIS.targetElement, jsc.jscolor.activeClassName);
 			jsc.picker.wrap.parentNode.removeChild(jsc.picker.wrap);
 			delete jsc.picker.owner;
 		}
@@ -1820,7 +1819,7 @@ var jsc = {
 			// If we are changing the owner without first closing the picker,
 			// make sure to first deal with the old owner
 			if (jsc.picker.owner && jsc.picker.owner !== THIS) {
-				jsc.unsetClass(jsc.picker.owner.targetElement, THIS.activeClass);
+				jsc.unsetClass(jsc.picker.owner.targetElement, jsc.jscolor.activeClassName);
 			}
 
 			// Set the new picker owner
@@ -1838,7 +1837,7 @@ var jsc = {
 				container.appendChild(p.wrap);
 			}
 
-			jsc.setClass(THIS.targetElement, THIS.activeClass);
+			jsc.setClass(THIS.targetElement, jsc.jscolor.activeClassName);
 		}
 
 
@@ -1932,6 +1931,9 @@ var jsc = {
 			return;
 		}
 		this.targetElement._jscLinkedInstance = this;
+
+		jsc.setClass(this.targetElement, jsc.jscolor.className);
+
 
 		// Find the value element
 		this.valueElement = jsc.fetchElement(this.valueElement);
@@ -2039,8 +2041,18 @@ jsc.jscolor.init = function () {
 };
 
 
+// class that will be set to elements having jscolor installed on them
+jsc.jscolor.className = 'jscolor';
+
+
+// class that will be set to elements having jscolor active on them
+jsc.jscolor.activeClassName = 'jscolor-active';
+
+
+// presets
 jsc.jscolor.presets = {};
 
+// built-in presets
 jsc.jscolor.presets['default'] = {}; // baseline for customization
 
 jsc.jscolor.presets['light'] = { backgroundColor:'#FFFFFF', insetColor:'#BBBBBB' }; // default color scheme
