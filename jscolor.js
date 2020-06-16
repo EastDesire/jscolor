@@ -1346,9 +1346,11 @@ var jsc = {
 			if (!(flags & jsc.leaveValue) && this.valueElement) {
 				var value = this.toString();
 
-				// TODO: this is only for 'hex' format
-				if (!this.uppercase) { value = value.toLowerCase(); }
-				if (!this.hash) { value = value.replace(/^#/, ''); }
+				if (this.format.toLowerCase() === 'hex') {
+					// TODO: test
+					if (!this.uppercase) { value = value.toLowerCase(); }
+					if (!this.hash) { value = value.replace(/^#/, ''); }
+				}
 
 				if (jsc.isElementType(this.valueElement, 'input')) {
 					if (this.valueElement.value !== value) {
@@ -2051,6 +2053,26 @@ var jsc = {
 			};
 		}
 
+
+		// Initialize the color
+
+		var initValue = '';
+
+		if (this.value !== null) {
+			initValue = this.value;
+		} else if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
+			initValue = this.valueElement.value;
+		}
+
+		if (this.format === null) {
+			var color = jsc.parseColorString(initValue);
+			this.format = color ? color.format : 'hex';
+		}
+
+		this.exportColor(initValue);
+
+
+		/*
 		// auto-detect color input/output format
 		if (this.format === null) {
 			this.format = 'hex';
@@ -2072,17 +2094,41 @@ var jsc = {
 		}
 
 
+
 		if (this.value !== null) {
+
+			if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
+				this.valueElement.value = this.value;
+			}
+
+
+			// initialize the picker based on the 'value' option
 			this.exportColor(this.value);
 
 		} else if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
-			// no 'value' option specified - try to find the color in input's 'value' attribute
+			// initialize the picker based on valueElement's 'value' attribute
 			this.exportColor(this.valueElement.value);
 
 		} else {
 			// nothing to import the color from -> let's just export the current color
 			this.exportCurrentColor();
 		}
+
+
+
+		if (this.value !== null) {
+			// initialize the picker based on the 'value' option
+			this.exportColor(this.value);
+
+		} else if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
+			// initialize the picker based on valueElement's 'value' attribute
+			this.exportColor(this.valueElement.value);
+
+		} else {
+			// nothing to import the color from -> let's just export the current color
+			this.exportCurrentColor();
+		}
+		*/
 	}
 
 };
