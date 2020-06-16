@@ -1260,7 +1260,7 @@ var jsc = {
 		};
 
 
-		this.exposeColor = function (str) {
+		this.processColorInput = function (str) {
 
 			// leave empty value (or just whitespace)
 			if (!this.required && /^\s*$/.test(str)) {
@@ -1901,7 +1901,7 @@ var jsc = {
 
 
 		function handleValueBlur () {
-			THIS.exposeColor(THIS.valueElement.value);
+			THIS.processColorInput(THIS.valueElement.value);
 		}
 
 
@@ -2028,7 +2028,7 @@ var jsc = {
 			this.format = color ? color.format : 'hex';
 		}
 
-		this.exposeColor(initValue);
+		this.processColorInput(initValue);
 	}
 
 };
