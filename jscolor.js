@@ -419,6 +419,72 @@ var jsc = {
 	},
 
 
+	parseColorString : function (str) {
+		var ret = {
+			rgba: null,
+			format: null // hex | rgb | rgba
+		};
+
+		var m;
+		if (m = str.match(/^\W*([0-9A-F]{3}([0-9A-F]{3})?)\W*$/i)) {
+			// HEX notation
+
+			ret.format = 'hex';
+
+			if (m[1].length === 6) {
+				// 6-char notation
+				ret.rgba = [
+					parseInt(m[1].substr(0,2),16),
+					parseInt(m[1].substr(2,2),16),
+					parseInt(m[1].substr(4,2),16),
+					null
+				];
+			} else {
+				// 3-char notation
+				ret.rgba = [
+					parseInt(m[1].charAt(0) + m[1].charAt(0),16),
+					parseInt(m[1].charAt(1) + m[1].charAt(1),16),
+					parseInt(m[1].charAt(2) + m[1].charAt(2),16),
+					null
+				];
+			}
+			return ret;
+
+		} else if (m = str.match(/^\W*rgba?\(([^)]*)\)\W*$/i)) {
+			// rgb(...) or rgba(...) notation
+
+			var params = m[1].split(',');
+			var re = /^\s*(\d*)(\.\d+)?\s*$/;
+			var mR, mG, mB, mA;
+			if (
+				params.length >= 3 &&
+				(mR = params[0].match(re)) &&
+				(mG = params[1].match(re)) &&
+				(mB = params[2].match(re))
+			) {
+				ret.format = 'rgb';
+				ret.rgba = [
+					parseFloat((mR[1] || '0') + (mR[2] || '')),
+					parseFloat((mG[1] || '0') + (mG[2] || '')),
+					parseFloat((mB[1] || '0') + (mB[2] || '')),
+					null
+				];
+
+				if (
+					params.length >= 4 &&
+					(mA = params[3].match(re))
+				) {
+					ret.format = 'rgba';
+					ret.rgba[3] = parseFloat((mA[1] || '0') + (mA[2] || ''));
+				}
+				return ret;
+			}
+		}
+
+		return false;
+	},
+
+
 	redrawPosition : function () {
 
 		if (jsc.picker && jsc.picker.owner) {
@@ -1007,6 +1073,7 @@ var jsc = {
 		// General options
 		//
 		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
+		this.format = null; // null | 'hex' | 'rgb' | 'rgba' - Format of the input/output value. null = auto-detect from value format
 		this.valueElement = targetElement; // element that will be used to display and input the color code
 		this.styleElement = targetElement; // element that will preview the picked color using CSS backgroundColor
 		this.required = true; // whether the associated text <input> can be left empty
@@ -1034,8 +1101,8 @@ var jsc = {
 		this.width = 181; // width of color palette (in px)
 		this.height = 101; // height of color palette (in px)
 		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
-		this.mode = 'HSV'; // HSV | HVS | HS | HV - layout of the color picker controls
-		this.position = 'bottom'; // left | right | top | bottom - position relative to the target element
+		this.mode = 'HSV'; // 'HSV' | 'HVS' | 'HS' | 'HV' - layout of the color picker controls
+		this.position = 'bottom'; // 'left' | 'right' | 'top' | 'bottom' - position relative to the target element
 		this.smartPosition = true; // automatically change picker position when there is not enough space for it
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
@@ -1138,47 +1205,50 @@ var jsc = {
 		};
 
 
-		this.importColor = function () {
-			if (!this.valueElement) {
+		this.importExportColor = function () {
+			if (!(this.valueElement && jsc.isElementType(this.valueElement, 'input'))) {
+				// not an input element -> no value to be imported
 				this.exportColor();
-			} else {
-				if (jsc.isElementType(this.valueElement, 'input')) {
-					if (!this.refine) {
-						if (!this.fromString(this.valueElement.value, jsc.leaveValue)) {
-							if (this.styleElement) {
-								this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
-								this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
-								this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
-							}
-							this.exportColor(jsc.leaveValue | jsc.leaveStyle);
-						}
-					} else if (!this.required && /^\s*$/.test(this.valueElement.value)) {
-						this.valueElement.value = '';
-						if (this.styleElement) {
-							this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
-							this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
-							this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
-						}
-						this.exportColor(jsc.leaveValue | jsc.leaveStyle);
-
-					} else if (this.fromString(this.valueElement.value)) {
-						// managed to import color successfully from the value -> OK, don't do anything
-					} else {
-						this.exportColor();
-					}
-				} else {
-					// not an input element -> doesn't have any value
-					this.exportColor();
-				}
+				return;
 			}
+
+			// leave empty value (or just whitespace)
+			if (!this.required && /^\s*$/.test(this.valueElement.value)) {
+				// input's value is empty -> restore the original style
+				this.valueElement.value = '';
+				if (this.styleElement) {
+					this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
+					this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
+					this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
+				}
+				this.exportColor(jsc.leaveValue | jsc.leaveStyle);
+				return;
+			}
+
+			if (!this.refine) {
+				if (!this.fromString(this.valueElement.value, jsc.leaveValue)) {
+					// input's value could not be parsed -> restore the original style
+					if (this.styleElement) {
+						this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
+						this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
+						this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
+					}
+					this.exportColor(jsc.leaveValue | jsc.leaveStyle);
+				}
+				return;
+			}
+
+			// try to parse input's value
+			this.fromString(this.valueElement.value) || this.exportColor();
 		};
 
 
 		this.exportColor = function (flags) {
 			if (!(flags & jsc.leaveValue) && this.valueElement) {
 				var value = this.toString();
-				if (this.uppercase) { value = value.toUpperCase(); }
-				if (this.hash) { value = '#' + value; }
+				// TODO: this is only for 'hex' format
+				if (!this.uppercase) { value = value.toLowerCase(); }
+				if (!this.hash) { value = value.replace(/^#/, ''); }
 
 				if (jsc.isElementType(this.valueElement, 'input')) {
 					if (this.valueElement.value !== value) {
@@ -1190,7 +1260,7 @@ var jsc = {
 			}
 			if (!(flags & jsc.leaveStyle)) {
 				if (this.styleElement) {
-					var bgColor = '#' + this.toString();
+					var bgColor = this.toHEXString();
 					var fgColor = this.isLight() ? '#000' : '#FFF';
 
 					this.styleElement.style.backgroundImage = 'none';
@@ -1316,73 +1386,40 @@ var jsc = {
 
 
 		this.fromString = function (str, flags) {
-			var m;
-			if (m = str.match(/^\W*([0-9A-F]{3}([0-9A-F]{3})?)\W*$/i)) {
-				// HEX notation
-				//
+			var color = jsc.parseColorString(str);
+			if (!color) {
+				return false; // could not parse
+			}
+			this.fromRGBA(
+				color.rgba[0],
+				color.rgba[1],
+				color.rgba[2],
+				color.rgba[3],
+				flags
+			);
+			return true;
+		};
 
-				if (m[1].length === 6) {
-					// 6-char notation
-					this.fromRGBA(
-						parseInt(m[1].substr(0,2),16),
-						parseInt(m[1].substr(2,2),16),
-						parseInt(m[1].substr(4,2),16),
-						null,
-						flags
-					);
-				} else {
-					// 3-char notation
-					this.fromRGBA(
-						parseInt(m[1].charAt(0) + m[1].charAt(0),16),
-						parseInt(m[1].charAt(1) + m[1].charAt(1),16),
-						parseInt(m[1].charAt(2) + m[1].charAt(2),16),
-						null,
-						flags
-					);
-				}
-				return true;
 
-			} else if (m = str.match(/^\W*rgba?\(([^)]*)\)\W*$/i)) {
-				var params = m[1].split(',');
-				var re = /^\s*(\d*)(\.\d+)?\s*$/;
-				var mR, mG, mB, mA;
-				if (
-					params.length >= 3 &&
-					(mR = params[0].match(re)) &&
-					(mG = params[1].match(re)) &&
-					(mB = params[2].match(re))
-				) {
-					var r = parseFloat((mR[1] || '0') + (mR[2] || ''));
-					var g = parseFloat((mG[1] || '0') + (mG[2] || ''));
-					var b = parseFloat((mB[1] || '0') + (mB[2] || ''));
-					var a = null; // alpha
-
-					if (
-						params.length >= 4 &&
-						(mA = params[3].match(re))
-					) {
-						a = parseFloat((mA[1] || '0') + (mA[2] || ''));
-					}
-
-					this.fromRGBA(r, g, b, a, flags);
-					return true;
-				}
+		this.toString = function (format) {
+			if (format === undefined) {
+				format = this.format;
+			}
+			switch (format.toLowerCase()) {
+				case 'hex': return this.toHEXString(); break;
+				case 'rgb': return this.toRGBString(); break;
+				case 'rgba': return this.toRGBAString(); break;
 			}
 			return false;
 		};
 
 
-		this.toString = function () {
-			return (
+		this.toHEXString = function () {
+			return '#' + (
 				('0' + Math.round(this.rgb[0]).toString(16)).substr(-2) +
 				('0' + Math.round(this.rgb[1]).toString(16)).substr(-2) +
 				('0' + Math.round(this.rgb[2]).toString(16)).substr(-2)
-			);
-		};
-
-
-		this.toHEXString = function () {
-			return '#' + this.toString().toUpperCase();
+			).toUpperCase();
 		};
 
 
@@ -1861,8 +1898,13 @@ var jsc = {
 
 
 		function handleValueBlur () {
-			THIS.importColor();
+			THIS.importExportColor();
 		}
+
+
+		//
+		// Install the color picker on chosen element(s)
+		//
 
 
 		// Find the target element
@@ -1892,6 +1934,7 @@ var jsc = {
 		this.styleElement = jsc.fetchElement(this.styleElement);
 
 		var THIS = this;
+
 		var container =
 			this.container ?
 			jsc.fetchElement(this.container) :
@@ -1959,12 +2002,33 @@ var jsc = {
 			};
 		}
 
+		// auto-detect color input/output format
+		if (this.format === null) {
+			this.format = 'hex';
+
+			if (this.value) {
+				// detect format from picker's 'value' option
+				var color = parseColorString(this.value);
+				if (color) {
+					this.format = color.format;
+				}
+
+			} else if (this.valueElement && jsc.isElementType(this.valueElement, 'input')) {
+				// detect format from input's 'value' attribute
+				var color = parseColorString(this.valueElement.value);
+				if (color) {
+					this.format = color.format;
+				}
+			}
+		}
+
 		if (this.value) {
-			// Try to set the color from the .value option and if unsuccessful,
+			// Try to set the color from picker's 'value' option and if unsuccessful,
 			// export the current color
 			this.fromString(this.value) || this.exportColor();
 		} else {
-			this.importColor();
+			// no 'value' option specified - try to find the color in input's 'value' attribute
+			this.importExportColor();
 		}
 	}
 
