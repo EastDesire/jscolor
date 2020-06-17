@@ -614,13 +614,20 @@ var jsc = {
 
 
 	getPickerDims : function (thisObj) {
-		var displaySlider = !!jsc.getSliderComponent(thisObj);
 		var dims = [
-			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.width +
-				(displaySlider ? 2 * thisObj.insetWidth + jsc.getPadToSliderPadding(thisObj) + thisObj.sliderSize : 0),
-			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.height +
-				(thisObj.closable ? 2 * thisObj.insetWidth + thisObj.padding + thisObj.buttonHeight : 0)
+			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.width,
+			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.height
 		];
+		var sliderSpace = 2 * thisObj.insetWidth + jsc.getPadToSliderPadding(thisObj) + thisObj.sliderSize;
+		if (jsc.getSliderChannel(thisObj)) {
+			dims[0] += sliderSpace;
+		}
+		if (jsc.hasAlphaSlider(thisObj)) {
+			dims[0] += sliderSpace;
+		}
+		if (thisObj.closable) {
+			dims[1] += 2 * thisObj.insetWidth + thisObj.padding + thisObj.buttonHeight;
+		}
 		return dims;
 	},
 
@@ -639,7 +646,7 @@ var jsc = {
 	},
 
 
-	getPadYComponent : function (thisObj) {
+	getPadYChannel : function (thisObj) {
 		switch (thisObj.mode.charAt(1).toLowerCase()) {
 			case 'v': return 'v'; break;
 		}
@@ -647,7 +654,7 @@ var jsc = {
 	},
 
 
-	getSliderComponent : function (thisObj) {
+	getSliderChannel : function (thisObj) {
 		if (thisObj.mode.length > 2) {
 			switch (thisObj.mode.charAt(2).toLowerCase()) {
 				case 's': return 's'; break;
@@ -655,6 +662,14 @@ var jsc = {
 			}
 		}
 		return null;
+	},
+
+
+	hasAlphaSlider : function (thisObj) {
+		if (thisObj.alphaSlider || thisObj.alphaValueElement || thisObj._currentFormat === 'rgba') { // TODO: correct?
+			return true;
+		}
+		return false;
 	},
 
 
@@ -767,7 +782,7 @@ var jsc = {
 		switch (controlName) {
 		case 'pad':
 			// if the slider is at the bottom, move it up
-			switch (jsc.getSliderComponent(thisObj)) {
+			switch (jsc.getSliderChannel(thisObj)) {
 			case 's': if (thisObj.hsv[1] === 0) { thisObj.fromHSVA(null, 100, null, null); }; break;
 			case 'v': if (thisObj.hsv[2] === 0) { thisObj.fromHSVA(null, null, 100, null); }; break;
 			}
@@ -776,6 +791,10 @@ var jsc = {
 
 		case 'sld':
 			jsc.setSld(thisObj, e, 0);
+			break;
+
+		case 'asld':
+			jsc.setASld(thisObj, e, 0);
 			break;
 		}
 
@@ -796,6 +815,12 @@ var jsc = {
 			case 'sld':
 				if (!e) { e = window.event; }
 				jsc.setSld(thisObj, e, offset[1]);
+				jsc.dispatchFineChange(thisObj);
+				break;
+
+			case 'asld':
+				if (!e) { e = window.event; }
+				jsc.setASld(thisObj, e, offset[1]);
 				jsc.dispatchFineChange(thisObj);
 				break;
 			}
@@ -846,7 +871,7 @@ var jsc = {
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		switch (jsc.getPadYComponent(thisObj)) {
+		switch (jsc.getPadYChannel(thisObj)) {
 		case 's': thisObj.fromHSVA(xVal, yVal, null, null, jsc.leaveSld); break;
 		case 'v': thisObj.fromHSVA(xVal, null, yVal, null, jsc.leaveSld); break;
 		}
@@ -859,10 +884,19 @@ var jsc = {
 
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		switch (jsc.getSliderComponent(thisObj)) {
+		switch (jsc.getSliderChannel(thisObj)) {
 		case 's': thisObj.fromHSVA(null, yVal, null, null, jsc.leavePad); break;
 		case 'v': thisObj.fromHSVA(null, null, yVal, null, jsc.leavePad); break;
 		}
+	},
+
+
+	setASld : function (thisObj, e, ofsY) {
+		var pointerAbs = jsc.getAbsPointerPos(e);
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
+		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
+
+		thisObj.fromHSVA(null, null, null, yVal, jsc.leaveAPad);
 	},
 
 
@@ -1086,6 +1120,7 @@ var jsc = {
 	leaveStyle : 1<<1,
 	leavePad : 1<<2,
 	leaveSld : 1<<3,
+	leaveASld : 1<<4,
 
 
 	BoxShadow : (function () {
@@ -1131,6 +1166,8 @@ var jsc = {
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
 		this.valueElement = targetElement; // element that will be used to display and input the color code
 		this.styleElement = targetElement; // element that will preview the picked color using CSS backgroundColor
+		this.alphaValueElement = null; // TODO
+		this.alphaStyleElement = null; // TODO
 		this.required = true; // whether the associated text <input> can be left empty
 		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
 		this.hash = false; // whether to prefix the HEX color code with # symbol
@@ -1154,10 +1191,11 @@ var jsc = {
 		//
 		this.width = 181; // width of color palette (in px)
 		this.height = 101; // height of color palette (in px)
-		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
 		this.mode = 'HSV'; // 'HSV' | 'HVS' | 'HS' | 'HV' - layout of the color picker controls
+		this.alphaSlider = false; // TODO
 		this.position = 'bottom'; // 'left' | 'right' | 'top' | 'bottom' - position relative to the target element
 		this.smartPosition = true; // automatically change picker position when there is not enough space for it
+		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
 		this.closable = false; // whether to display the Close button
@@ -1333,9 +1371,11 @@ var jsc = {
 			if (!(flags & jsc.leavePad) && isPickerOwner()) {
 				redrawPad();
 			}
-
 			if (!(flags & jsc.leaveSld) && isPickerOwner()) {
 				redrawSld();
+			}
+			if (!(flags & jsc.leaveASld) && isPickerOwner()) {
+				redrawASld();
 			}
 		};
 
@@ -1576,7 +1616,7 @@ var jsc = {
 					crossBX : document.createElement('div'), // border X
 					crossLY : document.createElement('div'), // line Y
 					crossLX : document.createElement('div'), // line X
-					sld : document.createElement('div'),
+					sld : document.createElement('div'), // slider
 					sldB : document.createElement('div'), // border
 					sldM : document.createElement('div'), // mouse/touch area
 					sldGrad : jsc.createSliderGradient(),
@@ -1584,6 +1624,14 @@ var jsc = {
 					sldPtrIB : document.createElement('div'), // slider pointer inner border
 					sldPtrMB : document.createElement('div'), // slider pointer middle border
 					sldPtrOB : document.createElement('div'), // slider pointer outer border
+					asld : document.createElement('div'), // alpha slider
+					asldB : document.createElement('div'), // border
+					asldM : document.createElement('div'), // mouse/touch area
+					asldGrad : jsc.createSliderGradient(), // TODO
+					asldPtrS : document.createElement('div'), // slider pointer spacer
+					asldPtrIB : document.createElement('div'), // slider pointer inner border
+					asldPtrMB : document.createElement('div'), // slider pointer middle border
+					asldPtrOB : document.createElement('div'), // slider pointer outer border
 					btn : document.createElement('div'),
 					btnT : document.createElement('span') // text
 				};
@@ -1607,6 +1655,15 @@ var jsc = {
 				jsc.picker.box.appendChild(jsc.picker.sldB);
 				jsc.picker.box.appendChild(jsc.picker.sldM);
 
+				jsc.picker.asld.appendChild(jsc.picker.asldGrad.elm);
+				jsc.picker.asldB.appendChild(jsc.picker.asld);
+				jsc.picker.asldB.appendChild(jsc.picker.asldPtrOB);
+				jsc.picker.asldPtrOB.appendChild(jsc.picker.asldPtrMB);
+				jsc.picker.asldPtrMB.appendChild(jsc.picker.asldPtrIB);
+				jsc.picker.asldPtrIB.appendChild(jsc.picker.asldPtrS);
+				jsc.picker.box.appendChild(jsc.picker.asldB);
+				jsc.picker.box.appendChild(jsc.picker.asldM);
+
 				jsc.picker.btn.appendChild(jsc.picker.btnT);
 				jsc.picker.box.appendChild(jsc.picker.btn);
 
@@ -1617,7 +1674,8 @@ var jsc = {
 
 			var p = jsc.picker;
 
-			var displaySlider = !!jsc.getSliderComponent(THIS);
+			var displaySlider = !!jsc.getSliderChannel(THIS);
+			var displayAlphaSlider = jsc.hasAlphaSlider(THIS);
 			var dims = jsc.getPickerDims(THIS);
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
 			var padToSliderPadding = jsc.getPadToSliderPadding(THIS);
@@ -1660,9 +1718,11 @@ var jsc = {
 			// e.g. on Canvas or on elements with border
 			p.padM.style.background =
 			p.sldM.style.background =
+			p.asldM.style.background =
 				'#FFF';
 			jsc.setStyle(p.padM, 'opacity', '0');
 			jsc.setStyle(p.sldM, 'opacity', '0');
+			jsc.setStyle(p.asldM, 'opacity', '0');
 
 			// pad
 			p.pad.style.position = 'relative';
@@ -1670,7 +1730,7 @@ var jsc = {
 			p.pad.style.height = THIS.height + 'px';
 
 			// pad palettes (HSV and HVS)
-			p.padPal.draw(THIS.width, THIS.height, jsc.getPadYComponent(THIS));
+			p.padPal.draw(THIS.width, THIS.height, jsc.getPadYChannel(THIS));
 
 			// pad border
 			p.padB.style.position = 'absolute';
@@ -1738,6 +1798,7 @@ var jsc = {
 			p.crossLX.style.left =
 				THIS.pointerBorderWidth + 'px';
 
+
 			// slider
 			p.sld.style.overflow = 'hidden';
 			p.sld.style.width = THIS.sliderSize + 'px';
@@ -1749,7 +1810,7 @@ var jsc = {
 			// slider border
 			p.sldB.style.display = displaySlider ? 'block' : 'none';
 			p.sldB.style.position = 'absolute';
-			p.sldB.style.right = THIS.padding + 'px';
+			p.sldB.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + padToSliderPadding) + 'px';
 			p.sldB.style.top = THIS.padding + 'px';
 			p.sldB.style.border = THIS.insetWidth + 'px solid';
 			p.sldB.style.borderColor = THIS.insetColor;
@@ -1759,7 +1820,7 @@ var jsc = {
 			p.sldM._jscControlName = 'sld';
 			p.sldM.style.display = displaySlider ? 'block' : 'none';
 			p.sldM.style.position = 'absolute';
-			p.sldM.style.right = '0';
+			p.sldM.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + padToSliderPadding / 2) + 'px';
 			p.sldM.style.top = '0';
 			p.sldM.style.width = (THIS.sliderSize + padToSliderPadding / 2 + THIS.padding + 2 * THIS.insetWidth) + 'px';
 			p.sldM.style.height = dims[1] + 'px';
@@ -1781,6 +1842,52 @@ var jsc = {
 			// slider pointer spacer
 			p.sldPtrS.style.width = THIS.sliderSize + 'px';
 			p.sldPtrS.style.height = sliderPtrSpace + 'px';
+
+
+			// alpha slider
+			p.asld.style.overflow = 'hidden';
+			p.asld.style.width = THIS.sliderSize + 'px';
+			p.asld.style.height = THIS.height + 'px';
+
+			// alpha slider gradient
+			p.asldGrad.draw(THIS.sliderSize, THIS.height, '#000', '#000');
+
+			// alpha slider border
+			p.asldB.style.display = displayAlphaSlider ? 'block' : 'none';
+			p.asldB.style.position = 'absolute';
+			p.asldB.style.right = THIS.padding + 'px';
+			p.asldB.style.top = THIS.padding + 'px';
+			p.asldB.style.border = THIS.insetWidth + 'px solid';
+			p.asldB.style.borderColor = THIS.insetColor;
+
+			// alpha slider mouse area
+			p.asldM._jscInstance = THIS;
+			p.asldM._jscControlName = 'asld';
+			p.asldM.style.display = displayAlphaSlider ? 'block' : 'none';
+			p.asldM.style.position = 'absolute';
+			p.asldM.style.right = '0';
+			p.asldM.style.top = '0';
+			p.asldM.style.width = (THIS.sliderSize + padToSliderPadding / 2 + THIS.padding + 2 * THIS.insetWidth) + 'px'; // TODO: padToSliderPadding? test if padding is 0
+			p.asldM.style.height = dims[1] + 'px';
+			p.asldM.style.cursor = 'default';
+
+			// alpha slider pointer inner and outer border
+			p.asldPtrIB.style.border =
+			p.asldPtrOB.style.border =
+				THIS.pointerBorderWidth + 'px solid ' + THIS.pointerBorderColor;
+
+			// alpha slider pointer outer border
+			p.asldPtrOB.style.position = 'absolute';
+			p.asldPtrOB.style.left = -(2 * THIS.pointerBorderWidth + THIS.pointerThickness) + 'px';
+			p.asldPtrOB.style.top = '0';
+
+			// alpha slider pointer middle border
+			p.asldPtrMB.style.border = THIS.pointerThickness + 'px solid ' + THIS.pointerColor;
+
+			// alpha slider pointer spacer
+			p.asldPtrS.style.width = THIS.sliderSize + 'px';
+			p.asldPtrS.style.height = sliderPtrSpace + 'px';
+
 
 			// the Close button
 			function setBtnBorder () {
@@ -1815,6 +1922,7 @@ var jsc = {
 			// place pointers
 			redrawPad();
 			redrawSld();
+			redrawASld();
 
 			// If we are changing the owner without first closing the picker,
 			// make sure to first deal with the old owner
@@ -1843,19 +1951,19 @@ var jsc = {
 
 		function redrawPad () {
 			// redraw the pad pointer
-			switch (jsc.getPadYComponent(THIS)) {
-			case 's': var yComponent = 1; break;
-			case 'v': var yComponent = 2; break;
+			switch (jsc.getPadYChannel(THIS)) {
+			case 's': var yChannel = 1; break;
+			case 'v': var yChannel = 2; break;
 			}
 			var x = Math.round((THIS.hsv[0] / 360) * (THIS.width - 1));
-			var y = Math.round((1 - THIS.hsv[yComponent] / 100) * (THIS.height - 1));
+			var y = Math.round((1 - THIS.hsv[yChannel] / 100) * (THIS.height - 1));
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
 			var ofs = -Math.floor(crossOuterSize / 2);
 			jsc.picker.cross.style.left = (x + ofs) + 'px';
 			jsc.picker.cross.style.top = (y + ofs) + 'px';
 
 			// redraw the slider
-			switch (jsc.getSliderComponent(THIS)) {
+			switch (jsc.getSliderChannel(THIS)) {
 			case 's':
 				var rgb1 = jsc.HSV_RGB(THIS.hsv[0], 100, THIS.hsv[2]);
 				var rgb2 = jsc.HSV_RGB(THIS.hsv[0], 0, THIS.hsv[2]);
@@ -1883,16 +1991,22 @@ var jsc = {
 
 
 		function redrawSld () {
-			var sldComponent = jsc.getSliderComponent(THIS);
-			if (sldComponent) {
+			var sldChannel = jsc.getSliderChannel(THIS);
+			if (sldChannel) {
 				// redraw the slider pointer
-				switch (sldComponent) {
-				case 's': var yComponent = 1; break;
-				case 'v': var yComponent = 2; break;
+				switch (sldChannel) {
+				case 's': var yChannel = 1; break;
+				case 'v': var yChannel = 2; break;
 				}
-				var y = Math.round((1 - THIS.hsv[yComponent] / 100) * (THIS.height - 1));
+				var y = Math.round((1 - THIS.hsv[yChannel] / 100) * (THIS.height - 1));
 				jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
 			}
+		}
+
+
+		function redrawASld () {
+			var y = Math.round((1 - THIS.alpha) * (THIS.height - 1));
+			jsc.picker.asldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
 		}
 
 
