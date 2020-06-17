@@ -97,8 +97,27 @@ var jsc = {
 	},
 
 
-	isElementType : function (elm, type) {
-		return elm.nodeName.toLowerCase() === type.toLowerCase();
+	nodeName : function (node) {
+		if (node && node.nodeName) {
+			return node.nodeName.toLowerCase();
+		}
+		return false;
+	},
+
+
+	isTextInput : function (node) {
+		// TODO: test
+		return jsc.nodeName(node) === 'input' && node.type.toLowerCase() === 'text';
+	},
+
+
+	isButton : function (node) {
+		// TODO: test
+		var n = jsc.nodeName(node);
+		return (
+			(n === 'button') ||
+			(n === 'input' && node.type.toLowerCase() === 'button')
+		);
 	},
 
 
@@ -540,24 +559,37 @@ var jsc = {
 	},
 
 
-	genChessboardCanvas : function (size, alpha, color1, color2) {
+	genColorPreviewCanvas : function (color, customWidth) {
+		// TODO: as static properties?
+		var sqSize = 8;
+		var sqColor1 = '#CCCCCC';
+		var sqColor2 = '#999999';
+
 		var canvas = document.createElement('canvas');
-		canvas.width = size;
-		canvas.height = size;
+		canvas.width = customWidth ? customWidth : sqSize * 2;
+		canvas.height = sqSize * 2;
 
 		var ctx = canvas.getContext('2d');
-		ctx.globalAlpha = alpha;
+		//ctx.globalAlpha = alpha; // TODO: rem?
 
-		var rw = canvas.width / 2; // rect width
-		var rh = canvas.height / 2; // rect height
+		// gray transparency background
+		ctx.fillStyle = sqColor1;
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-		ctx.fillStyle = color1;
-		ctx.fillRect(0, 0, rw, rh);
-		ctx.fillRect(rw, rh, rw, rh);
+		// gray transparency squares
+		ctx.fillStyle = sqColor2;
+		for (var x = 0; x < canvas.width; x += sqSize * 2) {
+			ctx.fillRect(x, 0, sqSize, sqSize);
+			ctx.fillRect(x + sqSize, sqSize, sqSize, sqSize);
+		}
 
-		ctx.fillStyle = color2;
-		ctx.fillRect(rw, 0, rw, rh);
-		ctx.fillRect(0, rh, rw, rh);
+		// actual color in foreground
+		ctx.fillStyle = color;
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+		if (customWidth) {
+			// TODO: draw border on the left (probably consisting of light and dark colors, like squares' colors. Light would probably look better on the left)
+		}
 
 		return canvas;
 	},
@@ -866,7 +898,7 @@ var jsc = {
 
 	dispatchChange : function (thisObj) {
 		if (thisObj.valueElement) {
-			if (jsc.isElementType(thisObj.valueElement, 'input')) {
+			if (jsc.isTextInput(thisObj.valueElement)) {
 				jsc.fireEvent(thisObj.valueElement, 'change');
 			}
 		}
@@ -1262,8 +1294,8 @@ var jsc = {
 		//
 		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
-		this.valueElement = targetElement; // element that will be used to display and input the color code
-		this.styleElement = targetElement; // element that will preview the picked color using CSS backgroundColor
+		this.valueElement = null; // element that will be used to display and input the color code // TODO
+		this.styleElement = null; // element that will preview the picked color using CSS backgroundColor // TODO
 		this.alphaValueElement = null; // TODO
 		this.alphaStyleElement = null; // TODO
 		this.required = true; // whether the associated text <input> can be left empty
@@ -1399,6 +1431,7 @@ var jsc = {
 
 			// leave empty value (or just whitespace)
 			if (!this.required && /^\s*$/.test(str)) {
+				/* TODO: not needed?
 				// input's value is empty -> restore the original style
 				if (this.styleElement) {
 					this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
@@ -1406,12 +1439,16 @@ var jsc = {
 					this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 					this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 				}
+				*/
+				// input's value is empty -> remove background
+				this.styleElement.style.background = ''; // TODO: OK?
 				this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				return;
 			}
 
 			if (!this.refine) {
 				if (!this.fromString(str, jsc.leaveValue)) {
+					/* TODO: not needed?
 					// input's value could not be parsed -> restore the original style
 					if (this.styleElement) {
 						this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
@@ -1419,6 +1456,9 @@ var jsc = {
 						this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 						this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 					}
+					*/
+					// input's value could not be parsed -> remove background
+					this.styleElement.style.background = ''; // TODO: OK?
 					this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				}
 				return;
@@ -1441,7 +1481,8 @@ var jsc = {
 					if (!this.hash) { value = value.replace(/^#/, ''); }
 				}
 
-				if (jsc.isElementType(this.valueElement, 'input')) {
+				// TODO: or test whether is text input?
+				if (jsc.nodeName(this.valueElement) === 'input') {
 					if (this.valueElement.value !== value) {
 						this.valueElement.value = value;
 					}
@@ -1452,14 +1493,20 @@ var jsc = {
 
 			if (!(flags & jsc.leaveStyle)) {
 				if (this.styleElement) {
+					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), 32);
+					this.styleElement.style.backgroundImage = 'url(\'' + previewCanvas.toDataURL() + '\')';
+					this.styleElement.style.backgroundRepeat = 'repeat-y';
+					this.styleElement.style.backgroundPosition = 'right top'; // TODO: correct order or flip?
+
+					/*
 					var bgColor = this.toHEXString();
 					var fgColor = this.isLight() ? '#000' : '#FFF';
 					var chessboard = jsc.genChessboardCanvas(16, 1.0 - this.alpha, '#CCCCCC', '#999999');
 
 					this.styleElement.style.backgroundImage = 'url(\'' + chessboard.toDataURL() + '\')';
-					this.styleElement.style.backgroundRepeat = 'repeat';
 					this.styleElement.style.backgroundColor = bgColor;
 					this.styleElement.style.color = fgColor;
+					*/
 					// TODO
 					/*
 					var shBlur = 8;
@@ -1696,7 +1743,7 @@ var jsc = {
 						elm._jscEventsAttached = true;
 					}
 				}
-			} while ((elm = elm.parentNode) && !jsc.isElementType(elm, 'body'));
+			} while ((elm = elm.parentNode) && jsc.nodeName(elm) !== 'body');
 		};
 
 
@@ -2049,7 +2096,7 @@ var jsc = {
 
 			// The redrawPosition() method needs picker.owner to be set, that's why we call it here,
 			// after setting the owner
-			if (jsc.isElementType(container, 'body')) {
+			if (jsc.nodeName(container) === 'body') {
 				jsc.redrawPosition();
 			} else {
 				jsc._drawPosition(THIS, 0, 0, 'relative', false);
@@ -2169,11 +2216,26 @@ var jsc = {
 		jsc.setClass(this.targetElement, jsc.jscolor.className);
 
 
-		// Find the value element
-		this.valueElement = jsc.fetchElement(this.valueElement);
+		// Determine the value element
+		if (this.valueElement !== null) {
+			this.valueElement = jsc.fetchElement(this.valueElement);
+		} else {
+			// valueElement is null
+			if (jsc.isTextInput(this.targetElement)) {
+				// for text inputs, default valueElement is targetElement
+				this.valueElement = this.targetElement;
+			} else {
+				// leave it null
+			}
+		}
 
-		// Find the style element
-		this.styleElement = jsc.fetchElement(this.styleElement);
+		// Determine the style element
+		if (this.styleElement !== null) {
+			this.styleElement = jsc.fetchElement(this.styleElement);
+		} else {
+			// styleElement is null -> default is targetElement
+			this.styleElement = this.targetElement;
+		}
 
 		// current input/output format (notation)
 		this._currentFormat = null;
@@ -2190,8 +2252,7 @@ var jsc = {
 
 
 		// if target is BUTTON
-		if (jsc.isElementType(this.targetElement, 'button')) {
-			// TODO: create function isButton() that will check test if is button element or input of type button
+		if (jsc.nodeName(this.targetElement) === 'button') {
 
 			// empty buttons end up too small -> let's insert non-breaking space
 			if (/^\s*$/.test(this.targetElement.innerHTML)) {
@@ -2216,7 +2277,7 @@ var jsc = {
 
 		// valueElement
 		if (this.valueElement) {
-			if (jsc.isElementType(this.valueElement, 'input')) {
+			if (jsc.nodeName(this.valueElement) === 'input') {
 				var handleValueInput = function () {
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
 					jsc.dispatchFineChange(THIS);
@@ -2228,6 +2289,7 @@ var jsc = {
 			}
 		}
 
+		/* TODO: not needed?
 		// styleElement
 		if (this.styleElement) {
 			this.styleElement._jscOrigStyle = {
@@ -2237,6 +2299,7 @@ var jsc = {
 				color : this.styleElement.style.color
 			};
 		}
+		*/
 
 
 		// Initialize the color
