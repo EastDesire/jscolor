@@ -871,9 +871,12 @@ var jsc = {
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
+		//var flags = jsc.leaveSld | jsc.leaveASld;
+		var flags = 0;
+
 		switch (jsc.getPadYChannel(thisObj)) {
-		case 's': thisObj.fromHSVA(xVal, yVal, null, null, jsc.leaveSld); break;
-		case 'v': thisObj.fromHSVA(xVal, null, yVal, null, jsc.leaveSld); break;
+		case 's': thisObj.fromHSVA(xVal, yVal, null, null, flags); break;
+		case 'v': thisObj.fromHSVA(xVal, null, yVal, null, flags); break;
 		}
 	},
 
@@ -881,12 +884,14 @@ var jsc = {
 	setSld : function (thisObj, e, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
-
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
+		//var flags = jsc.leavePad | jsc.leaveASld;
+		var flags = 0;
+
 		switch (jsc.getSliderChannel(thisObj)) {
-		case 's': thisObj.fromHSVA(null, yVal, null, null, jsc.leavePad); break;
-		case 'v': thisObj.fromHSVA(null, null, yVal, null, jsc.leavePad); break;
+		case 's': thisObj.fromHSVA(null, yVal, null, null, flags); break;
+		case 'v': thisObj.fromHSVA(null, null, yVal, null, flags); break;
 		}
 	},
 
@@ -896,7 +901,10 @@ var jsc = {
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
 
-		thisObj.fromHSVA(null, null, null, yVal, jsc.leaveAPad);
+		//var flags = jsc.leavePad | jsc.leaveSld;
+		var flags = 0;
+
+		thisObj.fromHSVA(null, null, null, yVal, flags);
 	},
 
 
