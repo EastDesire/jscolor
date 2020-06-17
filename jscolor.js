@@ -419,6 +419,61 @@ var jsc = {
 	},
 
 
+	// r: 0-255
+	// g: 0-255
+	// b: 0-255
+	//
+	// returns: [ 0-360, 0-100, 0-100 ]
+	//
+	RGB_HSV : function (r, g, b) {
+		r /= 255;
+		g /= 255;
+		b /= 255;
+		var n = Math.min(Math.min(r,g),b);
+		var v = Math.max(Math.max(r,g),b);
+		var m = v - n;
+		if (m === 0) { return [ null, 0, 100 * v ]; }
+		var h = r===n ? 3+(b-g)/m : (g===n ? 5+(r-b)/m : 1+(g-r)/m);
+		return [
+			60 * (h===6?0:h),
+			100 * (m/v),
+			100 * v
+		];
+	},
+
+
+	// h: 0-360
+	// s: 0-100
+	// v: 0-100
+	//
+	// returns: [ 0-255, 0-255, 0-255 ]
+	//
+	HSV_RGB : function (h, s, v) {
+		var u = 255 * (v / 100);
+
+		if (h === null) {
+			return [ u, u, u ];
+		}
+
+		h /= 60;
+		s /= 100;
+
+		var i = Math.floor(h);
+		var f = i%2 ? h-i : 1-(h-i);
+		var m = u * (1 - s);
+		var n = u * (1 - s * f);
+		switch (i) {
+			case 6:
+			case 0: return [u,n,m];
+			case 1: return [n,u,m];
+			case 2: return [m,u,n];
+			case 3: return [m,n,u];
+			case 4: return [n,m,u];
+			case 5: return [u,m,n];
+		}
+	},
+
+
 	parseColorString : function (str) {
 		var ret = {
 			rgba: null,
@@ -485,58 +540,26 @@ var jsc = {
 	},
 
 
-	// r: 0-255
-	// g: 0-255
-	// b: 0-255
-	//
-	// returns: [ 0-360, 0-100, 0-100 ]
-	//
-	RGB_HSV : function (r, g, b) {
-		r /= 255;
-		g /= 255;
-		b /= 255;
-		var n = Math.min(Math.min(r,g),b);
-		var v = Math.max(Math.max(r,g),b);
-		var m = v - n;
-		if (m === 0) { return [ null, 0, 100 * v ]; }
-		var h = r===n ? 3+(b-g)/m : (g===n ? 5+(r-b)/m : 1+(g-r)/m);
-		return [
-			60 * (h===6?0:h),
-			100 * (m/v),
-			100 * v
-		];
-	},
+	genChessCanvas : function (size, alpha, color1, color2) {
+		var canvas = document.createElement('canvas');
+		canvas.width = size;
+		canvas.height = size;
 
+		var ctx = canvas.getContext('2d');
+		ctx.globalAlpha = alpha;
 
-	// h: 0-360
-	// s: 0-100
-	// v: 0-100
-	//
-	// returns: [ 0-255, 0-255, 0-255 ]
-	//
-	HSV_RGB : function (h, s, v) {
-		var u = 255 * (v / 100);
+		var rw = canvas.width / 2; // rect width
+		var rh = canvas.height / 2; // rect height
 
-		if (h === null) {
-			return [ u, u, u ];
-		}
+		ctx.fillStyle = color1;
+		ctx.fillRect(0, 0, rw, rh);
+		ctx.fillRect(rw, rh, rw, rh);
 
-		h /= 60;
-		s /= 100;
+		ctx.fillStyle = color2;
+		ctx.fillRect(rw, 0, rw, rh);
+		ctx.fillRect(0, rh, rw, rh);
 
-		var i = Math.floor(h);
-		var f = i%2 ? h-i : 1-(h-i);
-		var m = u * (1 - s);
-		var n = u * (1 - s * f);
-		switch (i) {
-			case 6:
-			case 0: return [u,n,m];
-			case 1: return [n,u,m];
-			case 2: return [m,u,n];
-			case 3: return [m,n,u];
-			case 4: return [n,m,u];
-			case 5: return [u,m,n];
-		}
+		return canvas;
 	},
 
 
@@ -666,7 +689,7 @@ var jsc = {
 
 
 	hasAlphaSlider : function (thisObj) {
-		if (thisObj.alphaSlider || thisObj.alphaValueElement || thisObj._currentFormat === 'rgba') { // TODO: correct?
+		if (thisObj.alphaSlider || thisObj.alphaValueElement || thisObj._currentFormat === 'rgba') {
 			return true;
 		}
 		return false;
@@ -1114,6 +1137,73 @@ var jsc = {
 
 				grad.color = color1;
 				grad.color2 = color2;
+			};
+			
+			sliderObj.elm = vmlContainer;
+			sliderObj.draw = drawFunc;
+		}
+
+		return sliderObj;
+	},
+
+
+	createASliderGradient : function () {
+
+		var sliderObj = {
+			elm: null,
+			draw: null
+		};
+
+		if (jsc.isCanvasSupported) {
+			// Canvas implementation for modern browsers
+
+			var canvas = document.createElement('canvas');
+			var ctx = canvas.getContext('2d');
+
+			var drawFunc = function (width, height, color) {
+				canvas.width = width;
+				canvas.height = height;
+
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+				var sqSize = canvas.width / 2;
+				var sqColor1 = '#999999';
+				var sqColor2 = '#CCCCCC';
+
+				// dark gray background
+				ctx.fillStyle = sqColor1;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+				for (var y = 0; y < canvas.height; y += sqSize * 2) {
+					// light gray squares
+					ctx.fillStyle = sqColor2;
+					ctx.fillRect(0, y, sqSize, sqSize);
+					ctx.fillRect(sqSize, y + sqSize, sqSize, sqSize);
+				}
+
+				var grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+				grad.addColorStop(0, color);
+				grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+				ctx.fillStyle = grad;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+			};
+
+			sliderObj.elm = canvas;
+			sliderObj.draw = drawFunc;
+
+		} else {
+			// NOT SUPPORTED
+			// VML fallback for IE 7 and 8
+
+			jsc.initVML();
+
+			var vmlContainer = document.createElement('div');
+			vmlContainer.style.position = 'relative';
+			vmlContainer.style.overflow = 'hidden';
+
+			var drawFunc = function (width, height, color1, color2) {
+				// NOT SUPPORTED
 			};
 			
 			sliderObj.elm = vmlContainer;
@@ -1635,7 +1725,7 @@ var jsc = {
 					asld : document.createElement('div'), // alpha slider
 					asldB : document.createElement('div'), // border
 					asldM : document.createElement('div'), // mouse/touch area
-					asldGrad : jsc.createSliderGradient(), // TODO
+					asldGrad : jsc.createASliderGradient(),
 					asldPtrS : document.createElement('div'), // slider pointer spacer
 					asldPtrIB : document.createElement('div'), // slider pointer inner border
 					asldPtrMB : document.createElement('div'), // slider pointer middle border
@@ -1818,7 +1908,7 @@ var jsc = {
 			// slider border
 			p.sldB.style.display = displaySlider ? 'block' : 'none';
 			p.sldB.style.position = 'absolute';
-			p.sldB.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + padToSliderPadding) + 'px';
+			p.sldB.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + padToSliderPadding) + 'px'; // TODO
 			p.sldB.style.top = THIS.padding + 'px';
 			p.sldB.style.border = THIS.insetWidth + 'px solid';
 			p.sldB.style.borderColor = THIS.insetColor;
@@ -1828,7 +1918,7 @@ var jsc = {
 			p.sldM._jscControlName = 'sld';
 			p.sldM.style.display = displaySlider ? 'block' : 'none';
 			p.sldM.style.position = 'absolute';
-			p.sldM.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + padToSliderPadding / 2) + 'px';
+			p.sldM.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + padToSliderPadding / 2) + 'px'; // TODO
 			p.sldM.style.top = '0';
 			p.sldM.style.width = (THIS.sliderSize + padToSliderPadding / 2 + THIS.padding + 2 * THIS.insetWidth) + 'px';
 			p.sldM.style.height = dims[1] + 'px';
@@ -1858,7 +1948,7 @@ var jsc = {
 			p.asld.style.height = THIS.height + 'px';
 
 			// alpha slider gradient
-			p.asldGrad.draw(THIS.sliderSize, THIS.height, '#000', '#000');
+			p.asldGrad.draw(THIS.sliderSize, THIS.height, '#000');
 
 			// alpha slider border
 			p.asldB.style.display = displayAlphaSlider ? 'block' : 'none';
@@ -1995,6 +2085,9 @@ var jsc = {
 				jsc.picker.sldGrad.draw(THIS.sliderSize, THIS.height, color1, color2);
 				break;
 			}
+
+			// redraw the alpha slider
+			jsc.picker.asldGrad.draw(THIS.sliderSize, THIS.height, THIS.toHEXString());
 		}
 
 
@@ -2009,6 +2102,9 @@ var jsc = {
 				var y = Math.round((1 - THIS.hsv[yChannel] / 100) * (THIS.height - 1));
 				jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
 			}
+
+			// redraw the alpha slider
+			jsc.picker.asldGrad.draw(THIS.sliderSize, THIS.height, THIS.toHEXString());
 		}
 
 
