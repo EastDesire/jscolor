@@ -540,7 +540,7 @@ var jsc = {
 	},
 
 
-	genChessCanvas : function (size, alpha, color1, color2) {
+	genChessboardCanvas : function (size, alpha, color1, color2) {
 		var canvas = document.createElement('canvas');
 		canvas.width = size;
 		canvas.height = size;
@@ -1402,6 +1402,7 @@ var jsc = {
 				// input's value is empty -> restore the original style
 				if (this.styleElement) {
 					this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
+					this.styleElement.style.backgroundRepeat = this.styleElement._jscOrigStyle.backgroundRepeat;
 					this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 					this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 				}
@@ -1414,6 +1415,7 @@ var jsc = {
 					// input's value could not be parsed -> restore the original style
 					if (this.styleElement) {
 						this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
+						this.styleElement.style.backgroundRepeat = this.styleElement._jscOrigStyle.backgroundRepeat;
 						this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
 						this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
 					}
@@ -1452,12 +1454,26 @@ var jsc = {
 				if (this.styleElement) {
 					var bgColor = this.toHEXString();
 					var fgColor = this.isLight() ? '#000' : '#FFF';
+					var chessboard = jsc.genChessboardCanvas(16, 1.0 - this.alpha, '#CCCCCC', '#999999');
 
-					this.styleElement.style.backgroundImage = 'none';
+					this.styleElement.style.backgroundImage = 'url(\'' + chessboard.toDataURL() + '\')';
+					this.styleElement.style.backgroundRepeat = 'repeat';
 					this.styleElement.style.backgroundColor = bgColor;
 					this.styleElement.style.color = fgColor;
+					// TODO
+					/*
+					var shBlur = 8;
+					var shColor = this.isLight() ? '#FFF' : '#000';
+					this.styleElement.style.textShadow =
+						'-1px -1px ' + shBlur + 'px ' + shColor + ', ' +
+						'1px -1px ' + shBlur + 'px ' + shColor + ', ' +
+						'-1px 1px ' + shBlur + 'px ' + shColor + ', ' +
+						'1px 1px ' + shBlur + 'px ' + shColor;
+					*/
 
+					// TODO: overwriteImportant could be called forceStyle and set to true by default
 					if (this.overwriteImportant) {
+						// TODO
 						this.styleElement.setAttribute('style',
 							'background: ' + bgColor + ' !important; ' +
 							'color: ' + fgColor + ' !important;'
@@ -2173,9 +2189,20 @@ var jsc = {
 		var sliderPtrSpace = 3; // px
 
 
-		// For BUTTON elements it's important to stop them from sending the form when clicked
-		// (e.g. in Safari)
+		// if target is BUTTON
 		if (jsc.isElementType(this.targetElement, 'button')) {
+			// TODO: create function isButton() that will check test if is button element or input of type button
+
+			// empty buttons end up too small -> let's insert non-breaking space
+			if (/^\s*$/.test(this.targetElement.innerHTML)) {
+				this.targetElement.appendChild(document.createTextNode('\xa0'));
+			}
+
+			// TODO
+			this.targetElement.style.minWidth = '50px';
+
+			// For BUTTON elements it's important to stop them from sending the form when clicked
+			// (e.g. in Safari)
 			if (this.targetElement.onclick) {
 				var origCallback = this.targetElement.onclick;
 				this.targetElement.onclick = function (evt) {
@@ -2205,6 +2232,7 @@ var jsc = {
 		if (this.styleElement) {
 			this.styleElement._jscOrigStyle = {
 				backgroundImage : this.styleElement.style.backgroundImage,
+				backgroundRepeat : this.styleElement.style.backgroundRepeat,
 				backgroundColor : this.styleElement.style.backgroundColor,
 				color : this.styleElement.style.color
 			};
