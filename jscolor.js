@@ -115,12 +115,20 @@ var jsc = {
 	})(),
 
 
-	fetchElement : function (mixed) {
-		// TODO: mixed will be called elementOrSelector
-		// TODO: use document.querySelector
-		// TODO: jsc.warn when elementOrSelector is string but selector didn't return any element
-		// TODO: if elementOrSelector is not a valid HTML element either
-		return typeof mixed === 'string' ? document.getElementById(mixed) : mixed;
+	fetchElement : function (elementOrSelector) {
+		if (!elementOrSelector) {
+			return null;
+		}
+		if (typeof elementOrSelector === 'string') {
+			// query selector
+			return document.querySelector(elementOrSelector);
+		}
+		if (typeof elementOrSelector === 'object' && elementOrSelector instanceof HTMLElement) {
+			// HTML element
+			return elementOrSelector;
+		}
+
+		throw 'Invalid element of type ' + (typeof elementOrSelector) + ': ' + elementOrSelector;
 	},
 
 
