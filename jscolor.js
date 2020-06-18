@@ -304,7 +304,7 @@ var jsc = {
 	},
 
 
-	dispatchEvent : function (el, eventName) {
+	dispatchEvent : function (el, eventName, customData) {
 		if (!el) {
 			return;
 		}
@@ -313,6 +313,7 @@ var jsc = {
 			bubbles: true,
 			cancelable: true
 		});
+		ev._jscEventData = customData;
 		el.dispatchEvent(ev);
 
 		/* TODO: which polyfill to keep?
@@ -857,6 +858,41 @@ var jsc = {
 	},
 
 
+	// dispatches given event on the value element
+	dispatchOnValueElement : function (thisObj, ev, customData) {
+		if (thisObj.valueElement) {
+			if (jsc.isTextInput(thisObj.valueElement)) {
+				jsc.dispatchEvent(thisObj.valueElement, ev, customData);
+			}
+		}
+	},
+
+
+	// calls function specified in picker's property
+	dispatchCallback : function (thisObj, prop) {
+		if (!thisObj[prop]) {
+			return;
+		}
+		var callback = null;
+
+		if (typeof thisObj[prop] === 'string') {
+			// string with code
+			try {
+				callback = new Function (thisObj[prop]);
+			} catch(e) {
+				console.error(e);
+			}
+		} else {
+			// function
+			callback = thisObj[prop];
+		}
+
+		if (callback) {
+			callback.call(thisObj);
+		}
+	},
+
+
 	_pointerMoveEvent : {
 		mouse: 'mousemove',
 		touch: 'touchmove'
@@ -918,7 +954,7 @@ var jsc = {
 			break;
 		}
 
-		dispatchCallback(thisObj, 'input');
+		jsc.dispatchCallback(thisObj, 'onInput');
 		jsc.dispatchOnValueElement(thisObj, 'input');
 	},
 
@@ -930,21 +966,21 @@ var jsc = {
 			case 'pad':
 				if (!e) { e = window.event; }
 				jsc.setPad(thisObj, e, offset[0], offset[1]);
-				dispatchCallback(thisObj, 'input');
+				jsc.dispatchCallback(thisObj, 'onInput');
 				jsc.dispatchOnValueElement(thisObj, 'input');
 				break;
 
 			case 'sld':
 				if (!e) { e = window.event; }
 				jsc.setSld(thisObj, e, offset[1]);
-				dispatchCallback(thisObj, 'input');
+				jsc.dispatchCallback(thisObj, 'onInput');
 				jsc.dispatchOnValueElement(thisObj, 'input');
 				break;
 
 			case 'asld':
 				if (!e) { e = window.event; }
 				jsc.setASld(thisObj, e, offset[1]);
-				dispatchCallback(thisObj, 'input');
+				jsc.dispatchCallback(thisObj, 'onInput');
 				jsc.dispatchOnValueElement(thisObj, 'input');
 				break;
 			}
@@ -957,71 +993,13 @@ var jsc = {
 			var thisObj = target._jscInstance;
 			jsc.detachGroupEvents('drag');
 			jsc.releaseTarget();
-			// Always dispatch changes after detaching outstanding mouse handlers,
-			// in case some user interaction will occur in user's onchange callback
-			// that would intrude with current mouse events
-			jsc.dispatchChange(thisObj);
+			// Always dispatch changes AFTER detaching outstanding mouse handlers,
+			// in case some user interaction occured in user-defined onchange callback
+			// that intruded into current mouse events
+			jsc.dispatchCallback(thisObj, 'onChange');
+			jsc.dispatchOnValueElement(thisObj, 'change');
 		};
 	},
-
-
-	// dispatches given event on the value element
-	dispatchOnValueElement : function (thisObj, ev) {
-		if (thisObj.valueElement) {
-			if (jsc.isTextInput(thisObj.valueElement)) {
-				jsc.dispatchEvent(thisObj.valueElement, ev);
-			}
-		}
-	},
-
-
-	// calls function specified in picker's property
-	dispatchCallback : function (thisObj, prop) {
-		if (!thisObj[prop]) {
-			return;
-		}
-		var callback = null;
-
-		if (typeof thisObj[prop] === 'string') {
-			// string with code
-			try {
-				callback = new Function (thisObj[prop]);
-			} catch(e) {
-				console.error(e);
-			}
-		} else {
-			// function
-			callback = thisObj[prop];
-		}
-
-		if (callback) {
-			callback.call(thisObj);
-		}
-	},
-
-
-/* TODO
-	dispatchFineChange : function (thisObj) {
-		if (!thisObj.onFineChange) {
-			return;
-		}
-		var callback = null;
-
-		if (typeof thisObj.onFineChange === 'string') {
-			try {
-				callback = new Function (thisObj.onFineChange);
-			} catch(e) {
-				console.error(e);
-			}
-		} else {
-			callback = thisObj.onFineChange;
-		}
-
-		if (callback) {
-			callback.call(thisObj);
-		}
-	},
-*/
 
 
 	setPad : function (thisObj, e, ofsX, ofsY) {
@@ -1032,8 +1010,7 @@ var jsc = {
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		//var flags = jsc.leaveSld | jsc.leaveASld; // TODO: remove?
-		var flags = 0;
+		var flags = jsc.leaveSld | jsc.leaveASld;
 
 		switch (jsc.getPadYChannel(thisObj)) {
 		case 's': thisObj.fromHSVA(xVal, yVal, null, null, flags); break;
@@ -1047,8 +1024,7 @@ var jsc = {
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		//var flags = jsc.leavePad | jsc.leaveASld; // TODO: remove?
-		var flags = 0;
+		var flags = jsc.leavePad | jsc.leaveASld;
 
 		switch (jsc.getSliderChannel(thisObj)) {
 		case 's': thisObj.fromHSVA(null, yVal, null, null, flags); break;
@@ -1062,8 +1038,7 @@ var jsc = {
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
 
-		//var flags = jsc.leavePad | jsc.leaveSld; // TODO: remove?
-		var flags = 0;
+		var flags = jsc.leavePad | jsc.leaveSld;
 
 		thisObj.fromHSVA(null, null, null, yVal, flags);
 	},
@@ -1354,6 +1329,9 @@ var jsc = {
 
 	leaveValue : 1<<0,
 	leaveStyle : 1<<1,
+	leavePad : 1<<2,
+	leaveSld : 1<<3,
+	leaveASld : 1<<4,
 
 
 	BoxShadow : (function () {
@@ -1397,6 +1375,12 @@ var jsc = {
 			opts = {};
 		}
 
+		// Accessing the picked color
+		//
+		this.hsv = [0, 0, 100]; // (read-only)  hue, saturation, value  [0-360, 0-100, 0-100]
+		this.rgb = [255, 255, 255]; // (read-only)  red, green, blue  [0-255, 0-255, 0-255]
+		this.alpha = 1.0; // (read-only) alpha channel (opacity)  0.0-1.0
+
 		// General options
 		//
 		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
@@ -1409,7 +1393,8 @@ var jsc = {
 		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
 		this.hash = false; // whether to prefix the HEX color code with # symbol
 		this.uppercase = true; // whether to show the color code in upper case
-		this.onChange = null; // called instantly every time the color changes (value can be either a function or a string with javascript code)
+		this.onChange = null; // called when color changes. Value can be either a function or a string with javascript code.
+		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging slider. Value can be either a function or a string with javascript code.
 		this.overwriteImportant = false; // whether to overwrite colors of styleElement using !important
 		this.minS = 0; // min allowed saturation (0 - 100)
 		this.maxS = 100; // max allowed saturation (0 - 100)
@@ -1417,12 +1402,6 @@ var jsc = {
 		this.maxV = 100; // max allowed value (brightness) (0 - 100)
 		this.minA = 0.0; // min allowed alpha (opacity) (0.0 - 1.0)
 		this.maxA = 1.0; // max allowed alpha (opacity) (0.0 - 1.0)
-
-		// Accessing the picked color
-		//
-		this.hsv = [0, 0, 100]; // (read-only)  hue, saturation, value  [0-360, 0-100, 0-100]
-		this.rgb = [255, 255, 255]; // (read-only)  red, green, blue  [0-255, 0-255, 0-255]
-		this.alpha = 1.0; // (read-only) alpha channel (opacity)  0.0-1.0
 
 		// Color Picker options
 		//
@@ -1637,9 +1616,16 @@ var jsc = {
 			}
 
 			if (isPickerOwner()) {
-				redrawPad();
-				redrawSld();
-				redrawASld();
+				// TODO: remove the leave* flags?
+				if (!(flags & jsc.leavePad)) {
+					redrawPad();
+				}
+				if (!(flags & jsc.leaveSld)) {
+					redrawSld();
+				}
+				if (!(flags & jsc.leaveASld)) {
+					redrawASld();
+				}
 			}
 		};
 
@@ -2374,13 +2360,22 @@ var jsc = {
 		// valueElement
 		if (this.valueElement) {
 			if (jsc.isTextInput(this.valueElement)) {
-				var handleValueInput = function () {
+
+				var handleValueInput = function (ev) {
+					if (ev._jscEventData && ev._jscEventData.internal) {
+						return; // ignore the event the it was triggered by jscolor
+					}
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
-					dispatchCallback(thisObj, 'input');
+					jsc.dispatchCallback(THIS, 'onInput');
 				};
-				var handleValueChange = function () {
-					dispatchCallback(thisObj, 'change');
+
+				var handleValueChange = function (ev) {
+					if (ev._jscEventData && ev._jscEventData.internal) {
+						return; // ignore the event the it was triggered by jscolor
+					}
+					jsc.dispatchCallback(THIS, 'onChange');
 				};
+
 				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
 				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
 				jsc.attachEvent(this.valueElement, 'change', handleValueChange);
