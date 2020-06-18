@@ -2197,10 +2197,27 @@ var jsc = {
 		}
 
 
+		// current input/output format (notation)
+		this._currentFormat = null;
+
+
+		var THIS = this;
+
+		var container =
+			this.container ?
+			jsc.fetchElement(this.container) :
+			document.getElementsByTagName('body')[0];
+
+		var sliderPtrSpace = 3; // px
+
+
 		//
 		// Install the color picker on chosen element(s)
 		//
 
+		if (!targetElement) {
+			// TODO: warn: target element not specified
+		}
 
 		// TODO: retrieve using fetchElement
 
@@ -2220,13 +2237,40 @@ var jsc = {
 		}
 
 		if (this.targetElement._jscLinkedInstance) {
-			jsc.warn('Cannot link jscolor twice to the same element. Skipping.');
+			jsc.warn('Cannot instantiate jscolor twice on the same element');
 			return;
 		}
 		this.targetElement._jscLinkedInstance = this;
 
 		jsc.setClass(this.targetElement, jsc.jscolor.className);
 
+
+		// if target is BUTTON
+		if (jsc.nodeName(this.targetElement) === 'button') { // TODO: or also input type=button? in that case, isButton() check would be better
+
+			// TODO: move this to the block where setting style (background)
+			// empty buttons end up too small -> let's insert non-breaking space
+			if (/^\s*$/.test(this.targetElement.innerHTML)) {
+				this.targetElement.appendChild(document.createTextNode('\xa0'));
+			}
+
+			// TODO: move this to the block where setting style (background)
+			this.targetElement.style.minWidth = '50px';
+
+			// For BUTTON elements it's important to stop them from sending the form when clicked
+			// (e.g. in Safari)
+
+			// TODO: better way of preventing form submission? preventDefault?
+			if (this.targetElement.onclick) {
+				var origCallback = this.targetElement.onclick;
+				this.targetElement.onclick = function (evt) {
+					origCallback.call(this, evt);
+					return false;
+				};
+			} else {
+				this.targetElement.onclick = function () { return false; };
+			}
+		}
 
 		// Determine the value element
 		if (this.valueElement !== null) {
@@ -2249,69 +2293,32 @@ var jsc = {
 			this.styleElement = this.targetElement;
 		}
 
-		// current input/output format (notation)
-		this._currentFormat = null;
-
-
-		var THIS = this;
-
-		var container =
-			this.container ?
-			jsc.fetchElement(this.container) :
-			document.getElementsByTagName('body')[0];
-
-		var sliderPtrSpace = 3; // px
-
-
-		// if target is BUTTON
-		if (jsc.nodeName(this.targetElement) === 'button') {
-
-			// empty buttons end up too small -> let's insert non-breaking space
-			if (/^\s*$/.test(this.targetElement.innerHTML)) {
-				this.targetElement.appendChild(document.createTextNode('\xa0'));
-			}
-
-			// TODO
-			this.targetElement.style.minWidth = '50px';
-
-			// For BUTTON elements it's important to stop them from sending the form when clicked
-			// (e.g. in Safari)
-			if (this.targetElement.onclick) {
-				var origCallback = this.targetElement.onclick;
-				this.targetElement.onclick = function (evt) {
-					origCallback.call(this, evt);
-					return false;
-				};
-			} else {
-				this.targetElement.onclick = function () { return false; };
-			}
-		}
-
 		// valueElement
 		if (this.valueElement) {
-			if (jsc.nodeName(this.valueElement) === 'input') {
+			if (jsc.isTextInput(this.valueElement)) {
 				var handleValueInput = function () {
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
 					jsc.dispatchFineChange(THIS);
 				};
-				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput);
+				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // TODO: keyUp still needed?
 				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
 				jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
 				this.valueElement.setAttribute('autocomplete', 'off');
 			}
 		}
 
-		/* TODO: not needed?
 		// styleElement
 		if (this.styleElement) {
+			//TODO: update (minWidth, paddingRight)
 			this.styleElement._jscOrigStyle = {
+				/*
 				backgroundImage : this.styleElement.style.backgroundImage,
 				backgroundRepeat : this.styleElement.style.backgroundRepeat,
 				backgroundColor : this.styleElement.style.backgroundColor,
 				color : this.styleElement.style.color
+				*/
 			};
 		}
-		*/
 
 
 		// Initialize the color
@@ -2341,6 +2348,13 @@ var jsc = {
 		}
 
 		this.processColorInput(initValue);
+
+
+
+		// TODO: move function x() {..} functions here?
+
+
+
 	}
 
 };
