@@ -33,7 +33,7 @@ var jsc = {
 		var elms = document.querySelectorAll(selector);
 
 		// for backward compatibility with DEPRECATED installation/configuration using className
-		var matchClass = new RegExp('(^|\\s)(' + className + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
+		var matchClass = new RegExp('(^|\\s)(' + jsc.jscolor.lookupClass + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
 
 		for (var i = 0; i < elms.length; i += 1) {
 
@@ -63,14 +63,37 @@ var jsc = {
 				var opts = {};
 				if (optsStr) {
 					try {
-						opts = (new Function ('return (' + optsStr + ')'))();
-					} catch(eParseError) {
-						jsc.warn('Error parsing jscolor options: ' + eParseError + ':\n' + optsStr);
+						opts = jsc.parseOptionsStr(optsStr);
+					} catch(e) {
+						jsc.warn(e + ':\n' + optsStr);
 					}
 				}
+
 				targetElm.jscolor = new jsc.jscolor(targetElm, opts);
 			}
 		}
+	},
+
+
+	parseOptionsStr : function (str) {
+		var opts = {};
+
+		try {
+			opts = JSON.parse();
+		} catch (eParse) {
+			if (!jsc.jscolor.looseJSON) {
+				throw 'Error parsing jscolor options as JSON: ' + eParse;
+			} else {
+				// loose JSON syntax is enabled -> try to evaluate the options string
+				try {
+					opts = (new Function ('return (' + str + ')'))();
+				} catch(eEval) {
+					throw 'Error parsing jscolor options as evaluated JSON: ' + eEval;
+				}
+			}
+		}
+
+		return opts;
 	},
 
 
@@ -936,7 +959,7 @@ var jsc = {
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		//var flags = jsc.leaveSld | jsc.leaveASld;
+		//var flags = jsc.leaveSld | jsc.leaveASld; // TODO: remove?
 		var flags = 0;
 
 		switch (jsc.getPadYChannel(thisObj)) {
@@ -951,7 +974,7 @@ var jsc = {
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		//var flags = jsc.leavePad | jsc.leaveASld;
+		//var flags = jsc.leavePad | jsc.leaveASld; // TODO: remove?
 		var flags = 0;
 
 		switch (jsc.getSliderChannel(thisObj)) {
@@ -966,7 +989,7 @@ var jsc = {
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
 
-		//var flags = jsc.leavePad | jsc.leaveSld;
+		//var flags = jsc.leavePad | jsc.leaveSld; // TODO: remove?
 		var flags = 0;
 
 		thisObj.fromHSVA(null, null, null, yVal, flags);
@@ -1258,9 +1281,6 @@ var jsc = {
 
 	leaveValue : 1<<0,
 	leaveStyle : 1<<1,
-	leavePad : 1<<2,
-	leaveSld : 1<<3,
-	leaveASld : 1<<4,
 
 
 	BoxShadow : (function () {
@@ -1539,13 +1559,9 @@ var jsc = {
 				}
 			}
 
-			if (!(flags & jsc.leavePad) && isPickerOwner()) {
+			if (isPickerOwner()) {
 				redrawPad();
-			}
-			if (!(flags & jsc.leaveSld) && isPickerOwner()) {
 				redrawSld();
-			}
-			if (!(flags & jsc.leaveASld) && isPickerOwner()) {
 				redrawASld();
 			}
 		};
@@ -2300,7 +2316,7 @@ var jsc = {
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
 					jsc.dispatchFineChange(THIS);
 				};
-				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // TODO: keyUp still needed?
+				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
 				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
 				jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
 				this.valueElement.setAttribute('autocomplete', 'off');
@@ -2387,6 +2403,11 @@ jsc.jscolor.className = 'jscolor';
 jsc.jscolor.activeClassName = 'jscolor-active';
 
 
+// whether to try to parse the options string by evaluating it using 'new Function()'
+// in case it could not be parsed with JSON.parse()
+jsc.jscolor.looseJSON = true;
+
+
 // presets
 jsc.jscolor.presets = {};
 
@@ -2423,8 +2444,8 @@ jsc.jscolor.lookupClass = 'jscolor';
 // DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
 //
 // Install jscolor on all elements that have the specified class name
-jsc.jscolor.installByClassName = function (className) {
-	jsc.install('.' + className);
+jsc.jscolor.installByClassName = function () {
+	jsc.install('.' + jsc.jscolor.lookupClass);
 };
 
 
