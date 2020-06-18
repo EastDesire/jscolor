@@ -37,7 +37,7 @@ var jsc = {
 
 		for (var i = 0; i < elms.length; i += 1) {
 
-			if (elms[i].jscolor !== undefined) { // TODO: test
+			if (elms[i]._jscLinkedInstance !== undefined) {
 				continue; // jscolor already installed on this element
 			}
 
@@ -79,16 +79,16 @@ var jsc = {
 		var opts = {};
 
 		try {
-			opts = JSON.parse();
+			opts = JSON.parse(str);
 		} catch (eParse) {
 			if (!jsc.jscolor.looseJSON) {
-				throw 'Error parsing jscolor options as JSON: ' + eParse;
+				throw new Error('Could not parse options as JSON: ' + eParse);
 			} else {
 				// loose JSON syntax is enabled -> try to evaluate the options string
 				try {
 					opts = (new Function ('return (' + str + ')'))();
 				} catch(eEval) {
-					throw 'Error parsing jscolor options as evaluated JSON: ' + eEval;
+					throw new Error('Could not evaluate options as JSON: ' + eEval);
 				}
 			}
 		}
@@ -97,38 +97,34 @@ var jsc = {
 	},
 
 
-	isColorAttrSupported : (function () {
-		var elm = document.createElement('input');
-		if (elm.setAttribute) {
-			elm.setAttribute('type', 'color');
-			if (elm.type.toLowerCase() == 'color') {
-				return true;
-			}
-		}
-		return false;
-	})(),
-
-
-	isCanvasSupported : (function () {
-		var elm = document.createElement('canvas');
-		return !!(elm.getContext && elm.getContext('2d'));
-	})(),
-
-
 	fetchElement : function (elementOrSelector) {
 		if (!elementOrSelector) {
 			return null;
 		}
+
 		if (typeof elementOrSelector === 'string') {
 			// query selector
-			return document.querySelector(elementOrSelector);
+			var sel = elementOrSelector;
+			var el = null;
+			try {
+				el = document.querySelector(sel);
+			} catch (e) {
+				console.error(e);
+				return null;
+			}
+			if (!el) {
+				console.error('No element matches the selector: %s', sel);
+			}
+			return el;
 		}
+
 		if (typeof elementOrSelector === 'object' && elementOrSelector instanceof HTMLElement) {
 			// HTML element
 			return elementOrSelector;
 		}
 
-		throw 'Invalid element of type ' + (typeof elementOrSelector) + ': ' + elementOrSelector;
+		console.error('Invalid element of type %s: %s', typeof elementOrSelector, elementOrSelector);
+		return null;
 	},
 
 
@@ -157,6 +153,24 @@ var jsc = {
 	getButtonText : function () {
 		// TODO
 	},
+
+
+	isColorAttrSupported : (function () {
+		var elm = document.createElement('input');
+		if (elm.setAttribute) {
+			elm.setAttribute('type', 'color');
+			if (elm.type.toLowerCase() == 'color') {
+				return true;
+			}
+		}
+		return false;
+	})(),
+
+
+	isCanvasSupported : (function () {
+		var elm = document.createElement('canvas');
+		return !!(elm.getContext && elm.getContext('2d'));
+	})(),
 
 
 	getDataAttr : function (el, name) {
@@ -1328,6 +1342,10 @@ var jsc = {
 
 	jscolor : function (targetElement, opts) {
 
+		if (opts === undefined) {
+			opts = {};
+		}
+
 		// General options
 		//
 		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
@@ -2221,6 +2239,8 @@ var jsc = {
 		}
 
 
+		console.log('instantiating'); // TODO
+
 		// current input/output format (notation)
 		this._currentFormat = null;
 
@@ -2239,32 +2259,18 @@ var jsc = {
 		// Install the color picker on chosen element(s)
 		//
 
-		if (!targetElement) {
-			// TODO: warn: target element not specified
-		}
-
-		// TODO: retrieve using fetchElement
-
 		// Find the target element
-		if (typeof targetElement === 'string') {
-			var id = targetElement;
-			var elm = document.getElementById(id);
-			if (elm) {
-				this.targetElement = elm;
-			} else {
-				jsc.warn('Could not find target element with ID \'' + id + '\'');
-			}
-		} else if (targetElement) {
-			this.targetElement = targetElement;
-		} else {
-			jsc.warn('Invalid target element: \'' + targetElement + '\'');
+		this.targetElement = jsc.fetchElement(targetElement);
+
+		if (!this.targetElement) {
+			throw new Error('Cannot instantiate color picker without a target element');
 		}
 
-		if (this.targetElement._jscLinkedInstance) {
-			jsc.warn('Cannot instantiate jscolor twice on the same element');
-			return;
+		if (this.targetElement._jscLinkedInstance !== undefined) {
+			throw new Error('Color picker already installed on this element');
 		}
-		this.targetElement._jscLinkedInstance = this;
+
+		this.targetElement._jscLinkedInstance = this; // TODO: use element's data
 
 		jsc.setClass(this.targetElement, jsc.jscolor.className);
 
@@ -2398,7 +2404,7 @@ jsc.jscolor.init = function () {
 
 	// for backward compatibility with DEPRECATED installation using class name
 	if (jsc.jscolor.lookupClass) {
-		jsc.jscolor.installByClassName(jsc.jscolor.lookupClass);
+		jsc.jscolor.installByClassName();
 	}
 };
 
@@ -2454,6 +2460,13 @@ jsc.jscolor.lookupClass = 'jscolor';
 // Install jscolor on all elements that have the specified class name
 jsc.jscolor.installByClassName = function () {
 	jsc.install('.' + jsc.jscolor.lookupClass);
+	// TODO
+	/*
+	jsc.install(
+		'input.' + jsc.jscolor.lookupClass + ', ' +
+		'button.' + jsc.jscolor.lookupClass
+	);
+	*/
 };
 
 
