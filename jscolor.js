@@ -304,7 +304,7 @@ var jsc = {
 	},
 
 
-	dispatchEvent : function (el, eventName, customData) {
+	dispatchEvent : function (el, eventName, bubbles, cancelable, customData) {
 		if (!el) {
 			return;
 		}
@@ -313,27 +313,26 @@ var jsc = {
 			customData = {};
 		}
 
-		// TODO: test in IE10 and use polyfill below if needed
-		var ev = new Event(eventName, {
-			bubbles: true,
-			cancelable: true
-		});
+		var ev = null;
+
+		if (typeof Event === 'function') {
+			ev = new Event(eventName, {
+				bubbles: bubbles,
+				cancelable: cancelable
+			});
+		} else {
+			// IE
+			ev = document.createEvent('Event');
+			ev.initEvent(eventName, bubbles, cancelable);
+		}
+
+		if (!ev) {
+			return false;
+		}
+
 		ev._jscData = customData;
 		el.dispatchEvent(ev);
-
-		/* TODO: which polyfill to keep?
-
-		if (document.createEvent) {
-			var ev = document.createEvent('HTMLEvents');
-			ev.initEvent(eventName, true, true);
-			el.dispatchEvent(ev);
-		} else if (document.createEventObject) {
-			var ev = document.createEventObject();
-			el.fireEvent('on' + eventName, ev);
-		} else if (el['on' + eventName]) { // alternatively use the traditional event model
-			el['on' + eventName]();
-		}
-		*/
+		return true;
 	},
 
 
@@ -867,7 +866,7 @@ var jsc = {
 	dispatchOnValueElement : function (thisObj, ev, customData) {
 		if (thisObj.valueElement) {
 			if (jsc.isTextInput(thisObj.valueElement)) {
-				jsc.dispatchEvent(thisObj.valueElement, ev, customData);
+				jsc.dispatchEvent(thisObj.valueElement, ev, true, true, customData);
 			}
 		}
 	},
