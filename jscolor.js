@@ -37,7 +37,7 @@ var jsc = {
 
 		for (var i = 0; i < elms.length; i += 1) {
 
-			if (elms[i]._jscLinkedInstance !== undefined) {
+			if (elms[i].jscolor !== undefined) {
 				continue; // jscolor already installed on this element
 			}
 
@@ -69,7 +69,7 @@ var jsc = {
 					}
 				}
 
-				targetElm.jscolor = new jsc.jscolor(targetElm, opts);
+				new jsc.jscolor(targetElm, opts);
 			}
 		}
 	},
@@ -304,20 +304,30 @@ var jsc = {
 	},
 
 
-	fireEvent : function (el, evnt) {
+	dispatchEvent : function (el, eventName) {
 		if (!el) {
 			return;
 		}
+		// TODO: test in IE10 and use polyfill below if needed
+		var ev = new Event(eventName, {
+			bubbles: true,
+			cancelable: true
+		});
+		el.dispatchEvent(ev);
+
+		/* TODO: which polyfill to keep?
+
 		if (document.createEvent) {
 			var ev = document.createEvent('HTMLEvents');
-			ev.initEvent(evnt, true, true);
+			ev.initEvent(eventName, true, true);
 			el.dispatchEvent(ev);
 		} else if (document.createEventObject) {
 			var ev = document.createEventObject();
-			el.fireEvent('on' + evnt, ev);
-		} else if (el['on' + evnt]) { // alternatively use the traditional event model
-			el['on' + evnt]();
+			el.fireEvent('on' + eventName, ev);
+		} else if (el['on' + eventName]) { // alternatively use the traditional event model
+			el['on' + eventName]();
 		}
+		*/
 	},
 
 
@@ -787,9 +797,9 @@ var jsc = {
 		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 
-		if (target._jscLinkedInstance) {
-			if (target._jscLinkedInstance.showOnClick) {
-				target._jscLinkedInstance.show();
+		if (target.jscolor) {
+			if (target.jscolor.showOnClick) {
+				target.jscolor.show();
 			}
 		} else if (target._jscControlName) {
 			jsc.onControlPointerStart(e, target, target._jscControlName, 'mouse');
@@ -806,9 +816,9 @@ var jsc = {
 		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 
-		if (target._jscLinkedInstance) {
-			if (target._jscLinkedInstance.showOnClick) {
-				target._jscLinkedInstance.show();
+		if (target.jscolor) {
+			if (target.jscolor.showOnClick) {
+				target.jscolor.show();
 			}
 		} else if (target._jscControlName) {
 			jsc.onControlPointerStart(e, target, target._jscControlName, 'touch');
@@ -908,7 +918,8 @@ var jsc = {
 			break;
 		}
 
-		jsc.dispatchFineChange(thisObj);
+		dispatchCallback(thisObj, 'input');
+		jsc.dispatchOnValueElement(thisObj, 'input');
 	},
 
 
@@ -919,19 +930,22 @@ var jsc = {
 			case 'pad':
 				if (!e) { e = window.event; }
 				jsc.setPad(thisObj, e, offset[0], offset[1]);
-				jsc.dispatchFineChange(thisObj);
+				dispatchCallback(thisObj, 'input');
+				jsc.dispatchOnValueElement(thisObj, 'input');
 				break;
 
 			case 'sld':
 				if (!e) { e = window.event; }
 				jsc.setSld(thisObj, e, offset[1]);
-				jsc.dispatchFineChange(thisObj);
+				dispatchCallback(thisObj, 'input');
+				jsc.dispatchOnValueElement(thisObj, 'input');
 				break;
 
 			case 'asld':
 				if (!e) { e = window.event; }
 				jsc.setASld(thisObj, e, offset[1]);
-				jsc.dispatchFineChange(thisObj);
+				dispatchCallback(thisObj, 'input');
+				jsc.dispatchOnValueElement(thisObj, 'input');
 				break;
 			}
 		}
@@ -951,26 +965,63 @@ var jsc = {
 	},
 
 
-	dispatchChange : function (thisObj) {
+	// dispatches given event on the value element
+	dispatchOnValueElement : function (thisObj, ev) {
 		if (thisObj.valueElement) {
 			if (jsc.isTextInput(thisObj.valueElement)) {
-				jsc.fireEvent(thisObj.valueElement, 'change');
+				jsc.dispatchEvent(thisObj.valueElement, ev);
 			}
 		}
 	},
 
 
-	dispatchFineChange : function (thisObj) {
-		if (thisObj.onFineChange) {
-			var callback;
-			if (typeof thisObj.onFineChange === 'string') {
-				callback = new Function (thisObj.onFineChange);
-			} else {
-				callback = thisObj.onFineChange;
+	// calls function specified in picker's property
+	dispatchCallback : function (thisObj, prop) {
+		if (!thisObj[prop]) {
+			return;
+		}
+		var callback = null;
+
+		if (typeof thisObj[prop] === 'string') {
+			// string with code
+			try {
+				callback = new Function (thisObj[prop]);
+			} catch(e) {
+				console.error(e);
 			}
+		} else {
+			// function
+			callback = thisObj[prop];
+		}
+
+		if (callback) {
 			callback.call(thisObj);
 		}
 	},
+
+
+/* TODO
+	dispatchFineChange : function (thisObj) {
+		if (!thisObj.onFineChange) {
+			return;
+		}
+		var callback = null;
+
+		if (typeof thisObj.onFineChange === 'string') {
+			try {
+				callback = new Function (thisObj.onFineChange);
+			} catch(e) {
+				console.error(e);
+			}
+		} else {
+			callback = thisObj.onFineChange;
+		}
+
+		if (callback) {
+			callback.call(thisObj);
+		}
+	},
+*/
 
 
 	setPad : function (thisObj, e, ofsX, ofsY) {
@@ -1358,7 +1409,7 @@ var jsc = {
 		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
 		this.hash = false; // whether to prefix the HEX color code with # symbol
 		this.uppercase = true; // whether to show the color code in upper case
-		this.onFineChange = null; // called instantly every time the color changes (value can be either a function or a string with javascript code)
+		this.onChange = null; // called instantly every time the color changes (value can be either a function or a string with javascript code)
 		this.overwriteImportant = false; // whether to overwrite colors of styleElement using !important
 		this.minS = 0; // min allowed saturation (0 - 100)
 		this.maxS = 100; // max allowed saturation (0 - 100)
@@ -2239,8 +2290,6 @@ var jsc = {
 		}
 
 
-		console.log('instantiating'); // TODO
-
 		// current input/output format (notation)
 		this._currentFormat = null;
 
@@ -2265,12 +2314,11 @@ var jsc = {
 		if (!this.targetElement) {
 			throw new Error('Cannot instantiate color picker without a target element');
 		}
-
-		if (this.targetElement._jscLinkedInstance !== undefined) {
+		if (this.targetElement.jscolor !== undefined) {
 			throw new Error('Color picker already installed on this element');
 		}
 
-		this.targetElement._jscLinkedInstance = this; // TODO: use element's data
+		this.targetElement.jscolor = this;
 
 		jsc.setClass(this.targetElement, jsc.jscolor.className);
 
@@ -2328,10 +2376,14 @@ var jsc = {
 			if (jsc.isTextInput(this.valueElement)) {
 				var handleValueInput = function () {
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
-					jsc.dispatchFineChange(THIS);
+					dispatchCallback(thisObj, 'input');
+				};
+				var handleValueChange = function () {
+					dispatchCallback(thisObj, 'change');
 				};
 				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
 				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
+				jsc.attachEvent(this.valueElement, 'change', handleValueChange);
 				jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
 				this.valueElement.setAttribute('autocomplete', 'off');
 			}
