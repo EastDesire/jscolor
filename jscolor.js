@@ -29,34 +29,34 @@ var jsc = {
 	},
 
 
-	tryInstallOnElements : function (elms, className) {
+	install : function (selector) {
+		var elms = document.querySelectorAll(selector);
+
+		// for backward compatibility with DEPRECATED installation/configuration using className
 		var matchClass = new RegExp('(^|\\s)(' + className + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
 
 		for (var i = 0; i < elms.length; i += 1) {
-			if (elms[i].type !== undefined && elms[i].type.toLowerCase() == 'color') {
-				if (jsc.isColorAttrSupported) {
-					// skip inputs of type 'color' if supported by the browser
-					continue;
-				}
+
+			if (elms[i].jscolor !== undefined) { // TODO: test
+				continue; // jscolor already installed on this element
 			}
 
-			if (elms[i].jscolor) {
-				// jscolor is already installed on this element
-				continue;
+			if (elms[i].type !== undefined && elms[i].type.toLowerCase() == 'color' && jsc.isColorAttrSupported) {
+				continue; // skips inputs of type 'color' if supported by the browser
 			}
 
-			var m, dataOpts;
+			var dataOpts, m;
 
 			if (
 				(dataOpts = jsc.getDataAttr(elms[i], 'jscolor')) !== null ||
-				(elms[i].className && (m = elms[i].className.match(matchClass)))
+				(elms[i].className && (m = elms[i].className.match(matchClass))) // installation using className (DEPRECATED)
 			) {
 				var targetElm = elms[i];
 				var optsStr = null;
 
 				if (dataOpts !== null) {
 					optsStr = dataOpts;
-				} else if (m && m[4]) {
+				} else if (m && m[4]) { // configuration using className (DEPRECATED)
 					optsStr = m[4];
 				}
 
@@ -93,6 +93,10 @@ var jsc = {
 
 
 	fetchElement : function (mixed) {
+		// TODO: mixed will be called elementOrSelector
+		// TODO: use document.querySelector
+		// TODO: jsc.warn when elementOrSelector is string but selector didn't return any element
+		// TODO: if elementOrSelector is not a valid HTML element either
 		return typeof mixed === 'string' ? document.getElementById(mixed) : mixed;
 	},
 
@@ -106,18 +110,21 @@ var jsc = {
 
 
 	isTextInput : function (node) {
-		// TODO: test
 		return jsc.nodeName(node) === 'input' && node.type.toLowerCase() === 'text';
 	},
 
 
 	isButton : function (node) {
-		// TODO: test
 		var n = jsc.nodeName(node);
 		return (
 			(n === 'button') ||
 			(n === 'input' && node.type.toLowerCase() === 'button')
 		);
+	},
+
+
+	getButtonText : function () {
+		// TODO
 	},
 
 
@@ -276,6 +283,7 @@ var jsc = {
 
 	// The className parameter (str) can only contain a single class name
 	hasClass : function (elm, className) {
+		// TODO: use classList, if implemented
 		if (!className) {
 			return false;
 		}
@@ -285,6 +293,7 @@ var jsc = {
 
 	// The className parameter (str) can contain multiple class names separated by whitespace
 	setClass : function (elm, className) {
+		// TODO: use classList, if implemented
 		var classList = jsc.classNameToList(className);
 		for (var i = 0; i < classList.length; i += 1) {
 			if (!jsc.hasClass(elm, classList[i])) {
@@ -296,6 +305,7 @@ var jsc = {
 
 	// The className parameter (str) can contain multiple class names separated by whitespace
 	unsetClass : function (elm, className) {
+		// TODO: use classList, if implemented
 		var classList = jsc.classNameToList(className);
 		for (var i = 0; i < classList.length; i += 1) {
 			var repl = new RegExp(
@@ -566,7 +576,7 @@ var jsc = {
 		var sqColor2 = '#999999';
 
 		var canvas = document.createElement('canvas');
-		canvas.width = customWidth ? customWidth : sqSize * 2;
+		canvas.width = customWidth !== undefined ? customWidth : sqSize * 2;
 		canvas.height = sqSize * 2;
 
 		var ctx = canvas.getContext('2d');
@@ -587,7 +597,7 @@ var jsc = {
 		ctx.fillStyle = color;
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-		if (customWidth) {
+		if (customWidth !== undefined) {
 			// TODO: draw border on the left (probably consisting of light and dark colors, like squares' colors. Light would probably look better on the left)
 		}
 
@@ -1441,7 +1451,7 @@ var jsc = {
 				}
 				*/
 				// input's value is empty -> remove background
-				this.styleElement.style.background = ''; // TODO: OK?
+				this.styleElement.style.background = 'none'; // TODO: OK?
 				this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				return;
 			}
@@ -1458,7 +1468,7 @@ var jsc = {
 					}
 					*/
 					// input's value could not be parsed -> remove background
-					this.styleElement.style.background = ''; // TODO: OK?
+					this.styleElement.style.background = 'none'; // TODO: OK?
 					this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				}
 				return;
@@ -2016,7 +2026,7 @@ var jsc = {
 			// alpha slider border
 			p.asldB.style.display = displayAlphaSlider ? 'block' : 'none';
 			p.asldB.style.position = 'absolute';
-			p.asldB.style.right = THIS.padding + 'px';
+			p.asldB.style.right = THIS.padding + 'px'; // TODO: position from left
 			p.asldB.style.top = THIS.padding + 'px';
 			p.asldB.style.border = THIS.insetWidth + 'px solid';
 			p.asldB.style.borderColor = THIS.insetColor;
@@ -2026,7 +2036,7 @@ var jsc = {
 			p.asldM._jscControlName = 'asld';
 			p.asldM.style.display = displayAlphaSlider ? 'block' : 'none';
 			p.asldM.style.position = 'absolute';
-			p.asldM.style.right = '0';
+			p.asldM.style.right = '0'; // TODO: position from left
 			p.asldM.style.top = '0';
 			p.asldM.style.width = (THIS.sliderSize + padToSliderPadding / 2 + THIS.padding + 2 * THIS.insetWidth) + 'px'; // TODO: padToSliderPadding? test if padding is 0
 			p.asldM.style.height = dims[1] + 'px';
@@ -2192,6 +2202,8 @@ var jsc = {
 		//
 
 
+		// TODO: retrieve using fetchElement
+
 		// Find the target element
 		if (typeof targetElement === 'string') {
 			var id = targetElement;
@@ -2344,6 +2356,9 @@ var jsc = {
 
 // Initializes jscolor on current DOM tree
 jsc.jscolor.init = function () {
+	jsc.install('[data-jscolor]');
+
+	// for backward compatibility with DEPRECATED installation using class name
 	if (jsc.jscolor.lookupClass) {
 		jsc.jscolor.installByClassName(jsc.jscolor.lookupClass);
 	}
@@ -2395,11 +2410,7 @@ jsc.jscolor.lookupClass = 'jscolor';
 //
 // Install jscolor on all elements that have the specified class name
 jsc.jscolor.installByClassName = function (className) {
-	var inputElms = document.getElementsByTagName('input');
-	var buttonElms = document.getElementsByTagName('button');
-
-	jsc.tryInstallOnElements(inputElms, className);
-	jsc.tryInstallOnElements(buttonElms, className);
+	jsc.install('.' + className);
 };
 
 
