@@ -308,12 +308,17 @@ var jsc = {
 		if (!el) {
 			return;
 		}
+
+		if (customData === undefined) {
+			customData = {};
+		}
+
 		// TODO: test in IE10 and use polyfill below if needed
 		var ev = new Event(eventName, {
 			bubbles: true,
 			cancelable: true
 		});
-		ev._jscEventData = customData;
+		ev._jscData = customData;
 		el.dispatchEvent(ev);
 
 		/* TODO: which polyfill to keep?
@@ -1010,7 +1015,8 @@ var jsc = {
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		var flags = jsc.leaveSld | jsc.leaveASld;
+		//var flags = jsc.leaveSld | jsc.leaveASld; // TODO: remove?
+		var flags = 0;
 
 		switch (jsc.getPadYChannel(thisObj)) {
 		case 's': thisObj.fromHSVA(xVal, yVal, null, null, flags); break;
@@ -1024,7 +1030,8 @@ var jsc = {
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		var flags = jsc.leavePad | jsc.leaveASld;
+		//var flags = jsc.leavePad | jsc.leaveASld; // TODO: remove?
+		var flags = 0;
 
 		switch (jsc.getSliderChannel(thisObj)) {
 		case 's': thisObj.fromHSVA(null, yVal, null, null, flags); break;
@@ -1038,7 +1045,8 @@ var jsc = {
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
 
-		var flags = jsc.leavePad | jsc.leaveSld;
+		//var flags = jsc.leavePad | jsc.leaveSld; // TODO: remove?
+		var flags = 0;
 
 		thisObj.fromHSVA(null, null, null, yVal, flags);
 	},
@@ -1329,9 +1337,6 @@ var jsc = {
 
 	leaveValue : 1<<0,
 	leaveStyle : 1<<1,
-	leavePad : 1<<2,
-	leaveSld : 1<<3,
-	leaveASld : 1<<4,
 
 
 	BoxShadow : (function () {
@@ -1616,16 +1621,9 @@ var jsc = {
 			}
 
 			if (isPickerOwner()) {
-				// TODO: remove the leave* flags?
-				if (!(flags & jsc.leavePad)) {
-					redrawPad();
-				}
-				if (!(flags & jsc.leaveSld)) {
-					redrawSld();
-				}
-				if (!(flags & jsc.leaveASld)) {
-					redrawASld();
-				}
+				redrawPad();
+				redrawSld();
+				redrawASld();
 			}
 		};
 
@@ -2362,7 +2360,7 @@ var jsc = {
 			if (jsc.isTextInput(this.valueElement)) {
 
 				var handleValueInput = function (ev) {
-					if (ev._jscEventData && ev._jscEventData.internal) {
+					if (ev._jscData) {
 						return; // ignore the event the it was triggered by jscolor
 					}
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
@@ -2370,7 +2368,7 @@ var jsc = {
 				};
 
 				var handleValueChange = function (ev) {
-					if (ev._jscEventData && ev._jscEventData.internal) {
+					if (ev._jscData) {
 						return; // ignore the event the it was triggered by jscolor
 					}
 					jsc.dispatchCallback(THIS, 'onChange');
