@@ -2365,9 +2365,12 @@ var jsc = {
 			throw new Error('Color picker already installed on this element');
 		}
 
+		// link this instance with the target element
 		this.targetElement.jscolor = this;
-
 		jsc.setClass(this.targetElement, jsc.pub.className);
+
+		// register this instance
+		jsc.instances.push(this);
 
 
 		// if target is BUTTON
