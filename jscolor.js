@@ -222,20 +222,12 @@ var jsc = {
 
 
 	attachEvent : function (el, evnt, func) {
-		if (el.addEventListener) {
-			el.addEventListener(evnt, func, false);
-		} else if (el.attachEvent) {
-			el.attachEvent('on' + evnt, func);
-		}
+		el.addEventListener(evnt, func, false);
 	},
 
 
 	detachEvent : function (el, evnt, func) {
-		if (el.removeEventListener) {
-			el.removeEventListener(evnt, func, false);
-		} else if (el.detachEvent) {
-			el.detachEvent('on' + evnt, func);
-		}
+		el.removeEventListener(evnt, func, false);
 	},
 
 
@@ -263,50 +255,8 @@ var jsc = {
 
 
 	attachDOMReadyEvent : function (func) {
-		var fired = false;
-		var fireOnce = function () {
-			if (!fired) {
-				fired = true;
-				func();
-			}
-		};
-
-		if (document.readyState === 'complete') {
-			setTimeout(fireOnce, 1); // async
-			return;
-		}
-
 		if (document.addEventListener) {
-			document.addEventListener('DOMContentLoaded', fireOnce, false);
-
-			// Fallback
-			window.addEventListener('load', fireOnce, false);
-
-		} else if (document.attachEvent) {
-			// IE
-			document.attachEvent('onreadystatechange', function () {
-				if (document.readyState === 'complete') {
-					document.detachEvent('onreadystatechange', arguments.callee);
-					fireOnce();
-				}
-			})
-
-			// Fallback
-			window.attachEvent('onload', fireOnce);
-
-			// IE7/8
-			if (document.documentElement.doScroll && window == window.top) {
-				var tryScroll = function () {
-					if (!document.body) { return; }
-					try {
-						document.documentElement.doScroll('left');
-						fireOnce();
-					} catch (e) {
-						setTimeout(tryScroll, 1);
-					}
-				};
-				tryScroll();
-			}
+			document.addEventListener('DOMContentLoaded', func, false);
 		}
 	},
 
@@ -2421,20 +2371,16 @@ var jsc = {
 		if (this.valueElement) {
 			if (jsc.isTextInput(this.valueElement)) {
 
-				// If the value element has oninput event already set, we need to store it and call it AFTER setting the color,
+				// If the value element has oninput event already set, we need to detach it and attach AFTER our listener.
 				// otherwise the picker instance would still contain the old color when accessed from the oninput handler.
 				// This is because we are attaching the 'input' event listener after the oninput is already set.
 				var origOnInput = this.valueElement.oninput;
 				this.valueElement.oninput = null;
-				// TODO
-				console.log(this.valueElement.oninput);
-				console.log(origOnInput);
 
 				var handleValueInput = function (ev) {
 					if (ev._jscData) {
 						return; // ignore the event the it was triggered by jscolor
 					}
-					console.log('triggered oninput with value ' + THIS.valueElement.value); // TODO
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
 					jsc.triggerCallback(THIS, 'onInput');
 				};
@@ -2443,7 +2389,6 @@ var jsc = {
 					if (ev._jscData) {
 						return; // ignore the event the it was triggered by jscolor
 					}
-					console.log('triggered onchange with value ' + THIS.valueElement.value); // TODO
 					jsc.triggerCallback(THIS, 'onChange');
 				};
 
@@ -2451,6 +2396,10 @@ var jsc = {
 				//jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
 
 				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
+				if (origOnInput) {
+					jsc.attachEvent(this.valueElement, 'input', origOnInput);
+				}
+
 				jsc.attachEvent(this.valueElement, 'change', handleValueChange);
 				jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
 				this.valueElement.setAttribute('autocomplete', 'off');
