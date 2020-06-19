@@ -1617,19 +1617,21 @@ var jsc = {
 
 			if (!(flags & jsc.leaveStyle)) {
 				if (this.previewElement) {
+
 					// null -> revert original style
-					var previewWidth = null;
 					var paddingRight = null;
 					var minWidth = null;
 
+					var previewOnRight = false;
+
 					if (isTextInput(this.previewElement)) {
 						// text input
-						previewWidth = this.previewSize;
+						previewOnRight = true;
 						paddingRight = this.previewSize + this.previewPadding;
 					} else if (isButton(this.previewElement)) {
 						if (jsc.getButtonText(this.previewElement).trim() !== '') {
 							// non-empty button
-							previewWidth = this.previewSize;
+							previewOnRight = true;
 							paddingRight = this.previewSize + this.previewPadding;
 						} else {
 							// empty button
@@ -1641,11 +1643,12 @@ var jsc = {
 					}
 
 
-					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), this.previewSize);
+					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), previewOnRight ? this.previewSize : null);
+
 					this.previewElement.style.backgroundImage = 'url(\'' + previewCanvas.toDataURL('image/png') + '\')';
-					this.previewElement.style.backgroundRepeat = 'repeat-y';
-					this.previewElement.style.backgroundPosition = 'right top';
-					this.previewElement.style.paddingRight = (this.previewSize + this.previewPadding) + 'px';
+					this.previewElement.style.backgroundRepeat = (previewOnRight ? 'repeat-y' : 'repeat');
+					this.previewElement.style.backgroundPosition = (previewOnRight ? 'right top' : 'left top');
+					this.previewElement.style.paddingRight = (paddingRight !== null ? (paddingRight + 'px') : this.previewElement._jscOrigStyle['padding-right']);
 
 					// TODO
 					if (this.forceStyle) {
