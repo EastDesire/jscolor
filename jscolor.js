@@ -953,19 +953,20 @@ var jsc = {
 			case 'v': if (thisObj.hsv[2] === 0) { thisObj.fromHSVA(null, null, 100, null); }; break;
 			}
 			jsc.setPad(thisObj, e, 0, 0);
-			thisObj.trigger('input', thisObj.valueElement);
+			//thisObj.trigger('input', thisObj.valueElement); // TODO: remove?
 			break;
 
 		case 'sld':
 			jsc.setSld(thisObj, e, 0);
-			thisObj.trigger('input', thisObj.valueElement);
+			//thisObj.trigger('input', thisObj.valueElement); // TODO: remove?
 			break;
 
 		case 'asld':
 			jsc.setASld(thisObj, e, 0);
-			thisObj.trigger('input'); // by changing alpha, we're basically changing the entire color
+			//thisObj.trigger('input'); // by changing alpha, we're basically changing the entire color // TODO: remove?
 			break;
 		}
+		thisObj.trigger('input');
 	},
 
 
@@ -975,19 +976,20 @@ var jsc = {
 			switch (controlName) {
 			case 'pad':
 				jsc.setPad(thisObj, e, offset[0], offset[1]);
-				thisObj.trigger('input', thisObj.valueElement);
+				//thisObj.trigger('input', thisObj.valueElement); // TODO: remove?
 				break;
 
 			case 'sld':
 				jsc.setSld(thisObj, e, offset[1]);
-				thisObj.trigger('input', thisObj.valueElement);
+				//thisObj.trigger('input', thisObj.valueElement); // TODO: remove?
 				break;
 
 			case 'asld':
 				jsc.setASld(thisObj, e, offset[1]);
-				thisObj.trigger('input'); // by changing alpha, we're basically changing the entire color
+				//thisObj.trigger('input'); // by changing alpha, we're basically changing the entire color // TODO: remove?
 				break;
 			}
+			thisObj.trigger('input');
 		}
 	},
 
@@ -1001,6 +1003,9 @@ var jsc = {
 			// Always trigger changes AFTER detaching outstanding mouse handlers,
 			// in case some color change occured in user-defined onchange/oninput handler
 			// would intrude into current mouse events
+			thisObj.trigger('input');
+			thisObj.trigger('change');
+			/* TODO: remove?
 			switch (controlName) {
 			case 'pad':
 			case 'sld':
@@ -1014,6 +1019,7 @@ var jsc = {
 				thisObj.trigger('change');
 				break;
 			}
+			*/
 		};
 	},
 
@@ -1533,10 +1539,10 @@ var jsc = {
 
 
 		// Triggers a color change related event by:
-		// - executing on<Event> callbacks stored in picker's properties
-		// - standard DOM events linked to related input elements
+		// - executing on<Event> callback stored in picker's properties
+		// - triggering standard DOM event listeners attached to the value element
 		//
-		this.trigger = function (eventName, relatedInputElement) {
+		this.trigger = function (eventName) {
 			var ev = eventName.toLowerCase();
 
 			// trigger a callback
@@ -1549,6 +1555,10 @@ var jsc = {
 				jsc.triggerCallback(this, callbackProp); 
 			}
 
+			// trigger standard DOM events on the value element
+			jsc.triggerInputEvent(this.valueElement, ev, true, true);
+
+			/* TODO: remove?
 			// trigger standard DOM events
 			//
 			if (relatedInputElement !== undefined) {
@@ -1559,6 +1569,7 @@ var jsc = {
 				jsc.triggerInputEvent(this.valueElement, ev, true, true);
 				jsc.triggerInputEvent(this.alphaElement, ev, true, true);
 			}
+			*/
 		};
 
 
@@ -2371,11 +2382,13 @@ var jsc = {
 			}
 			jsc.triggerCallback(THIS, 'onChange');
 
-			// triggering alphaElement's onchange (because changing color value changes entire color, e.g. with rgba format)
-			jsc.triggerInputEvent(this.alphaElement, 'change', true, true);
-
 			// triggering valueElement's onchange
 			// (not needed, it was dispatched normally by the browser)
+
+			/* TODO: remove
+			// triggering alphaElement's onchange (because changing color value changes entire color, e.g. with rgba format)
+			jsc.triggerInputEvent(THIS.alphaElement, 'change', true, true);
+			*/
 		}
 
 
@@ -2385,11 +2398,11 @@ var jsc = {
 			}
 			jsc.triggerCallback(THIS, 'onChange');
 
-			// triggering valueElement's onchange (because changing alpha changes entire color, e.g. with rgba format)
-			jsc.triggerInputEvent(this.valueElement, 'change', true, true);
-
 			// triggering alphaElement's onchange
 			// (not needed, it was dispatched normally by the browser)
+
+			// triggering valueElement's onchange (because changing alpha changes entire color, e.g. with rgba format)
+			jsc.triggerInputEvent(THIS.valueElement, 'change', true, true);
 		}
 
 
@@ -2400,7 +2413,13 @@ var jsc = {
 			THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
 			jsc.triggerCallback(THIS, 'onInput');
 
-			// TODO
+			// triggering valueElement's oninput
+			// (not needed, it was dispatched normally by the browser)
+
+			/* TODO: remove
+			// triggering alphaElement's oninput (because changing color value changes entire color, e.g. with rgba format)
+			jsc.triggerInputEvent(THIS.alphaElement, 'input', true, true);
+			*/
 		}
 
 
@@ -2411,7 +2430,11 @@ var jsc = {
 			THIS.setAlpha(THIS.alphaElement.value, jsc.leaveAlphaValue);
 			jsc.triggerCallback(THIS, 'onInput');
 
-			// TODO
+			// triggering alphaElement's oninput
+			// (not needed, it was dispatched normally by the browser)
+
+			// triggering valueElement's oninput (because changing alpha changes entire color, e.g. with rgba format)
+			jsc.triggerInputEvent(THIS.valueElement, 'input', true, true);
 		}
 
 
@@ -2520,6 +2543,7 @@ var jsc = {
 		// alphaElement
 		if (jsc.isTextInput(this.alphaElement)) {
 
+			// TODO: remove? perhaps not
 			// same trick as with valueElement
 			var alphaElementOrigEvents = {
 				oninput: this.alphaElement.oninput
@@ -2529,6 +2553,7 @@ var jsc = {
 			jsc.attachEvent(this.alphaElement, 'blur', handleAlphaBlur);
 			jsc.attachEvent(this.alphaElement, 'change', handleAlphaChange);
 			jsc.attachEvent(this.alphaElement, 'input', handleAlphaInput);
+			// TODO: remove? perhaps not
 			// the original event listener must be attached AFTER our handler (to let it first set picker's color)
 			if (alphaElementOrigEvents.oninput) {
 				jsc.attachEvent(this.alphaElement, 'input', alphaElementOrigEvents.oninput);
