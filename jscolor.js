@@ -843,6 +843,10 @@ var jsc = {
 	onDocumentKeyUp : function (e) {
 		if (!e) { e = window.event; }
 
+		// TODO: also hide on TAB key (or Shift + Tab)
+		console.log(e.code);
+		console.log(e.keyCode);
+
 		if (
 			(e.code && e.code === 'Enter' || e.keyCode === 13) ||
 			(e.code && e.code === 'Escape' || e.keyCode === 27)
@@ -1383,11 +1387,12 @@ var jsc = {
 		//
 		this.hsv = [0, 0, 100]; // (read-only)  hue, saturation, value  [0-360, 0-100, 0-100]
 		this.rgb = [255, 255, 255]; // (read-only)  red, green, blue  [0-255, 0-255, 0-255]
-		this.alpha = 1.0; // (read-only) alpha channel (opacity)  0.0-1.0
+		this.alp = 1.0; // (read-only) alpha channel (opacity) value  0.0-1.0
 
 		// General options
 		//
-		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
+		this.value = null; // INITIAL color value in any supported format. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
+		this.alpha = null; // INITIAL alpha value. To change it later, use method setAlpha()
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
 		this.previewElement = null; // element that will preview the picked color using CSS background
 		this.previewSize = 32; // width of the color preview (in px)
@@ -1542,10 +1547,11 @@ var jsc = {
 		};
 
 
-		this.processColorInput = function (str) {
+		this.processValueInput = function (str) {
 
-			// leave empty value (or just whitespace)
 			if (!this.required && /^\s*$/.test(str)) {
+				// leave empty value (or just whitespace)
+
 				/* TODO: not needed?
 				// input's value is empty -> restore the original style
 				if (this.previewElement) {
@@ -1557,7 +1563,7 @@ var jsc = {
 				*/
 				// input's value is empty -> remove background
 				this.previewElement.style.background = 'none'; // TODO: OK?
-				this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
+				this.exposeColor(jsc.leaveValue | jsc.leaveStyle);
 				return;
 			}
 
@@ -1574,19 +1580,41 @@ var jsc = {
 					*/
 					// input's value could not be parsed -> remove background
 					this.previewElement.style.background = 'none'; // TODO: OK?
-					this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
+					this.exposeColor(jsc.leaveValue | jsc.leaveStyle);
 				}
 				return;
 			}
 
 			if (!this.fromString(str)) {
-				// could not parse the color - let's just expose the current color
-				this.exposeCurrentColor();
+				// could not parse the color value - let's just expose the current color
+				this.exposeColor();
 			}
 		};
 
 
-		this.exposeCurrentColor = function (flags) {
+		this.processAlphaInput = function (str) {
+			if (!this.required && /^\s*$/.test(str)) {
+				// leave empty value (or just whitespace)
+				this.exposeColor(jsc.leaveAlphaValue);
+				return;
+			}
+
+			if (!this.refine) {
+				if (!this.setAlpha(str, jsc.leaveAlphaValue)) {
+					// input's value could not be parsed
+					this.exposeColor(jsc.leaveAlphaValue);
+				}
+				return;
+			}
+
+			if (!this.setAlpha(str)) {
+				// could not parse the alpha value - let's just expose the current color
+				this.exposeColor();
+			}
+		};
+
+
+		this.exposeColor = function (flags) {
 
 			if (!(flags & jsc.leaveValue) && this.valueElement) {
 				var value = this.toString();
@@ -1604,7 +1632,7 @@ var jsc = {
 			}
 
 			if (!(flags & jsc.leaveAlphaValue) && this.alphaElement) {
-				var value = Math.round(this.alpha * 100) / 100;
+				var value = Math.round(this.alp * 100) / 100;
 
 				if (jsc.nodeName(this.alphaElement) === 'input') {
 					this.alphaElement.value = value;
@@ -1624,7 +1652,7 @@ var jsc = {
 					/*
 					var bgColor = this.toHEXString();
 					var fgColor = this.isLight() ? '#000' : '#FFF';
-					var chessboard = jsc.genChessboardCanvas(16, 1.0 - this.alpha, '#CCCCCC', '#999999');
+					var chessboard = jsc.genChessboardCanvas(16, 1.0 - this.alp, '#CCCCCC', '#999999');
 
 					this.previewElement.style.backgroundImage = 'url(\'' + chessboard.toDataURL() + '\')';
 					this.previewElement.style.backgroundColor = bgColor;
@@ -1662,6 +1690,17 @@ var jsc = {
 		};
 
 
+		// alpha: 0.0-1.0
+		this.setAlpha = function (alpha, flags) {
+			if (isNaN(alpha)) {
+				return false;
+			}
+			this.alp = Math.max(0, Math.min(1, this.maxA, alpha), this.minA);
+
+			this.exposeColor(flags);
+		};
+
+
 		// h: 0-360
 		// s: 0-100
 		// v: 0-100
@@ -1682,7 +1721,7 @@ var jsc = {
 			}
 			if (a !== null) {
 				if (isNaN(a)) { return false; }
-				this.alpha = Math.max(0, Math.min(1, this.maxA, a), this.minA);
+				this.alp = Math.max(0, Math.min(1, this.maxA, a), this.minA);
 			}
 
 			this.rgb = jsc.HSV_RGB(
@@ -1691,7 +1730,7 @@ var jsc = {
 				v===null ? this.hsv[2] : (this.hsv[2]=v)
 			);
 
-			this.exposeCurrentColor(flags);
+			this.exposeColor(flags);
 		};
 
 
@@ -1715,7 +1754,7 @@ var jsc = {
 			}
 			if (a !== null) {
 				if (isNaN(a)) { return false; }
-				this.alpha = Math.max(0, Math.min(1, this.maxA, a), this.minA);
+				this.alp = Math.max(0, Math.min(1, this.maxA, a), this.minA);
 			}
 
 			var hsv = jsc.RGB_HSV(
@@ -1737,7 +1776,7 @@ var jsc = {
 			this.rgb[1] = rgb[1];
 			this.rgb[2] = rgb[2];
 
-			this.exposeCurrentColor(flags);
+			this.exposeColor(flags);
 		};
 
 
@@ -1820,7 +1859,7 @@ var jsc = {
 				Math.round(this.rgb[0]) + ',' +
 				Math.round(this.rgb[1]) + ',' +
 				Math.round(this.rgb[2]) + ',' +
-				(Math.round(this.alpha * 100) / 100) +
+				(Math.round(this.alp * 100) / 100) +
 			')');
 		};
 
@@ -2305,7 +2344,7 @@ var jsc = {
 
 
 		function redrawASld () {
-			var y = Math.round((1 - THIS.alpha) * (THIS.height - 1));
+			var y = Math.round((1 - THIS.alp) * (THIS.height - 1));
 			jsc.picker.asldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
 		}
 
@@ -2316,7 +2355,46 @@ var jsc = {
 
 
 		function handleValueBlur () {
-			THIS.processColorInput(THIS.valueElement.value);
+			THIS.processValueInput(THIS.valueElement.value);
+		}
+
+
+		function handleAlphaBlur () {
+			THIS.processAlphaInput(THIS.alphaElement.value);
+		}
+
+
+		function handleValueChange (ev) {
+			if (ev._jscData) {
+				return; // ignore the event the it was triggered by jscolor
+			}
+			jsc.triggerCallback(THIS, 'onChange');
+		}
+
+
+		function handleAlphaChange (ev) {
+			if (ev._jscData) {
+				return; // ignore the event the it was triggered by jscolor
+			}
+			jsc.triggerCallback(THIS, 'onChange');
+		}
+
+
+		function handleValueInput (ev) {
+			if (ev._jscData) {
+				return; // ignore the event the it was triggered by jscolor
+			}
+			THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
+			jsc.triggerCallback(THIS, 'onInput');
+		}
+
+
+		function handleAlphaInput (ev) {
+			if (ev._jscData) {
+				return; // ignore the event the it was triggered by jscolor
+			}
+			THIS.setAlpha(THIS.alphaElement.value, jsc.leaveAlphaValue);
+			jsc.triggerCallback(THIS, 'onInput');
 		}
 
 
@@ -2388,6 +2466,11 @@ var jsc = {
 			}
 		}
 
+		// Determine the alpha element
+		if (this.alphaElement !== null) {
+			this.alphaElement = jsc.fetchElement(this.alphaElement);
+		}
+
 		// Determine the preview element
 		if (this.previewElement !== null) {
 			this.previewElement = jsc.fetchElement(this.previewElement);
@@ -2401,36 +2484,40 @@ var jsc = {
 
 			// If the value element has oninput event already set, we need to detach it and attach AFTER our listener.
 			// otherwise the picker instance would still contain the old color when accessed from the oninput handler.
-			// This is because we are attaching the 'input' event listener after the oninput is already set.
-			var origOnInput = this.valueElement.oninput;
+			var valueElementOrigEvents = {
+				oninput: this.valueElement.oninput
+			};
 			this.valueElement.oninput = null;
 
-			var handleValueInput = function (ev) {
-				if (ev._jscData) {
-					return; // ignore the event the it was triggered by jscolor
-				}
-				THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
-				jsc.triggerCallback(THIS, 'onInput');
-			};
-
-			var handleValueChange = function (ev) {
-				if (ev._jscData) {
-					return; // ignore the event the it was triggered by jscolor
-				}
-				jsc.triggerCallback(THIS, 'onChange');
-			};
-
-			// TODO: remove. If not removed, we need to make a separate handler for it, because we're calling original oninput func in the handler
-			//jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
-
+			jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
+			jsc.attachEvent(this.valueElement, 'change', handleValueChange);
 			jsc.attachEvent(this.valueElement, 'input', handleValueInput);
-			if (origOnInput) {
-				jsc.attachEvent(this.valueElement, 'input', origOnInput);
+			// the original event listener must be attached AFTER our handler (to let it first set picker's color)
+			if (valueElementOrigEvents.oninput) {
+				jsc.attachEvent(this.valueElement, 'input', valueElementOrigEvents.oninput);
 			}
 
-			jsc.attachEvent(this.valueElement, 'change', handleValueChange);
-			jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
 			this.valueElement.setAttribute('autocomplete', 'off');
+		}
+
+		// alphaElement
+		if (jsc.isTextInput(this.alphaElement)) {
+
+			// same trick as with valueElement
+			var alphaElementOrigEvents = {
+				oninput: this.alphaElement.oninput
+			};
+			this.alphaElement.oninput = null;
+
+			jsc.attachEvent(this.alphaElement, 'blur', handleAlphaBlur);
+			jsc.attachEvent(this.alphaElement, 'change', handleAlphaChange);
+			jsc.attachEvent(this.alphaElement, 'input', handleAlphaInput);
+			// the original event listener must be attached AFTER our handler (to let it first set picker's color)
+			if (alphaElementOrigEvents.oninput) {
+				jsc.attachEvent(this.alphaElement, 'input', alphaElementOrigEvents.oninput);
+			}
+
+			this.alphaElement.setAttribute('autocomplete', 'off');
 		}
 
 		// previewElement
@@ -2447,14 +2534,13 @@ var jsc = {
 		}
 
 
-		// Initialize the color
-
+		// determine initial color value
+		//
 		var initValue = '';
 
 		if (this.value !== null) {
 			initValue = this.value; // get initial color from the 'value' property
 		}
-
 		if (this.valueElement && this.valueElement.value !== undefined) {
 			if (this.value !== null) {
 				this.valueElement.value = this.value; // sync valueElement's value with the 'value' property
@@ -2463,7 +2549,23 @@ var jsc = {
 			}
 		}
 
-		// determine current format
+		// determine initial alpha value
+		//
+		var initAlpha = '';
+
+		if (this.alpha !== null) {
+			initAlpha = this.alpha; // get initial alpha value from the 'alpha' property
+		}
+		if (this.alphaElement && this.alphaElement.value !== undefined) {
+			if (this.alpha !== null) {
+				this.alphaElement.value = this.alpha; // sync alphaElement's value with the 'alpha' property
+			} else {
+				initAlpha = this.alphaElement.value; // get initial color from alphaElement's value
+			}
+		}
+
+		// determine current format based on the initial color value
+		//
 		if (['auto', 'any'].indexOf(this.format.toLowerCase()) > -1) {
 			// format is 'auto' or 'any' -> let's auto-detect current format
 			var color = jsc.parseColorString(initValue);
@@ -2473,8 +2575,14 @@ var jsc = {
 			this._currentFormat = this.format.toLowerCase();
 		}
 
-		this.processColorInput(initValue);
 
+		// let's parse the color value and expose color's preview
+		this.processValueInput(initValue);
+
+		// if initial alpha value is set, let's also parse and expose the alpha value
+		if (initAlpha) {
+			this.processAlphaInput(initValue);
+		}
 
 
 		// TODO: move function x() {..} functions here?
