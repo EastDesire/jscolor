@@ -127,7 +127,7 @@ var jsc = {
 		var inst = [];
 		for (var i = 0; i < jsc.instances.length; i += 1) {
 			// if the targetElement still exists, the instance is considered "alive"
-			if (jsc.instances.targetElement) {
+			if (jsc.instances[i] && jsc.instances[i].targetElement) {
 				inst.push(jsc.instances[i]);
 			}
 		}
@@ -988,7 +988,7 @@ var jsc = {
 			jsc.setASld(thisObj, e, 0);
 			break;
 		}
-		jsc.triggerPickerEvent(thisObj, 'input');
+		thisObj.trigger('input');
 	},
 
 
@@ -999,19 +999,19 @@ var jsc = {
 			case 'pad':
 				if (!e) { e = window.event; }
 				jsc.setPad(thisObj, e, offset[0], offset[1]);
-				jsc.triggerPickerEvent(thisObj, 'input');
+				thisObj.trigger('input');
 				break;
 
 			case 'sld':
 				if (!e) { e = window.event; }
 				jsc.setSld(thisObj, e, offset[1]);
-				jsc.triggerPickerEvent(thisObj, 'input');
+				thisObj.trigger('input');
 				break;
 
 			case 'asld':
 				if (!e) { e = window.event; }
 				jsc.setASld(thisObj, e, offset[1]);
-				jsc.triggerPickerEvent(thisObj, 'input');
+				thisObj.trigger('input');
 				break;
 			}
 		}
@@ -1026,7 +1026,7 @@ var jsc = {
 			// Always trigger changes AFTER detaching outstanding mouse handlers,
 			// in case some user interaction occured in user-defined onchange callback
 			// that intruded into current mouse events
-			jsc.triggerPickerEvent(thisObj, 'change');
+			thisObj.trigger('change');
 		};
 	},
 
@@ -1545,10 +1545,11 @@ var jsc = {
 
 		// triggers a color change related event
 		this.trigger = function (eventName) {
+			var ev = eventName.toLowerCase();
 
 			// trigger a callback
 			var callbackProp = null;
-			switch (eventName.toLowerCase()) {
+			switch (ev) {
 				case 'input': callbackProp = 'onInput'; break;
 				case 'change': callbackProp = 'onChange'; break;
 			}
@@ -1560,10 +1561,10 @@ var jsc = {
 			if (this.valueElement) {
 				/* // TODO: not needed?
 				if (jsc.isTextInput(this.valueElement)) {
-					jsc.triggerEvent(this.valueElement, ev, true, true, customData);
+					jsc.triggerEvent(this.valueElement, ev, true, true);
 				}
 				*/
-				jsc.triggerEvent(this.valueElement, ev, true, true, customData);
+				jsc.triggerEvent(this.valueElement, ev, true, true);
 			}
 		};
 
@@ -2603,7 +2604,7 @@ jsc.pub.init = function () {
 //
 // Install jscolor on all elements that have the specified class name
 jsc.pub.installByClassName = function () {
-	console.warn('jscolor.installByClassName() is DEPRECATED. Use data-jscolor="" attribute instead of a class name.');
+	console.error('jscolor.installByClassName() is DEPRECATED. Use data-jscolor="" attribute instead of a class name.');
 	return false;
 };
 
