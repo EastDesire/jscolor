@@ -211,6 +211,7 @@ var jsc = {
 	})(),
 
 
+	// TODO: do not use and remove (always consider canvas supported)
 	isCanvasSupported : (function () {
 		var elm = document.createElement('canvas');
 		return !!(elm.getContext && elm.getContext('2d'));
@@ -642,12 +643,16 @@ var jsc = {
 
 
 	genColorPreviewCanvas : function (color, customWidth) {
+		if (customWidth === undefined) {
+			customWidth = null;
+		}
+
 		var sqSize = jsc.pub.chessboardSize;
 		var sqColor1 = jsc.pub.chessboardColor1;
 		var sqColor2 = jsc.pub.chessboardColor2;
 
 		var canvas = document.createElement('canvas');
-		canvas.width = customWidth !== undefined ? customWidth : sqSize * 2;
+		canvas.width = customWidth !== null ? customWidth : sqSize * 2;
 		canvas.height = sqSize * 2;
 
 		var ctx = canvas.getContext('2d');
@@ -667,7 +672,7 @@ var jsc = {
 		ctx.fillStyle = color;
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-		if (customWidth !== undefined) {
+		if (customWidth !== null) {
 			// TODO: draw border on the left (probably consisting of light and dark colors, like squares' colors. Light would probably look better on the left)
 		}
 
@@ -1532,7 +1537,7 @@ var jsc = {
 
 		this.processValueInput = function (str) {
 
-			if (!this.required && /^\s*$/.test(str)) {
+			if (!this.required && str.trim() === '') {
 				// leave empty value (or just whitespace)
 
 				/* TODO: not needed?
@@ -1612,6 +1617,30 @@ var jsc = {
 
 			if (!(flags & jsc.leaveStyle)) {
 				if (this.previewElement) {
+					// null -> revert original style
+					var previewWidth = null;
+					var paddingRight = null;
+					var minWidth = null;
+
+					if (isTextInput(this.previewElement)) {
+						// text input
+						previewWidth = this.previewSize;
+						paddingRight = this.previewSize + this.previewPadding;
+					} else if (isButton(this.previewElement)) {
+						if (jsc.getButtonText(this.previewElement).trim() !== '') {
+							// non-empty button
+							previewWidth = this.previewSize;
+							paddingRight = this.previewSize + this.previewPadding;
+						} else {
+							// empty button
+							minWidth = this.previewSize;
+						}
+					} else {
+						// div, span, etc.
+						// (noop)
+					}
+
+
 					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), this.previewSize);
 					this.previewElement.style.backgroundImage = 'url(\'' + previewCanvas.toDataURL('image/png') + '\')';
 					this.previewElement.style.backgroundRepeat = 'repeat-y';
@@ -2406,7 +2435,7 @@ var jsc = {
 
 			// TODO: move this to the block where setting style (background)
 			// empty buttons end up too small -> let's insert non-breaking space
-			if (/^\s*$/.test(this.targetElement.innerHTML)) {
+			if (this.targetElement.innerHTML.trim() === '') {
 				this.targetElement.appendChild(document.createTextNode('\xa0'));
 			}
 
@@ -2472,14 +2501,13 @@ var jsc = {
 
 		// previewElement
 		if (this.previewElement) {
-			//TODO: update (minWidth, paddingRight)
 			this.previewElement._jscOrigStyle = {
-				/*
-				backgroundImage : this.previewElement.style.backgroundImage,
-				backgroundRepeat : this.previewElement.style.backgroundRepeat,
-				backgroundColor : this.previewElement.style.backgroundColor,
-				color : this.previewElement.style.color
-				*/
+				// TODO: complete?
+				'background-image': this.previewElement.style['background-image'],
+				'background-position': this.previewElement.style['background-position'],
+				'background-repeat': this.previewElement.style['background-repeat'],
+				'min-width': this.previewElement.style['min-width'],
+				'padding-right': this.previewElement.style['padding-right'],
 			};
 		}
 
