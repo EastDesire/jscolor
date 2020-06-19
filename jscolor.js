@@ -2542,22 +2542,9 @@ var jsc = {
 
 		// alphaElement
 		if (jsc.isTextInput(this.alphaElement)) {
-
-			// TODO: remove? perhaps not
-			// same trick as with valueElement
-			var alphaElementOrigEvents = {
-				oninput: this.alphaElement.oninput
-			};
-			this.alphaElement.oninput = null;
-
 			jsc.attachEvent(this.alphaElement, 'blur', handleAlphaBlur);
 			jsc.attachEvent(this.alphaElement, 'change', handleAlphaChange);
 			jsc.attachEvent(this.alphaElement, 'input', handleAlphaInput);
-			// TODO: remove? perhaps not
-			// the original event listener must be attached AFTER our handler (to let it first set picker's color)
-			if (alphaElementOrigEvents.oninput) {
-				jsc.attachEvent(this.alphaElement, 'input', alphaElementOrigEvents.oninput);
-			}
 
 			this.alphaElement.setAttribute('autocomplete', 'off');
 		}
@@ -2593,14 +2580,14 @@ var jsc = {
 
 		// determine initial alpha value
 		//
-		var initAlpha = '';
+		var initAlpha = null;
 
 		if (this.alpha !== null) {
-			initAlpha = this.alpha; // get initial alpha value from the 'alpha' property
+			initAlpha = (''+this.alpha); // get initial alpha value from the 'alpha' property
 		}
-		if (this.alphaElement && this.alphaElement.value !== undefined) {
+		if (this.alphaElement && this.alphaElement.value !== '') {
 			if (this.alpha !== null) {
-				this.alphaElement.value = this.alpha; // sync alphaElement's value with the 'alpha' property
+				this.alphaElement.value = (''+this.alpha); // sync alphaElement's value with the 'alpha' property
 			} else {
 				initAlpha = this.alphaElement.value; // get initial color from alphaElement's value
 			}
@@ -2622,8 +2609,8 @@ var jsc = {
 		this.processValueInput(initValue);
 
 		// if initial alpha value is set, let's also parse and expose the alpha value
-		if (initAlpha) {
-			this.processAlphaInput(initValue);
+		if (initAlpha !== null) {
+			this.processAlphaInput(initAlpha);
 		}
 
 
