@@ -399,41 +399,21 @@ var jsc = {
 	},
 
 
-	setStyle : (function () {
-		var helper = document.createElement('div');
-		var getSupportedProp = function (names) {
-			for (var i = 0; i < names.length; i += 1) {
-				if (names[i] in helper.style) {
-					return names[i];
-				}
-			}
-		};
-		var props = {
-			borderRadius: getSupportedProp(['borderRadius', 'MozBorderRadius', 'webkitBorderRadius']),
-			boxShadow: getSupportedProp(['boxShadow', 'MozBoxShadow', 'webkitBoxShadow'])
-		};
-		return function (elm, prop, value) {
-			switch (prop.toLowerCase()) {
-			case 'opacity':
-				var alphaOpacity = Math.round(parseFloat(value) * 100);
-				elm.style.opacity = value;
-				elm.style.filter = 'alpha(opacity=' + alphaOpacity + ')';
-				break;
-			default:
-				elm.style[props[prop]] = value;
-				break;
-			}
-		};
-	})(),
+	setStyle : function (elm, styles, important) {
+		// TODO
+		for () {
+			elm.style.setProperty();
+		}
+	},
 
 
 	setBorderRadius : function (elm, value) {
-		jsc.setStyle(elm, 'borderRadius', value || '0');
+		jsc.setStyle(elm, {'border-radius' : value || '0'});
 	},
 
 
 	setBoxShadow : function (elm, value) {
-		jsc.setStyle(elm, 'boxShadow', value || 'none');
+		jsc.setStyle(elm, {'box-shadow', value || 'none'});
 	},
 
 
@@ -2034,9 +2014,10 @@ var jsc = {
 			p.sldM.style.background =
 			p.asldM.style.background =
 				'#FFF';
-			jsc.setStyle(p.padM, 'opacity', '0');
-			jsc.setStyle(p.sldM, 'opacity', '0');
-			jsc.setStyle(p.asldM, 'opacity', '0');
+			p.padM.style.opacity =
+			p.sldM.style.opacity =
+			p.asldM.style.opacity =
+				'0';
 
 			// pad
 			p.pad.style.position = 'relative';
