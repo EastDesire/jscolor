@@ -37,6 +37,10 @@ var jsc = {
 
 
 	init : function () {
+		if (jsc.initialized) {
+			return;
+		}
+
 		jsc.pub.install();
 		jsc.initialized = true;
 
@@ -75,8 +79,11 @@ var jsc = {
 
 				if (dataOpts !== null) {
 					optsStr = dataOpts;
-				} else if (m && m[4]) { // configuration using className (DEPRECATED)
-					optsStr = m[4];
+				} else if (m) { // installation using className (DEPRECATED)
+					console.warn('Installation using class name is DEPRECATED. Use data-jscolor="" attribute instead.');
+					if (m[4]) {
+						optsStr = m[4];
+					}
 				}
 
 				var opts = {};
@@ -84,7 +91,7 @@ var jsc = {
 					try {
 						opts = jsc.parseOptionsStr(optsStr);
 					} catch(e) {
-						jsc.warn(e + ':\n' + optsStr);
+						console.warn(e + '\n' + optsStr);
 					}
 				}
 
@@ -140,11 +147,11 @@ var jsc = {
 			try {
 				el = document.querySelector(sel);
 			} catch (e) {
-				console.error(e);
+				console.warn(e);
 				return null;
 			}
 			if (!el) {
-				console.error('No element matches the selector: %s', sel);
+				console.warn('No element matches the selector: %s', sel);
 			}
 			return el;
 		}
@@ -154,7 +161,7 @@ var jsc = {
 			return elementOrSelector;
 		}
 
-		console.error('Invalid element of type %s: %s', typeof elementOrSelector, elementOrSelector);
+		console.warn('Invalid element of type %s: %s', typeof elementOrSelector, elementOrSelector);
 		return null;
 	},
 
@@ -300,13 +307,6 @@ var jsc = {
 				};
 				tryScroll();
 			}
-		}
-	},
-
-
-	warn : function (msg) {
-		if (window.console && window.console.warn) {
-			window.console.warn(msg);
 		}
 	},
 
@@ -535,7 +535,7 @@ var jsc = {
 
 	setOption : function (option, value) {
 		if (typeof this[option] === 'undefined') {
-			jsc.warn('Unrecognized option \'' + option + '\'');
+			console.warn('Unrecognized configuration option: %s', option);
 			return false;
 		}
 		this[option] = value;
@@ -906,7 +906,7 @@ var jsc = {
 			try {
 				callback = new Function (thisObj[prop]);
 			} catch(e) {
-				console.error(e);
+				console.warn(e);
 			}
 		} else {
 			// function
@@ -1487,7 +1487,7 @@ var jsc = {
 			} else if (Array.isArray(opts.preset)) {
 				presetsArr = opts.preset.slice(); // to clone
 			} else {
-				jsc.warn('Unrecognized preset value');
+				console.warn('Unrecognized preset value');
 			}
 		}
 
@@ -1502,7 +1502,7 @@ var jsc = {
 				continue; // preset is empty string
 			}
 			if (!jsc.pub.presets.hasOwnProperty(pres)) {
-				jsc.warn('Unknown preset \'' + pres + '\'');
+				console.warn('Unknown preset: %s', pres);
 				continue;
 			}
 			for (var opt in jsc.pub.presets[pres]) {
@@ -1767,6 +1767,7 @@ var jsc = {
 		// v: 0-100
 		//
 		this.fromHSV = function (h, s, v, flags) { // null = don't change
+			console.warn('fromHSV() method is DEPRECATED. Use fromHSVA() instead.');
 			return this.fromHSVA(h, s, v, null, flags);
 		};
 
@@ -1778,6 +1779,7 @@ var jsc = {
 		// b: 0-255
 		//
 		this.fromRGB = function (r, g, b, flags) { // null = don't change
+			console.warn('fromRGB() method is DEPRECATED. Use fromRGBA() instead.');
 			return this.fromRGBA(r, g, b, null, flags);
 		};
 
@@ -2544,7 +2546,10 @@ jsc.pub.install = function () {
 
 	// for backward compatibility with DEPRECATED installation using class name
 	if (jsc.pub.lookupClass) {
-		jsc.pub.installByClassName();
+		jsc.installBySelector(
+			'input.' + jsc.pub.lookupClass + ', ' +
+			'button.' + jsc.pub.lookupClass
+		);
 	}
 };
 
@@ -2555,10 +2560,11 @@ jsc.pub.install = function () {
 jsc.pub.trigger = function (eventNames) {
 	var evs = jsc.strList(eventNames);
 	for (var i = 0; i < evs.length; i += 1) {
+		var ev = evs[i];
 		if (jsc.initialized) {
 			jsc.triggerGlobal(ev);
 		} else {
-			jsc.triggerQueue.push(eventName);
+			jsc.triggerQueue.push(ev);
 		}
 	}
 };
@@ -2585,14 +2591,20 @@ jsc.pub.options = {};
 jsc.pub.lookupClass = 'jscolor';
 
 
+// DEPRECATED. Use jscolor.install() instead
+//
+jsc.pub.init = function () {
+	console.warn('jscolor.init() is DEPRECATED. Use jscolor.install()');
+	return jsc.pub.install();
+};
+
+
 // DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
 //
 // Install jscolor on all elements that have the specified class name
 jsc.pub.installByClassName = function () {
-	jsc.installBySelector(
-		'input.' + jsc.pub.lookupClass + ', ' +
-		'button.' + jsc.pub.lookupClass
-	);
+	console.warn('jscolor.installByClassName() is DEPRECATED. Use data-jscolor="" attribute instead of a class name.');
+	return false;
 };
 
 
