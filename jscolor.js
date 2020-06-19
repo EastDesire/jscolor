@@ -953,17 +953,14 @@ var jsc = {
 			case 'v': if (thisObj.hsv[2] === 0) { thisObj.fromHSVA(null, null, 100, null); }; break;
 			}
 			jsc.setPad(thisObj, e, 0, 0);
-			//thisObj.trigger('input', thisObj.valueElement); // TODO: remove?
 			break;
 
 		case 'sld':
 			jsc.setSld(thisObj, e, 0);
-			//thisObj.trigger('input', thisObj.valueElement); // TODO: remove?
 			break;
 
 		case 'asld':
 			jsc.setASld(thisObj, e, 0);
-			//thisObj.trigger('input'); // by changing alpha, we're basically changing the entire color // TODO: remove?
 			break;
 		}
 		thisObj.trigger('input');
@@ -976,17 +973,14 @@ var jsc = {
 			switch (controlName) {
 			case 'pad':
 				jsc.setPad(thisObj, e, offset[0], offset[1]);
-				//thisObj.trigger('input', thisObj.valueElement); // TODO: remove?
 				break;
 
 			case 'sld':
 				jsc.setSld(thisObj, e, offset[1]);
-				//thisObj.trigger('input', thisObj.valueElement); // TODO: remove?
 				break;
 
 			case 'asld':
 				jsc.setASld(thisObj, e, offset[1]);
-				//thisObj.trigger('input'); // by changing alpha, we're basically changing the entire color // TODO: remove?
 				break;
 			}
 			thisObj.trigger('input');
@@ -1005,21 +999,6 @@ var jsc = {
 			// would intrude into current mouse events
 			thisObj.trigger('input');
 			thisObj.trigger('change');
-			/* TODO: remove?
-			switch (controlName) {
-			case 'pad':
-			case 'sld':
-				thisObj.trigger('input', thisObj.valueElement);
-				thisObj.trigger('change', thisObj.valueElement);
-				break;
-
-			case 'asld':
-				// by changing alpha, we're basically changing the entire color
-				thisObj.trigger('input');
-				thisObj.trigger('change');
-				break;
-			}
-			*/
 		};
 	},
 
@@ -1032,12 +1011,9 @@ var jsc = {
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		//var flags = jsc.leaveSld | jsc.leaveASld; // TODO: remove?
-		var flags = 0;
-
 		switch (jsc.getPadYChannel(thisObj)) {
-		case 's': thisObj.fromHSVA(xVal, yVal, null, null, flags); break;
-		case 'v': thisObj.fromHSVA(xVal, null, yVal, null, flags); break;
+		case 's': thisObj.fromHSVA(xVal, yVal, null, null); break;
+		case 'v': thisObj.fromHSVA(xVal, null, yVal, null); break;
 		}
 	},
 
@@ -1047,12 +1023,9 @@ var jsc = {
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		//var flags = jsc.leavePad | jsc.leaveASld; // TODO: remove?
-		var flags = 0;
-
 		switch (jsc.getSliderChannel(thisObj)) {
-		case 's': thisObj.fromHSVA(null, yVal, null, null, flags); break;
-		case 'v': thisObj.fromHSVA(null, null, yVal, null, flags); break;
+		case 's': thisObj.fromHSVA(null, yVal, null, null); break;
+		case 'v': thisObj.fromHSVA(null, null, yVal, null); break;
 		}
 	},
 
@@ -1062,10 +1035,7 @@ var jsc = {
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
 		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
 
-		//var flags = jsc.leavePad | jsc.leaveSld; // TODO: remove?
-		var flags = 0;
-
-		thisObj.fromHSVA(null, null, null, yVal, flags);
+		thisObj.fromHSVA(null, null, null, yVal);
 	},
 
 
@@ -1555,21 +1525,8 @@ var jsc = {
 				jsc.triggerCallback(this, callbackProp); 
 			}
 
-			// trigger standard DOM events on the value element
+			// trigger standard DOM event listeners on the value element
 			jsc.triggerInputEvent(this.valueElement, ev, true, true);
-
-			/* TODO: remove?
-			// trigger standard DOM events
-			//
-			if (relatedInputElement !== undefined) {
-				// trigger DOM events on the specified element
-				jsc.triggerInputEvent(relatedInputElement, ev, true, true);
-			} else {
-				// trigger DOM events on all possible input elements
-				jsc.triggerInputEvent(this.valueElement, ev, true, true);
-				jsc.triggerInputEvent(this.alphaElement, ev, true, true);
-			}
-			*/
 		};
 
 
@@ -1658,28 +1615,8 @@ var jsc = {
 					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), this.previewSize);
 					this.previewElement.style.backgroundImage = 'url(\'' + previewCanvas.toDataURL('image/png') + '\')';
 					this.previewElement.style.backgroundRepeat = 'repeat-y';
-					this.previewElement.style.backgroundPosition = 'right top'; // TODO: correct order or flip?
+					this.previewElement.style.backgroundPosition = 'right top';
 					this.previewElement.style.paddingRight = (this.previewSize + this.previewPadding) + 'px';
-
-					/*
-					var bgColor = this.toHEXString();
-					var fgColor = this.isLight() ? '#000' : '#FFF';
-					var chessboard = jsc.genChessboardCanvas(16, 1.0 - this.alp, '#CCCCCC', '#999999');
-
-					this.previewElement.style.backgroundImage = 'url(\'' + chessboard.toDataURL() + '\')';
-					this.previewElement.style.backgroundColor = bgColor;
-					this.previewElement.style.color = fgColor;
-					*/
-					// TODO
-					/*
-					var shBlur = 8;
-					var shColor = this.isLight() ? '#FFF' : '#000';
-					this.previewElement.style.textShadow =
-						'-1px -1px ' + shBlur + 'px ' + shColor + ', ' +
-						'1px -1px ' + shBlur + 'px ' + shColor + ', ' +
-						'-1px 1px ' + shBlur + 'px ' + shColor + ', ' +
-						'1px 1px ' + shBlur + 'px ' + shColor;
-					*/
 
 					// TODO
 					if (this.forceStyle) {
@@ -2384,11 +2321,6 @@ var jsc = {
 
 			// triggering valueElement's onchange
 			// (not needed, it was dispatched normally by the browser)
-
-			/* TODO: remove
-			// triggering alphaElement's onchange (because changing color value changes entire color, e.g. with rgba format)
-			jsc.triggerInputEvent(THIS.alphaElement, 'change', true, true);
-			*/
 		}
 
 
@@ -2397,9 +2329,6 @@ var jsc = {
 				return; // skip if the event was internally triggered by jscolor
 			}
 			jsc.triggerCallback(THIS, 'onChange');
-
-			// triggering alphaElement's onchange
-			// (not needed, it was dispatched normally by the browser)
 
 			// triggering valueElement's onchange (because changing alpha changes entire color, e.g. with rgba format)
 			jsc.triggerInputEvent(THIS.valueElement, 'change', true, true);
@@ -2415,11 +2344,6 @@ var jsc = {
 
 			// triggering valueElement's oninput
 			// (not needed, it was dispatched normally by the browser)
-
-			/* TODO: remove
-			// triggering alphaElement's oninput (because changing color value changes entire color, e.g. with rgba format)
-			jsc.triggerInputEvent(THIS.alphaElement, 'input', true, true);
-			*/
 		}
 
 
@@ -2429,9 +2353,6 @@ var jsc = {
 			}
 			THIS.setAlpha(THIS.alphaElement.value, jsc.leaveAlphaValue);
 			jsc.triggerCallback(THIS, 'onInput');
-
-			// triggering alphaElement's oninput
-			// (not needed, it was dispatched normally by the browser)
 
 			// triggering valueElement's oninput (because changing alpha changes entire color, e.g. with rgba format)
 			jsc.triggerInputEvent(THIS.valueElement, 'input', true, true);
