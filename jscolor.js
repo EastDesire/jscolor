@@ -145,7 +145,7 @@ var jsc = {
 		var n = jsc.nodeName(node);
 		return (
 			(n === 'button') ||
-			(n === 'input' && node.type.toLowerCase() === 'button')
+			(n === 'input' && ['button', 'submit', 'reset'].indexOf(node.type.toLowerCase()) > -1)
 		);
 	},
 
@@ -2307,7 +2307,13 @@ var jsc = {
 
 
 		// if target is BUTTON
-		if (jsc.nodeName(this.targetElement) === 'button') { // TODO: or also input type=button? in that case, isButton() check would be better
+		if (jsc.isButton(this.targetElement)) {
+
+			if (this.targetElement.type.toLowerCase() !== 'button') {
+				// on buttons, always force type to be 'button', e.g. in situations the target <button> has no type
+				// and thus defaults to 'submit' and would submit the form when clicked
+				this.targetElement.type = 'button';
+			}
 
 			// TODO: move this to the block where setting style (background)
 			// empty buttons end up too small -> let's insert non-breaking space
@@ -2317,20 +2323,6 @@ var jsc = {
 
 			// TODO: move this to the block where setting style (background)
 			this.targetElement.style.minWidth = '50px';
-
-			// For BUTTON elements it's important to stop them from sending the form when clicked
-			// (e.g. in Safari)
-
-			// TODO: better way of preventing form submission? preventDefault?
-			if (this.targetElement.onclick) {
-				var origCallback = this.targetElement.onclick;
-				this.targetElement.onclick = function (evt) {
-					origCallback.call(this, evt);
-					return false;
-				};
-			} else {
-				this.targetElement.onclick = function () { return false; };
-			}
 		}
 
 		// Determine the value element
