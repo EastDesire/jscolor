@@ -174,21 +174,27 @@ var jsc = {
 	},
 
 
-	isTextInput : function (node) {
-		return jsc.nodeName(node) === 'input' && node.type.toLowerCase() === 'text';
+	isTextInput : function (el) {
+		return el && jsc.nodeName(el) === 'input' && el.type.toLowerCase() === 'text';
 	},
 
 
-	isButton : function (node) {
-		var n = jsc.nodeName(node);
+	isButton : function (el) {
+		if (!el) {
+			return false;
+		}
+		var n = jsc.nodeName(el);
 		return (
 			(n === 'button') ||
-			(n === 'input' && ['button', 'submit', 'reset'].indexOf(node.type.toLowerCase()) > -1)
+			(n === 'input' && ['button', 'submit', 'reset'].indexOf(el.type.toLowerCase()) > -1)
 		);
 	},
 
 
-	getButtonText : function () {
+	getButtonText : function (el) {
+		if (!el) {
+			return null;
+		}
 		// TODO
 	},
 
@@ -1328,7 +1334,8 @@ var jsc = {
 
 
 	leaveValue : 1<<0,
-	leaveStyle : 1<<1,
+	leaveAlphaValue : 1<<1,
+	leaveStyle : 1<<2,
 
 
 	BoxShadow : (function () {
@@ -1526,13 +1533,11 @@ var jsc = {
 			}
 
 			// trigger standard DOM events
-			if (this.valueElement) {
-				/* // TODO: not needed?
-				if (jsc.isTextInput(this.valueElement)) {
-					jsc.triggerEvent(this.valueElement, ev, true, true);
-				}
-				*/
+			if (jsc.isTextInput(this.valueElement)) {
 				jsc.triggerEvent(this.valueElement, ev, true, true);
+			}
+			if (jsc.isTextInput(this.alphaElement)) {
+				jsc.triggerEvent(this.alphaElement, ev, true, true);
 			}
 		};
 
@@ -1591,13 +1596,20 @@ var jsc = {
 					if (!this.hash) { value = value.replace(/^#/, ''); }
 				}
 
-				// TODO: or test whether is text input?
 				if (jsc.nodeName(this.valueElement) === 'input') {
-					if (this.valueElement.value !== value) {
-						this.valueElement.value = value;
-					}
+					this.valueElement.value = value;
 				} else {
 					this.valueElement.innerHTML = value;
+				}
+			}
+
+			if (!(flags & jsc.leaveAlphaValue) && this.alphaElement) {
+				var value = Math.round(this.alpha * 100) / 100;
+
+				if (jsc.nodeName(this.alphaElement) === 'input') {
+					this.alphaElement.value = value;
+				} else {
+					this.alphaElement.innerHTML = value;
 				}
 			}
 
@@ -2385,42 +2397,40 @@ var jsc = {
 		}
 
 		// valueElement
-		if (this.valueElement) {
-			if (jsc.isTextInput(this.valueElement)) {
+		if (jsc.isTextInput(this.valueElement)) {
 
-				// If the value element has oninput event already set, we need to detach it and attach AFTER our listener.
-				// otherwise the picker instance would still contain the old color when accessed from the oninput handler.
-				// This is because we are attaching the 'input' event listener after the oninput is already set.
-				var origOnInput = this.valueElement.oninput;
-				this.valueElement.oninput = null;
+			// If the value element has oninput event already set, we need to detach it and attach AFTER our listener.
+			// otherwise the picker instance would still contain the old color when accessed from the oninput handler.
+			// This is because we are attaching the 'input' event listener after the oninput is already set.
+			var origOnInput = this.valueElement.oninput;
+			this.valueElement.oninput = null;
 
-				var handleValueInput = function (ev) {
-					if (ev._jscData) {
-						return; // ignore the event the it was triggered by jscolor
-					}
-					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
-					jsc.triggerCallback(THIS, 'onInput');
-				};
-
-				var handleValueChange = function (ev) {
-					if (ev._jscData) {
-						return; // ignore the event the it was triggered by jscolor
-					}
-					jsc.triggerCallback(THIS, 'onChange');
-				};
-
-				// TODO: remove. If not removed, we need to make a separate handler for it, because we're calling original oninput func in the handler
-				//jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
-
-				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
-				if (origOnInput) {
-					jsc.attachEvent(this.valueElement, 'input', origOnInput);
+			var handleValueInput = function (ev) {
+				if (ev._jscData) {
+					return; // ignore the event the it was triggered by jscolor
 				}
+				THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
+				jsc.triggerCallback(THIS, 'onInput');
+			};
 
-				jsc.attachEvent(this.valueElement, 'change', handleValueChange);
-				jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
-				this.valueElement.setAttribute('autocomplete', 'off');
+			var handleValueChange = function (ev) {
+				if (ev._jscData) {
+					return; // ignore the event the it was triggered by jscolor
+				}
+				jsc.triggerCallback(THIS, 'onChange');
+			};
+
+			// TODO: remove. If not removed, we need to make a separate handler for it, because we're calling original oninput func in the handler
+			//jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
+
+			jsc.attachEvent(this.valueElement, 'input', handleValueInput);
+			if (origOnInput) {
+				jsc.attachEvent(this.valueElement, 'input', origOnInput);
 			}
+
+			jsc.attachEvent(this.valueElement, 'change', handleValueChange);
+			jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
+			this.valueElement.setAttribute('autocomplete', 'off');
 		}
 
 		// previewElement
