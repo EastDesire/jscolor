@@ -450,7 +450,6 @@ var jsc = {
 
 	// get pointer's X/Y coordinates relative to viewport
 	getAbsPointerPos : function (e) {
-		if (!e) { e = window.event; }
 		var x = 0, y = 0;
 		if (typeof e.changedTouches !== 'undefined' && e.changedTouches.length) {
 			// touch devices
@@ -466,7 +465,6 @@ var jsc = {
 
 	// get pointer's X/Y coordinates relative to target element
 	getRelPointerPos : function (e) {
-		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 		var targetRect = target.getBoundingClientRect();
 
@@ -804,7 +802,6 @@ var jsc = {
 
 
 	onDocumentMouseDown : function (e) {
-		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 
 		if (target.jscolor) {
@@ -823,7 +820,6 @@ var jsc = {
 
 
 	onDocumentTouchStart : function (e) {
-		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 
 		if (target.jscolor) {
@@ -841,15 +837,10 @@ var jsc = {
 
 
 	onDocumentKeyUp : function (e) {
-		if (!e) { e = window.event; }
-
-		// TODO: also hide on TAB key (or Shift + Tab)
-		console.log(e.code);
-		console.log(e.keyCode);
-
 		if (
+			(e.code && e.code === 'Escape' || e.keyCode === 27) ||
 			(e.code && e.code === 'Enter' || e.keyCode === 13) ||
-			(e.code && e.code === 'Escape' || e.keyCode === 27)
+			(e.code && e.code === 'Tab' || e.keyCode === 9)
 		) {
 			if (jsc.picker && jsc.picker.owner) {
 				jsc.picker.owner.hide();
@@ -974,19 +965,16 @@ var jsc = {
 			var thisObj = target._jscInstance;
 			switch (controlName) {
 			case 'pad':
-				if (!e) { e = window.event; }
 				jsc.setPad(thisObj, e, offset[0], offset[1]);
 				thisObj.trigger('input');
 				break;
 
 			case 'sld':
-				if (!e) { e = window.event; }
 				jsc.setSld(thisObj, e, offset[1]);
 				thisObj.trigger('input');
 				break;
 
 			case 'asld':
-				if (!e) { e = window.event; }
 				jsc.setASld(thisObj, e, offset[1]);
 				thisObj.trigger('input');
 				break;
