@@ -24,7 +24,7 @@ var jsc = {
 
 	instances : [], // created instances of jscolor
 
-	dispatchQueue : [], // events waiting to be dispatched after init
+	triggerQueue : [], // events waiting to be triggered after init
 
 
 	register : function () {
@@ -40,10 +40,10 @@ var jsc = {
 		jsc.pub.install();
 		jsc.initialized = true;
 
-		// dispatch events waiting in the queue
-		while (jsc.dispatchQueue.length) {
-			var ev = jsc.dispatchQueue.shift();
-			jsc.pub.dispatch(ev);
+		// trigger events waiting in the queue
+		while (jsc.triggerQueue.length) {
+			var ev = jsc.triggerQueue.shift();
+			jsc.triggerGlobal(ev);
 		}
 	},
 
@@ -113,6 +113,18 @@ var jsc = {
 		}
 
 		return opts;
+	},
+
+
+	getInstances : function () {
+		var inst = [];
+		for (var i = 0; i < jsc.instances.length; i += 1) {
+			// if the targetElement still exists, the instance is considered "alive"
+			if (jsc.instances.targetElement) {
+				inst.push(jsc.instances[i]);
+			}
+		}
+		return inst;
 	},
 
 
@@ -323,7 +335,7 @@ var jsc = {
 	},
 
 
-	dispatchEvent : function (el, eventName, bubbles, cancelable, customData) {
+	triggerEvent : function (el, eventName, bubbles, cancelable, customData) {
 		if (!el) {
 			return;
 		}
@@ -882,18 +894,8 @@ var jsc = {
 	},
 
 
-	// dispatches given event on the value element
-	dispatchOnValueElement : function (thisObj, ev, customData) {
-		if (thisObj.valueElement) {
-			if (jsc.isTextInput(thisObj.valueElement)) {
-				jsc.dispatchEvent(thisObj.valueElement, ev, true, true, customData);
-			}
-		}
-	},
-
-
 	// calls function specified in picker's property
-	dispatchCallback : function (thisObj, prop) {
+	triggerCallback : function (thisObj, prop) {
 		if (!thisObj[prop]) {
 			return;
 		}
@@ -913,6 +915,15 @@ var jsc = {
 
 		if (callback) {
 			callback.call(thisObj);
+		}
+	},
+
+
+	// triggers a color change related event on all picker instances
+	triggerGlobal : function (eventName) {
+		var inst = jsc.getInstances();
+		for (var i = 0; i < inst.length; i += 1) {
+			inst[i].trigger(eventName);
 		}
 	},
 
@@ -977,9 +988,7 @@ var jsc = {
 			jsc.setASld(thisObj, e, 0);
 			break;
 		}
-
-		jsc.dispatchCallback(thisObj, 'onInput');
-		jsc.dispatchOnValueElement(thisObj, 'input');
+		jsc.triggerPickerEvent(thisObj, 'input');
 	},
 
 
@@ -990,22 +999,19 @@ var jsc = {
 			case 'pad':
 				if (!e) { e = window.event; }
 				jsc.setPad(thisObj, e, offset[0], offset[1]);
-				jsc.dispatchCallback(thisObj, 'onInput');
-				jsc.dispatchOnValueElement(thisObj, 'input');
+				jsc.triggerPickerEvent(thisObj, 'input');
 				break;
 
 			case 'sld':
 				if (!e) { e = window.event; }
 				jsc.setSld(thisObj, e, offset[1]);
-				jsc.dispatchCallback(thisObj, 'onInput');
-				jsc.dispatchOnValueElement(thisObj, 'input');
+				jsc.triggerPickerEvent(thisObj, 'input');
 				break;
 
 			case 'asld':
 				if (!e) { e = window.event; }
 				jsc.setASld(thisObj, e, offset[1]);
-				jsc.dispatchCallback(thisObj, 'onInput');
-				jsc.dispatchOnValueElement(thisObj, 'input');
+				jsc.triggerPickerEvent(thisObj, 'input');
 				break;
 			}
 		}
@@ -1017,11 +1023,10 @@ var jsc = {
 			var thisObj = target._jscInstance;
 			jsc.detachGroupEvents('drag');
 			jsc.releaseTarget();
-			// Always dispatch changes AFTER detaching outstanding mouse handlers,
+			// Always trigger changes AFTER detaching outstanding mouse handlers,
 			// in case some user interaction occured in user-defined onchange callback
 			// that intruded into current mouse events
-			jsc.dispatchCallback(thisObj, 'onChange');
-			jsc.dispatchOnValueElement(thisObj, 'change');
+			jsc.triggerPickerEvent(thisObj, 'change');
 		};
 	},
 
@@ -1534,6 +1539,31 @@ var jsc = {
 		this.redraw = function () {
 			if (isPickerOwner()) {
 				drawPicker();
+			}
+		};
+
+
+		// triggers a color change related event
+		this.trigger = function (eventName) {
+
+			// trigger a callback
+			var callbackProp = null;
+			switch (eventName.toLowerCase()) {
+				case 'input': callbackProp = 'onInput'; break;
+				case 'change': callbackProp = 'onChange'; break;
+			}
+			if (callbackProp) {
+				jsc.triggerCallback(this, callbackProp); 
+			}
+
+			// trigger standard DOM events
+			if (this.valueElement) {
+				/* // TODO: not needed?
+				if (jsc.isTextInput(this.valueElement)) {
+					jsc.triggerEvent(this.valueElement, ev, true, true, customData);
+				}
+				*/
+				jsc.triggerEvent(this.valueElement, ev, true, true, customData);
 			}
 		};
 
@@ -2389,14 +2419,14 @@ var jsc = {
 						return; // ignore the event the it was triggered by jscolor
 					}
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
-					jsc.dispatchCallback(THIS, 'onInput');
+					jsc.triggerCallback(THIS, 'onInput');
 				};
 
 				var handleValueChange = function (ev) {
 					if (ev._jscData) {
 						return; // ignore the event the it was triggered by jscolor
 					}
-					jsc.dispatchCallback(THIS, 'onChange');
+					jsc.triggerCallback(THIS, 'onChange');
 				};
 
 				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
@@ -2516,21 +2546,18 @@ jsc.pub.install = function () {
 };
 
 
-// Triggers given event (e.g. 'input' or 'change') on all color pickers.
+// Triggers given color change event (e.g. 'input' or 'change') on all color pickers.
 // It is possible to specify multiple events separated with a space.
 // If called before jscolor is initialized, then the events will triggered after initialization.
-jsc.pub.dispatch = function (eventNames) {
+jsc.pub.trigger = function (eventNames) {
 	var evs = jsc.strList(eventNames);
 	for (var i = 0; i < evs.length; i += 1) {
-		if (!jsc.initialized) {
-			jsc.dispatchQueue.push(eventName);
+		if (jsc.initialized) {
+			jsc.triggerGlobal(ev);
 		} else {
-			for (var j = 0; j < jsc.instances.length; j += 1) {
-				// TODO
-			}
+			jsc.triggerQueue.push(eventName);
 		}
 	}
-
 };
 
 
