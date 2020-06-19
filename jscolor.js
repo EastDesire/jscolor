@@ -327,35 +327,52 @@ var jsc = {
 
 	// The className parameter (str) can only contain a single class name
 	hasClass : function (elm, className) {
-		// TODO: use classList, if implemented
 		if (!className) {
 			return false;
 		}
+		if (elm.classList !== undefined) {
+			return elm.classList.contains(className);
+		}
+		// polyfill
 		return -1 != (' ' + elm.className.replace(/\s+/g, ' ') + ' ').indexOf(' ' + className + ' ');
 	},
 
 
 	// The className parameter (str) can contain multiple class names separated by whitespace
-	setClass : function (elm, className) {
-		// TODO: use classList, if implemented
-		var classList = jsc.strList(className);
-		for (var i = 0; i < classList.length; i += 1) {
-			if (!jsc.hasClass(elm, classList[i])) {
-				elm.className += (elm.className ? ' ' : '') + classList[i];
+	addClass : function (elm, className) {
+		var classNames = jsc.strList(className);
+
+		if (elm.classList !== undefined) {
+			for (var i = 0; i < classNames.length; i += 1) {
+				elm.classList.add(classNames[i]);
+			}
+			return;
+		}
+		// polyfill
+		for (var i = 0; i < classNames.length; i += 1) {
+			if (!jsc.hasClass(elm, classNames[i])) {
+				elm.className += (elm.className ? ' ' : '') + classNames[i];
 			}
 		}
 	},
 
 
 	// The className parameter (str) can contain multiple class names separated by whitespace
-	unsetClass : function (elm, className) {
-		// TODO: use classList, if implemented
-		var classList = jsc.strList(className);
-		for (var i = 0; i < classList.length; i += 1) {
+	removeClass : function (elm, className) {
+		var classNames = jsc.strList(className);
+
+		if (elm.classList !== undefined) {
+			for (var i = 0; i < classNames.length; i += 1) {
+				elm.classList.remove(classNames[i]);
+			}
+			return;
+		}
+		// polyfill
+		for (var i = 0; i < classNames.length; i += 1) {
 			var repl = new RegExp(
-				'^\\s*' + classList[i] + '\\s*|' +
-				'\\s*' + classList[i] + '\\s*$|' +
-				'\\s+' + classList[i] + '(\\s+)',
+				'^\\s*' + classNames[i] + '\\s*|' +
+				'\\s*' + classNames[i] + '\\s*$|' +
+				'\\s+' + classNames[i] + '(\\s+)',
 				'g'
 			);
 			elm.className = elm.className.replace(repl, '$1');
@@ -1852,7 +1869,7 @@ var jsc = {
 
 
 		function detachPicker () {
-			jsc.unsetClass(THIS.targetElement, jsc.pub.activeClassName);
+			jsc.removeClass(THIS.targetElement, jsc.pub.activeClassName);
 			jsc.picker.wrap.parentNode.removeChild(jsc.picker.wrap);
 			delete jsc.picker.owner;
 		}
@@ -2192,7 +2209,7 @@ var jsc = {
 			// If we are changing the owner without first closing the picker,
 			// make sure to first deal with the old owner
 			if (jsc.picker.owner && jsc.picker.owner !== THIS) {
-				jsc.unsetClass(jsc.picker.owner.targetElement, jsc.pub.activeClassName);
+				jsc.removeClass(jsc.picker.owner.targetElement, jsc.pub.activeClassName);
 			}
 
 			// Set the new picker owner
@@ -2210,7 +2227,7 @@ var jsc = {
 				container.appendChild(p.wrap);
 			}
 
-			jsc.setClass(THIS.targetElement, jsc.pub.activeClassName);
+			jsc.addClass(THIS.targetElement, jsc.pub.activeClassName);
 		}
 
 
@@ -2321,7 +2338,7 @@ var jsc = {
 
 		// link this instance with the target element
 		this.targetElement.jscolor = this;
-		jsc.setClass(this.targetElement, jsc.pub.className);
+		jsc.addClass(this.targetElement, jsc.pub.className);
 
 		// register this instance
 		jsc.instances.push(this);
