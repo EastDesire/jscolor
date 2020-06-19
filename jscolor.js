@@ -1389,17 +1389,17 @@ var jsc = {
 		//
 		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
-		this.valueElement = null; // element that will be used to display and input the color code // TODO
-		this.styleElement = null; // element that will preview the picked color using CSS backgroundColor // TODO
+		this.valueElement = null; // element that will be used to display and input the color code
+		this.previewElement = null; // element that will preview the picked color using CSS background
 		this.alphaValueElement = null; // TODO
-		this.alphaStyleElement = null; // TODO
+		this.alphaPreviewElement = null; // TODO
 		this.required = true; // whether the associated text <input> can be left empty
 		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
 		this.hash = false; // whether to prefix the HEX color code with # symbol
 		this.uppercase = true; // whether to show the color code in upper case
 		this.onChange = null; // called when color changes. Value can be either a function or a string with javascript code.
 		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging slider. Value can be either a function or a string with javascript code.
-		this.overwriteImportant = false; // whether to overwrite colors of styleElement using !important
+		this.overwriteImportant = false; // whether to overwrite colors of previewElement using !important
 		this.minS = 0; // min allowed saturation (0 - 100)
 		this.maxS = 100; // max allowed saturation (0 - 100)
 		this.minV = 0; // min allowed value (brightness) (0 - 100)
@@ -1412,7 +1412,7 @@ var jsc = {
 		this.width = 181; // width of color palette (in px)
 		this.height = 101; // height of color palette (in px)
 		this.mode = 'HSV'; // 'HSV' | 'HVS' | 'HS' | 'HV' - layout of the color picker controls
-		this.alphaSlider = false; // TODO
+		this.alphaSlider = false; // whether to display a slider for tweaking the alpha channel
 		this.position = 'bottom'; // 'left' | 'right' | 'top' | 'bottom' - position relative to the target element
 		this.smartPosition = true; // automatically change picker position when there is not enough space for it
 		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
@@ -1523,15 +1523,15 @@ var jsc = {
 			if (!this.required && /^\s*$/.test(str)) {
 				/* TODO: not needed?
 				// input's value is empty -> restore the original style
-				if (this.styleElement) {
-					this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
-					this.styleElement.style.backgroundRepeat = this.styleElement._jscOrigStyle.backgroundRepeat;
-					this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
-					this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
+				if (this.previewElement) {
+					this.previewElement.style.backgroundImage = this.previewElement._jscOrigStyle.backgroundImage;
+					this.previewElement.style.backgroundRepeat = this.previewElement._jscOrigStyle.backgroundRepeat;
+					this.previewElement.style.backgroundColor = this.previewElement._jscOrigStyle.backgroundColor;
+					this.previewElement.style.color = this.previewElement._jscOrigStyle.color;
 				}
 				*/
 				// input's value is empty -> remove background
-				this.styleElement.style.background = 'none'; // TODO: OK?
+				this.previewElement.style.background = 'none'; // TODO: OK?
 				this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				return;
 			}
@@ -1540,15 +1540,15 @@ var jsc = {
 				if (!this.fromString(str, jsc.leaveValue)) {
 					/* TODO: not needed?
 					// input's value could not be parsed -> restore the original style
-					if (this.styleElement) {
-						this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
-						this.styleElement.style.backgroundRepeat = this.styleElement._jscOrigStyle.backgroundRepeat;
-						this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
-						this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
+					if (this.previewElement) {
+						this.previewElement.style.backgroundImage = this.previewElement._jscOrigStyle.backgroundImage;
+						this.previewElement.style.backgroundRepeat = this.previewElement._jscOrigStyle.backgroundRepeat;
+						this.previewElement.style.backgroundColor = this.previewElement._jscOrigStyle.backgroundColor;
+						this.previewElement.style.color = this.previewElement._jscOrigStyle.color;
 					}
 					*/
 					// input's value could not be parsed -> remove background
-					this.styleElement.style.background = 'none'; // TODO: OK?
+					this.previewElement.style.background = 'none'; // TODO: OK?
 					this.exposeCurrentColor(jsc.leaveValue | jsc.leaveStyle);
 				}
 				return;
@@ -1582,26 +1582,26 @@ var jsc = {
 			}
 
 			if (!(flags & jsc.leaveStyle)) {
-				if (this.styleElement) {
+				if (this.previewElement) {
 					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), 32);
-					this.styleElement.style.backgroundImage = 'url(\'' + previewCanvas.toDataURL() + '\')';
-					this.styleElement.style.backgroundRepeat = 'repeat-y';
-					this.styleElement.style.backgroundPosition = 'right top'; // TODO: correct order or flip?
+					this.previewElement.style.backgroundImage = 'url(\'' + previewCanvas.toDataURL() + '\')';
+					this.previewElement.style.backgroundRepeat = 'repeat-y';
+					this.previewElement.style.backgroundPosition = 'right top'; // TODO: correct order or flip?
 
 					/*
 					var bgColor = this.toHEXString();
 					var fgColor = this.isLight() ? '#000' : '#FFF';
 					var chessboard = jsc.genChessboardCanvas(16, 1.0 - this.alpha, '#CCCCCC', '#999999');
 
-					this.styleElement.style.backgroundImage = 'url(\'' + chessboard.toDataURL() + '\')';
-					this.styleElement.style.backgroundColor = bgColor;
-					this.styleElement.style.color = fgColor;
+					this.previewElement.style.backgroundImage = 'url(\'' + chessboard.toDataURL() + '\')';
+					this.previewElement.style.backgroundColor = bgColor;
+					this.previewElement.style.color = fgColor;
 					*/
 					// TODO
 					/*
 					var shBlur = 8;
 					var shColor = this.isLight() ? '#FFF' : '#000';
-					this.styleElement.style.textShadow =
+					this.previewElement.style.textShadow =
 						'-1px -1px ' + shBlur + 'px ' + shColor + ', ' +
 						'1px -1px ' + shBlur + 'px ' + shColor + ', ' +
 						'-1px 1px ' + shBlur + 'px ' + shColor + ', ' +
@@ -1611,7 +1611,7 @@ var jsc = {
 					// TODO: overwriteImportant could be called forceStyle and set to true by default
 					if (this.overwriteImportant) {
 						// TODO
-						this.styleElement.setAttribute('style',
+						this.previewElement.setAttribute('style',
 							'background: ' + bgColor + ' !important; ' +
 							'color: ' + fgColor + ' !important;'
 						);
@@ -2338,12 +2338,12 @@ var jsc = {
 			}
 		}
 
-		// Determine the style element
-		if (this.styleElement !== null) {
-			this.styleElement = jsc.fetchElement(this.styleElement);
+		// Determine the preview element
+		if (this.previewElement !== null) {
+			this.previewElement = jsc.fetchElement(this.previewElement);
 		} else {
-			// styleElement is null -> default is targetElement
-			this.styleElement = this.targetElement;
+			// previewElement is null -> default is targetElement
+			this.previewElement = this.targetElement;
 		}
 
 		// valueElement
@@ -2373,15 +2373,15 @@ var jsc = {
 			}
 		}
 
-		// styleElement
-		if (this.styleElement) {
+		// previewElement
+		if (this.previewElement) {
 			//TODO: update (minWidth, paddingRight)
-			this.styleElement._jscOrigStyle = {
+			this.previewElement._jscOrigStyle = {
 				/*
-				backgroundImage : this.styleElement.style.backgroundImage,
-				backgroundRepeat : this.styleElement.style.backgroundRepeat,
-				backgroundColor : this.styleElement.style.backgroundColor,
-				color : this.styleElement.style.color
+				backgroundImage : this.previewElement.style.backgroundImage,
+				backgroundRepeat : this.previewElement.style.backgroundRepeat,
+				backgroundColor : this.previewElement.style.backgroundColor,
+				color : this.previewElement.style.color
 				*/
 			};
 		}
