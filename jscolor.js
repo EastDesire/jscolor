@@ -20,8 +20,15 @@ window.jscolor = (function () { // BEGIN window.jscolor
 var jsc = {
 
 
+	initialized : false,
+
+	instances : [], // created instances of jscolor
+
+	dispatchQueue : [], // events waiting to be dispatched after init
+
+
 	register : function () {
-		jsc.attachDOMReadyEvent(jsc.jscolor.init);
+		jsc.attachDOMReadyEvent(jsc.init);
 		jsc.attachEvent(document, 'mousedown', jsc.onDocumentMouseDown);
 		jsc.attachEvent(document, 'touchstart', jsc.onDocumentTouchStart);
 		jsc.attachEvent(document, 'keyup', jsc.onDocumentKeyUp);
@@ -29,11 +36,23 @@ var jsc = {
 	},
 
 
-	install : function (selector) {
+	init : function () {
+		jsc.pub.install();
+		jsc.initialized = true;
+
+		// dispatch events waiting in the queue
+		while (jsc.dispatchQueue.length) {
+			var ev = jsc.dispatchQueue.shift();
+			jsc.pub.dispatch(ev);
+		}
+	},
+
+
+	installBySelector : function (selector) {
 		var elms = document.querySelectorAll(selector);
 
 		// for backward compatibility with DEPRECATED installation/configuration using className
-		var matchClass = new RegExp('(^|\\s)(' + jsc.jscolor.lookupClass + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
+		var matchClass = new RegExp('(^|\\s)(' + jsc.pub.lookupClass + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
 
 		for (var i = 0; i < elms.length; i += 1) {
 
@@ -69,7 +88,7 @@ var jsc = {
 					}
 				}
 
-				new jsc.jscolor(targetElm, opts);
+				new jsc.pub(targetElm, opts);
 			}
 		}
 	},
@@ -81,7 +100,7 @@ var jsc = {
 		try {
 			opts = JSON.parse(str);
 		} catch (eParse) {
-			if (!jsc.jscolor.looseJSON) {
+			if (!jsc.pub.looseJSON) {
 				throw new Error('Could not parse options as JSON: ' + eParse);
 			} else {
 				// loose JSON syntax is enabled -> try to evaluate the options string
@@ -336,8 +355,11 @@ var jsc = {
 	},
 
 
-	classNameToList : function (className) {
-		return className.replace(/^\s+|\s+$/g, '').split(/\s+/);
+	strList : function (str) {
+		if (!str) {
+			return [];
+		}
+		return str.replace(/^\s+|\s+$/g, '').split(/\s+/);
 	},
 
 
@@ -354,7 +376,7 @@ var jsc = {
 	// The className parameter (str) can contain multiple class names separated by whitespace
 	setClass : function (elm, className) {
 		// TODO: use classList, if implemented
-		var classList = jsc.classNameToList(className);
+		var classList = jsc.strList(className);
 		for (var i = 0; i < classList.length; i += 1) {
 			if (!jsc.hasClass(elm, classList[i])) {
 				elm.className += (elm.className ? ' ' : '') + classList[i];
@@ -366,7 +388,7 @@ var jsc = {
 	// The className parameter (str) can contain multiple class names separated by whitespace
 	unsetClass : function (elm, className) {
 		// TODO: use classList, if implemented
-		var classList = jsc.classNameToList(className);
+		var classList = jsc.strList(className);
 		for (var i = 0; i < classList.length; i += 1) {
 			var repl = new RegExp(
 				'^\\s*' + classList[i] + '\\s*|' +
@@ -630,23 +652,21 @@ var jsc = {
 
 
 	genColorPreviewCanvas : function (color, customWidth) {
-		// TODO: as static properties?
-		var sqSize = 8;
-		var sqColor1 = '#CCCCCC';
-		var sqColor2 = '#999999';
+		var sqSize = jsc.pub.chessboardSize;
+		var sqColor1 = jsc.pub.chessboardColor1;
+		var sqColor2 = jsc.pub.chessboardColor2;
 
 		var canvas = document.createElement('canvas');
 		canvas.width = customWidth !== undefined ? customWidth : sqSize * 2;
 		canvas.height = sqSize * 2;
 
 		var ctx = canvas.getContext('2d');
-		//ctx.globalAlpha = alpha; // TODO: rem?
 
-		// gray transparency background
+		// transparency chessboard - background
 		ctx.fillStyle = sqColor1;
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-		// gray transparency squares
+		// transparency chessboard - squares
 		ctx.fillStyle = sqColor2;
 		for (var x = 0; x < canvas.width; x += sqSize * 2) {
 			ctx.fillRect(x, 0, sqSize, sqSize);
@@ -1287,8 +1307,8 @@ var jsc = {
 				ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 				var sqSize = canvas.width / 2;
-				var sqColor1 = '#999999';
-				var sqColor2 = '#CCCCCC';
+				var sqColor1 = jsc.pub.chessboardColor1;
+				var sqColor2 = jsc.pub.chessboardColor2;
 
 				// dark gray background
 				ctx.fillStyle = sqColor1;
@@ -1368,12 +1388,12 @@ var jsc = {
 
 	//
 	// Usage:
-	// var myColor = new jscolor(<targetElement> [, <options>])
+	// var myPicker = new JSColor(<targetElement> [, <options>])
 	//
-	// (you can use both 'new jscolor' and 'new JSColor')
+	// (constructor is accessible via both 'jscolor' and 'JSColor' name)
 	//
 
-	jscolor : function (targetElement, opts) {
+	pub : function (targetElement, opts) {
 
 		if (opts === undefined) {
 			opts = {};
@@ -1389,17 +1409,18 @@ var jsc = {
 		//
 		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
-		this.valueElement = null; // element that will be used to display and input the color code
 		this.previewElement = null; // element that will preview the picked color using CSS background
-		this.alphaValueElement = null; // TODO
-		this.alphaPreviewElement = null; // TODO
+		this.previewSize = 32; // width of the color preview (in px)
+		this.previewPadding = 5; // minimum padding between the input/button text and the color preview (in px)
+		this.valueElement = null; // element that will be used to display and input the color code
+		this.alphaValueElement = null; // element that will be used to display and input the alpha (opacity) value
 		this.required = true; // whether the associated text <input> can be left empty
 		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
 		this.hash = false; // whether to prefix the HEX color code with # symbol
 		this.uppercase = true; // whether to show the color code in upper case
 		this.onChange = null; // called when color changes. Value can be either a function or a string with javascript code.
 		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging slider. Value can be either a function or a string with javascript code.
-		this.overwriteImportant = false; // whether to overwrite colors of previewElement using !important
+		this.forceStyle = true; // whether to overwrite CSS style of the previewElement using !important flag
 		this.minS = 0; // min allowed saturation (0 - 100)
 		this.maxS = 100; // max allowed saturation (0 - 100)
 		this.minV = 0; // min allowed value (brightness) (0 - 100)
@@ -1440,12 +1461,12 @@ var jsc = {
 		this.container = null; // where to append the color picker (BODY element by default)
 
 
-		// let's process the DEPRECATED jscolor.options property (this will be later removed)
-		if (jsc.jscolor.options) {
+		// let's process the DEPRECATED 'options' property (this will be later removed)
+		if (jsc.pub.options) {
 			// let's set custom default options, if specified
-			for (var opt in jsc.jscolor.options) {
-				if (jsc.jscolor.options.hasOwnProperty(opt)) {
-					jsc.setOption.call(this, opt, jsc.jscolor.options[opt]);
+			for (var opt in jsc.pub.options) {
+				if (jsc.pub.options.hasOwnProperty(opt)) {
+					jsc.setOption.call(this, opt, jsc.pub.options[opt]);
 				}
 			}
 		}
@@ -1475,13 +1496,13 @@ var jsc = {
 			if (!pres) {
 				continue; // preset is empty string
 			}
-			if (!jsc.jscolor.presets.hasOwnProperty(pres)) {
+			if (!jsc.pub.presets.hasOwnProperty(pres)) {
 				jsc.warn('Unknown preset \'' + pres + '\'');
 				continue;
 			}
-			for (var opt in jsc.jscolor.presets[pres]) {
-				if (jsc.jscolor.presets[pres].hasOwnProperty(opt)) {
-					jsc.setOption.call(this, opt, jsc.jscolor.presets[pres][opt]);
+			for (var opt in jsc.pub.presets[pres]) {
+				if (jsc.pub.presets[pres].hasOwnProperty(opt)) {
+					jsc.setOption.call(this, opt, jsc.pub.presets[pres][opt]);
 				}
 			}
 		}
@@ -1583,10 +1604,11 @@ var jsc = {
 
 			if (!(flags & jsc.leaveStyle)) {
 				if (this.previewElement) {
-					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), 32);
-					this.previewElement.style.backgroundImage = 'url(\'' + previewCanvas.toDataURL() + '\')';
+					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), this.previewSize);
+					this.previewElement.style.backgroundImage = 'url(\'' + previewCanvas.toDataURL('image/png') + '\')';
 					this.previewElement.style.backgroundRepeat = 'repeat-y';
 					this.previewElement.style.backgroundPosition = 'right top'; // TODO: correct order or flip?
+					this.previewElement.style.paddingRight = (this.previewSize + this.previewPadding) + 'px';
 
 					/*
 					var bgColor = this.toHEXString();
@@ -1608,13 +1630,15 @@ var jsc = {
 						'1px 1px ' + shBlur + 'px ' + shColor;
 					*/
 
-					// TODO: overwriteImportant could be called forceStyle and set to true by default
-					if (this.overwriteImportant) {
+					// TODO
+					if (this.forceStyle) {
 						// TODO
+						/*
 						this.previewElement.setAttribute('style',
 							'background: ' + bgColor + ' !important; ' +
 							'color: ' + fgColor + ' !important;'
 						);
+						*/
 					}
 				}
 			}
@@ -1788,6 +1812,16 @@ var jsc = {
 		};
 
 
+		this.toCanvas = function () {
+			return jsc.genColorPreviewCanvas(this.toRGBAString());
+		};
+
+
+		this.toImageURL = function () {
+			return this.toCanvas().toDataURL('image/png');
+		};
+
+
 		this.toGrayscale = function () {
 			return (
 				0.213 * this.rgb[0] +
@@ -1834,7 +1868,7 @@ var jsc = {
 
 
 		function detachPicker () {
-			jsc.unsetClass(THIS.targetElement, jsc.jscolor.activeClassName);
+			jsc.unsetClass(THIS.targetElement, jsc.pub.activeClassName);
 			jsc.picker.wrap.parentNode.removeChild(jsc.picker.wrap);
 			delete jsc.picker.owner;
 		}
@@ -2174,7 +2208,7 @@ var jsc = {
 			// If we are changing the owner without first closing the picker,
 			// make sure to first deal with the old owner
 			if (jsc.picker.owner && jsc.picker.owner !== THIS) {
-				jsc.unsetClass(jsc.picker.owner.targetElement, jsc.jscolor.activeClassName);
+				jsc.unsetClass(jsc.picker.owner.targetElement, jsc.pub.activeClassName);
 			}
 
 			// Set the new picker owner
@@ -2192,7 +2226,7 @@ var jsc = {
 				container.appendChild(p.wrap);
 			}
 
-			jsc.setClass(THIS.targetElement, jsc.jscolor.activeClassName);
+			jsc.setClass(THIS.targetElement, jsc.pub.activeClassName);
 		}
 
 
@@ -2303,7 +2337,7 @@ var jsc = {
 
 		this.targetElement.jscolor = this;
 
-		jsc.setClass(this.targetElement, jsc.jscolor.className);
+		jsc.setClass(this.targetElement, jsc.pub.className);
 
 
 		// if target is BUTTON
@@ -2322,7 +2356,7 @@ var jsc = {
 			}
 
 			// TODO: move this to the block where setting style (background)
-			this.targetElement.style.minWidth = '50px';
+			this.targetElement.style.minWidth = this.previewSize + 'px';
 		}
 
 		// Determine the value element
@@ -2429,56 +2463,86 @@ var jsc = {
 //================================
 // Public properties and methods
 //================================
+
 //
 // These will be publicly available via jscolor.<name> and JSColor.<name>
 //
 
 
-// Initializes jscolor on current DOM tree
-jsc.jscolor.init = function () {
-	jsc.install('[data-jscolor]');
-
-	// for backward compatibility with DEPRECATED installation using class name
-	if (jsc.jscolor.lookupClass) {
-		jsc.jscolor.installByClassName();
-	}
-};
-
-
 // class that will be set to elements having jscolor installed on them
-jsc.jscolor.className = 'jscolor';
+jsc.pub.className = 'jscolor';
 
 
 // class that will be set to elements having jscolor active on them
-jsc.jscolor.activeClassName = 'jscolor-active';
+jsc.pub.activeClassName = 'jscolor-active';
 
 
 // whether to try to parse the options string by evaluating it using 'new Function()'
 // in case it could not be parsed with JSON.parse()
-jsc.jscolor.looseJSON = true;
+jsc.pub.looseJSON = true;
 
 
 // presets
-jsc.jscolor.presets = {};
+jsc.pub.presets = {};
 
 // built-in presets
-jsc.jscolor.presets['default'] = {}; // baseline for customization
+jsc.pub.presets['default'] = {}; // baseline for customization
 
-jsc.jscolor.presets['light'] = { backgroundColor:'#FFFFFF', insetColor:'#BBBBBB' }; // default color scheme
-jsc.jscolor.presets['dark'] = { backgroundColor:'#333333', insetColor:'#999999' };
+jsc.pub.presets['light'] = { backgroundColor:'#FFFFFF', insetColor:'#BBBBBB' }; // default color scheme
+jsc.pub.presets['dark'] = { backgroundColor:'#333333', insetColor:'#999999' };
 
-jsc.jscolor.presets['small'] = { width:101, height:101, padding:8 };
-jsc.jscolor.presets['medium'] = { width:181, height:101, padding:12 }; // default size
-jsc.jscolor.presets['large'] = { width:271, height:151, padding:12 };
+jsc.pub.presets['small'] = { width:101, height:101, padding:8 };
+jsc.pub.presets['medium'] = { width:181, height:101, padding:12 }; // default size
+jsc.pub.presets['large'] = { width:271, height:151, padding:12 };
 
-jsc.jscolor.presets['thin'] = { borderWidth:1, insetWidth:1, pointerBorderWidth:1 }; // default thickness
-jsc.jscolor.presets['thick'] = { borderWidth:2, insetWidth:2, pointerBorderWidth:2 };
+jsc.pub.presets['thin'] = { borderWidth:1, insetWidth:1, pointerBorderWidth:1 }; // default thickness
+jsc.pub.presets['thick'] = { borderWidth:2, insetWidth:2, pointerBorderWidth:2 };
+
+
+// transparency chessboard
+jsc.pub.chessboardSize = 8;
+jsc.pub.chessboardColor1 = '#999999';
+jsc.pub.chessboardColor2 = '#CCCCCC';
+
+
+// Installs jscolor on current DOM tree
+jsc.pub.install = function () {
+	jsc.installBySelector('[data-jscolor]');
+
+	// for backward compatibility with DEPRECATED installation using class name
+	if (jsc.pub.lookupClass) {
+		jsc.pub.installByClassName();
+	}
+};
+
+
+// Triggers given event (e.g. 'input' or 'change') on all color pickers.
+// It is possible to specify multiple events separated with a space.
+// If called before jscolor is initialized, then the events will triggered after initialization.
+jsc.pub.dispatch = function (eventNames) {
+	var evs = jsc.strList(eventNames);
+	for (var i = 0; i < evs.length; i += 1) {
+		if (!jsc.initialized) {
+			jsc.dispatchQueue.push(eventName);
+		} else {
+			for (var j = 0; j < jsc.instances.length; j += 1) {
+				// TODO
+			}
+		}
+	}
+
+};
+
+
+//
+// DEPRECATED properties and methods
+//
 
 
 // DEPRECATED. Use jscolor.presets.default instead.
 //
 // Custom default options for all color pickers, e.g. { hash: true, width: 300 }
-jsc.jscolor.options = {};
+jsc.pub.options = {};
 
 
 // DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
@@ -2488,28 +2552,24 @@ jsc.jscolor.options = {};
 // You can change what class name will be looked for by setting the property jscolor.lookupClass
 // anywhere in your HTML document. To completely disable the automatic lookup, set it to null.
 //
-jsc.jscolor.lookupClass = 'jscolor';
+jsc.pub.lookupClass = 'jscolor';
 
 
 // DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
 //
 // Install jscolor on all elements that have the specified class name
-jsc.jscolor.installByClassName = function () {
-	jsc.install('.' + jsc.jscolor.lookupClass);
-	// TODO
-	/*
-	jsc.install(
-		'input.' + jsc.jscolor.lookupClass + ', ' +
-		'button.' + jsc.jscolor.lookupClass
+jsc.pub.installByClassName = function () {
+	jsc.installBySelector(
+		'input.' + jsc.pub.lookupClass + ', ' +
+		'button.' + jsc.pub.lookupClass
 	);
-	*/
 };
 
 
 jsc.register();
 
 
-return jsc.jscolor;
+return jsc.pub;
 
 
 })(); // END window.jscolor
