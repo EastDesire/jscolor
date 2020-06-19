@@ -2367,7 +2367,7 @@ var jsc = {
 
 		function handleValueChange (ev) {
 			if (ev._jscData) {
-				return; // ignore the event the it was triggered by jscolor
+				return; // skip if the event was internally triggered by jscolor
 			}
 			jsc.triggerCallback(THIS, 'onChange');
 
@@ -2381,7 +2381,7 @@ var jsc = {
 
 		function handleAlphaChange (ev) {
 			if (ev._jscData) {
-				return; // ignore the event the it was triggered by jscolor
+				return; // skip if the event was internally triggered by jscolor
 			}
 			jsc.triggerCallback(THIS, 'onChange');
 
@@ -2395,7 +2395,7 @@ var jsc = {
 
 		function handleValueInput (ev) {
 			if (ev._jscData) {
-				return; // ignore the event the it was triggered by jscolor
+				return; // skip if the event was internally triggered by jscolor
 			}
 			THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
 			jsc.triggerCallback(THIS, 'onInput');
@@ -2406,7 +2406,7 @@ var jsc = {
 
 		function handleAlphaInput (ev) {
 			if (ev._jscData) {
-				return; // ignore the event the it was triggered by jscolor
+				return; // skip if the event was internally triggered by jscolor
 			}
 			THIS.setAlpha(THIS.alphaElement.value, jsc.leaveAlphaValue);
 			jsc.triggerCallback(THIS, 'onInput');
