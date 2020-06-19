@@ -823,7 +823,7 @@ var jsc = {
 
 
 	hasAlphaSlider : function (thisObj) {
-		if (thisObj.alphaSlider || thisObj.alphaValueElement || thisObj._currentFormat === 'rgba') {
+		if (thisObj.alphaSlider || thisObj.alphaElement || thisObj._currentFormat === 'rgba') {
 			return true;
 		}
 		return false;
@@ -1026,6 +1026,7 @@ var jsc = {
 			// Always trigger changes AFTER detaching outstanding mouse handlers,
 			// in case some user interaction occured in user-defined onchange callback
 			// that intruded into current mouse events
+			thisObj.trigger('input');
 			thisObj.trigger('change');
 		};
 	},
@@ -1418,7 +1419,7 @@ var jsc = {
 		this.previewSize = 32; // width of the color preview (in px)
 		this.previewPadding = 5; // minimum padding between the input/button text and the color preview (in px)
 		this.valueElement = null; // element that will be used to display and input the color code
-		this.alphaValueElement = null; // element that will be used to display and input the alpha (opacity) value
+		this.alphaElement = null; // element that will be used to display and input the alpha (opacity) value
 		this.required = true; // whether the associated text <input> can be left empty
 		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
 		this.hash = false; // whether to prefix the HEX color code with # symbol
@@ -2420,10 +2421,20 @@ var jsc = {
 		if (this.valueElement) {
 			if (jsc.isTextInput(this.valueElement)) {
 
+				// If the value element has oninput event already set, we need to store it and call it AFTER setting the color,
+				// otherwise the picker instance would still contain the old color when accessed from the oninput handler.
+				// This is because we are attaching the 'input' event listener after the oninput is already set.
+				var origOnInput = this.valueElement.oninput;
+				this.valueElement.oninput = null;
+				// TODO
+				console.log(this.valueElement.oninput);
+				console.log(origOnInput);
+
 				var handleValueInput = function (ev) {
 					if (ev._jscData) {
 						return; // ignore the event the it was triggered by jscolor
 					}
+					console.log('triggered oninput with value ' + THIS.valueElement.value); // TODO
 					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
 					jsc.triggerCallback(THIS, 'onInput');
 				};
@@ -2432,10 +2443,13 @@ var jsc = {
 					if (ev._jscData) {
 						return; // ignore the event the it was triggered by jscolor
 					}
+					console.log('triggered onchange with value ' + THIS.valueElement.value); // TODO
 					jsc.triggerCallback(THIS, 'onChange');
 				};
 
-				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
+				// TODO: remove. If not removed, we need to make a separate handler for it, because we're calling original oninput func in the handler
+				//jsc.attachEvent(this.valueElement, 'keyup', handleValueInput); // for Opera mini, which doesn't support 'input' event
+
 				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
 				jsc.attachEvent(this.valueElement, 'change', handleValueChange);
 				jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
