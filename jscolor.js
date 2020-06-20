@@ -408,11 +408,11 @@ var jsc = {
 
 
 	setStyle : function (elm, styles, important) {
-		var priority = important ? 'important' : undefined;
+		// using '' for standard priority (IE10 apparently doesn't like value undefined)
+		var priority = important ? 'important' : '';
+
 		for (var prop in styles) {
-			if (styles.hasOwnProperty(prop)) {
-				elm.style.setProperty(prop, styles[prop], priority);
-			}
+			elm.style.setProperty(prop, styles[prop], priority);
 		}
 	},
 
