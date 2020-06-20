@@ -1521,36 +1521,16 @@ var jsc = {
 		this.processValueInput = function (str) {
 
 			if (!this.required && str.trim() === '') {
-				// leave empty value (or just whitespace)
-
-				/* TODO: not needed?
-				// input's value is empty -> restore the original style
-				if (this.previewElement) {
-					this.previewElement.style.backgroundImage = this.previewElement._jscOrigStyle.backgroundImage;
-					this.previewElement.style.backgroundRepeat = this.previewElement._jscOrigStyle.backgroundRepeat;
-					this.previewElement.style.backgroundColor = this.previewElement._jscOrigStyle.backgroundColor;
-					this.previewElement.style.color = this.previewElement._jscOrigStyle.color;
-				}
-				*/
-				// input's value is empty -> remove background
-				this.previewElement.style.background = 'none'; // TODO: OK?
+				// input's value is empty (or just whitespace) -> leave the value
+				this.previewElement.style.background = 'none';
 				this.exposeColor(jsc.leaveValue | jsc.leaveStyle);
 				return;
 			}
 
 			if (!this.refine) {
 				if (!this.fromString(str, jsc.leaveValue)) {
-					/* TODO: not needed?
-					// input's value could not be parsed -> restore the original style
-					if (this.previewElement) {
-						this.previewElement.style.backgroundImage = this.previewElement._jscOrigStyle.backgroundImage;
-						this.previewElement.style.backgroundRepeat = this.previewElement._jscOrigStyle.backgroundRepeat;
-						this.previewElement.style.backgroundColor = this.previewElement._jscOrigStyle.backgroundColor;
-						this.previewElement.style.color = this.previewElement._jscOrigStyle.color;
-					}
-					*/
 					// input's value could not be parsed -> remove background
-					this.previewElement.style.background = 'none'; // TODO: OK?
+					this.previewElement.style.background = 'none';
 					this.exposeColor(jsc.leaveValue | jsc.leaveStyle);
 				}
 				return;
@@ -1625,7 +1605,6 @@ var jsc = {
 
 					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), previewOnRight ? this.previewSize : null);
 
-					// TODO: test forceStyle
 					jsc.setStyle(this.previewElement, {
 						'background-image': 'url(\'' + previewCanvas.toDataURL('image/png') + '\')',
 						'background-repeat': previewOnRight ? 'repeat-y' : 'repeat',
@@ -2475,7 +2454,6 @@ var jsc = {
 		// previewElement
 		if (this.previewElement) {
 			this.previewElement._jscOrigStyle = {
-				// TODO: complete?
 				'background-image': this.previewElement.style['background-image'],
 				'background-position': this.previewElement.style['background-position'],
 				'background-repeat': this.previewElement.style['background-repeat'],
@@ -2534,11 +2512,6 @@ var jsc = {
 		if (initAlpha !== null) {
 			this.processAlphaInput(initAlpha);
 		}
-
-
-		// TODO: move function x() {..} functions here?
-
-
 
 	}
 
