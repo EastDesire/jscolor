@@ -1442,7 +1442,7 @@ var jsc = {
 					if (previewPos) {
 						padding = this.previewSize + Math.max(
 							5, // minimum padding
-							parseFloat(data.origCompStyle['padding-' + previewPos]) || 0
+							parseFloat(data.origCompStyle['padding-' + previewPos]) || 0 // element's original padding
 						);
 					}
 
