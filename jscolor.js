@@ -1432,8 +1432,8 @@ var jsc = {
 
 					var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
 					if (
-						jsc.isTextInput(this.previewElement)) { // text input
-						jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement) // button with text
+						jsc.isTextInput(this.previewElement) || // text input
+						(jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement)) // button with text
 					) {
 						previewPos = this.previewPosition;
 					}
