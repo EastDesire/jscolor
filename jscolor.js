@@ -1494,6 +1494,11 @@ var jsc = {
 		// a: 0.0-1.0
 		//
 		this.fromHSVA = function (h, s, v, a, flags) { // null = don't change
+			if (h === undefined) { h = null; }
+			if (s === undefined) { s = null; }
+			if (v === undefined) { v = null; }
+			if (a === undefined) { a = null; }
+
 			if (h !== null) {
 				if (isNaN(h)) { return false; }
 				h = Math.max(0, Math.min(360, h));
@@ -1527,6 +1532,11 @@ var jsc = {
 		// a: 0.0-1.0
 		//
 		this.fromRGBA = function (r, g, b, a, flags) { // null = don't change
+			if (r === undefined) { r = null; }
+			if (g === undefined) { g = null; }
+			if (b === undefined) { b = null; }
+			if (a === undefined) { a = null; }
+
 			if (r !== null) {
 				if (isNaN(r)) { return false; }
 				r = Math.max(0, Math.min(255, r));
