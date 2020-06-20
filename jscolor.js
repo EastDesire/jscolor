@@ -191,12 +191,12 @@ var jsc = {
 	},
 
 
-	getButtonText : function (el) {
-		// TODO: test?
+	isButtonEmpty : function (el) {
 		switch (jsc.nodeName(el)) {
-			case 'input': return el.value;
-			case 'button': return el.innerHTML;
+			case 'input': return (!el.value || el.value.trim() === '');
+			case 'button': return (el.textContent.trim() === '');
 		}
+		return null; // could not determine element's text
 	},
 
 
@@ -1601,10 +1601,8 @@ var jsc = {
 			if (!(flags & jsc.leaveStyle)) {
 				if (this.previewElement) {
 
-					// null -> revert original style
-					var paddingRight = null;
-					var minWidth = null;
-
+					var paddingRight = null; // null -> original style
+					var minWidth = null; // null -> original style
 					var previewOnRight = false;
 
 					if (jsc.isTextInput(this.previewElement)) {
@@ -1612,13 +1610,13 @@ var jsc = {
 						previewOnRight = true;
 						paddingRight = this.previewSize + this.previewPadding;
 					} else if (jsc.isButton(this.previewElement)) {
-						if (jsc.getButtonText(this.previewElement).trim() !== '') {
-							// non-empty button
-							previewOnRight = true;
-							paddingRight = this.previewSize + this.previewPadding;
-						} else {
+						if (jsc.isButtonEmpty(this.previewElement)) {
 							// empty button
 							minWidth = this.previewSize;
+						} else {
+							// button with text
+							previewOnRight = true;
+							paddingRight = this.previewSize + this.previewPadding;
 						}
 					} else {
 						// div, span, etc.
@@ -1632,7 +1630,7 @@ var jsc = {
 						'background-image': 'url(\'' + previewCanvas.toDataURL('image/png') + '\')',
 						'background-repeat': previewOnRight ? 'repeat-y' : 'repeat',
 						'background-position': previewOnRight ? 'right top' : 'left top',
-						'min-width': paddingRight !== null ? (paddingRight + 'px') : this.previewElement._jscOrigStyle['min-width'],
+						'min-width': minWidth !== null ? (minWidth + 'px') : this.previewElement._jscOrigStyle['min-width'],
 						'padding-right': paddingRight !== null ? (paddingRight + 'px') : this.previewElement._jscOrigStyle['padding-right'],
 					}, this.forceStyle);
 				}
