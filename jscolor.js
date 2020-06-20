@@ -863,7 +863,7 @@ var jsc = {
 			try {
 				callback = new Function (thisObj[prop]);
 			} catch(e) {
-				console.warn(e);
+				console.error(e);
 			}
 		} else {
 			// function
@@ -1190,6 +1190,8 @@ var jsc = {
 
 	pub : function (targetElement, opts) {
 
+		var THIS = this;
+
 		if (opts === undefined) {
 			opts = {};
 		}
@@ -1202,21 +1204,20 @@ var jsc = {
 
 		// General options
 		//
+		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
 		this.value = null; // INITIAL color value in any supported format. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
 		this.alpha = null; // INITIAL alpha value. To change it later, use method setAlpha()
-		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
+		this.onChange = null; // called when color changes. Value can be either a function or a string with javascript code.
+		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging slider. Value can be either a function or a string with javascript code.
+		this.valueElement = null; // element that will be used to display and input the color code
+		this.alphaElement = null; // element that will be used to display and input the alpha (opacity) value
 		this.previewElement = null; // element that will preview the picked color using CSS background
 		this.previewSize = 32; // width of the color preview (in px)
 		this.previewPosition = 'left'; // 'left' | 'right' - position of the color preview in previewElement
-		this.previewPadding = 5; // minimum padding between the input/button text and the color preview (in px) // TODO: get preview padding from computed padding-left/right
-		this.valueElement = null; // element that will be used to display and input the color code
-		this.alphaElement = null; // element that will be used to display and input the alpha (opacity) value
 		this.required = true; // whether the associated text <input> can be left empty
 		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
 		this.hash = false; // whether to prefix the HEX color code with # symbol
 		this.uppercase = true; // whether to show the color code in upper case
-		this.onChange = null; // called when color changes. Value can be either a function or a string with javascript code.
-		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging slider. Value can be either a function or a string with javascript code.
 		this.forceStyle = true; // whether to overwrite CSS style of the previewElement using !important flag
 		this.minS = 0; // min allowed saturation (0 - 100)
 		this.maxS = 100; // max allowed saturation (0 - 100)
@@ -1277,7 +1278,7 @@ var jsc = {
 			if (typeof opts.preset === 'string') {
 				presetsArr = opts.preset.split(/\s+/);
 			} else if (Array.isArray(opts.preset)) {
-				presetsArr = opts.preset.slice(); // to clone
+				presetsArr = opts.preset.slice(); // slice() to clone
 			} else {
 				console.warn('Unrecognized preset value');
 			}
@@ -1287,7 +1288,7 @@ var jsc = {
 		presetsArr.push('default');
 
 		// let's apply the presets in reverse order, so that should there be any overlapping options,
-		// then the formerly listed preset overrides the latter
+		// the formerly listed preset will override the latter
 		for (var i = presetsArr.length - 1; i >= 0; i -= 1) {
 			var pres = presetsArr[i];
 			if (!pres) {
@@ -1306,7 +1307,10 @@ var jsc = {
 
 
 		// let's set specific options for this color picker
-		var nonProperties = ['preset']; // these options won't be set as instance properties
+		var nonProperties = [
+			// these options won't be set as instance properties
+			'preset',
+		];
 		for (var opt in opts) {
 			if (opts.hasOwnProperty(opt)) {
 				if (nonProperties.indexOf(opt) === -1) {
@@ -1317,7 +1321,15 @@ var jsc = {
 
 
 		// check input values
-		checkEnumOption('format', ['auto', 'any', 'hex', 'rgb', 'rgba'])
+		try {
+			checkEnumOption('format', ['auto', 'any', 'hex', 'rgb', 'rgba']);
+			checkEnumOption('previewPosition', ['left', 'right']);
+			checkEnumOption('mode', ['hsv', 'hvs', 'hs', 'hv']);
+			checkEnumOption('position', ['left', 'right', 'top', 'bottom']);
+		} catch (e) {
+			console.error(e);
+			return;
+		}
 
 
 		this.hide = function () {
@@ -1691,13 +1703,15 @@ var jsc = {
 		};
 
 
+		// checks if the option's value is in the defined list
+		//
+		// string values in possibleValues array must be in lowercase,
+		// as we're lowercasing option's value too for case-insensitive comparison
 		function checkEnumOption (optionName, possibleValues) {
 			var val = THIS[optionName];
-			if (possibleValues.indexOf(val) === -1) {
-				console.warn('Unrecognized value for option %s: %s', optionName, val);
-				return false;
+			if (possibleValues.indexOf(typeof val === 'string' ? val.toLowerCase() : val) === -1) {
+				throw new Error('Option \'' + optionName + '\' has invalid value: ' + val);
 			}
-			return true;
 		}
 
 
@@ -1966,7 +1980,7 @@ var jsc = {
 
 			// slider pointer spacer
 			p.sldPtrS.style.width = THIS.sliderSize + 'px';
-			p.sldPtrS.style.height = sliderPtrSpace + 'px';
+			p.sldPtrS.style.height = jsc.pub.sliderInnerSpace + 'px';
 
 
 			// alpha slider
@@ -2011,7 +2025,7 @@ var jsc = {
 
 			// alpha slider pointer spacer
 			p.asldPtrS.style.width = THIS.sliderSize + 'px';
-			p.asldPtrS.style.height = sliderPtrSpace + 'px';
+			p.asldPtrS.style.height = jsc.pub.sliderInnerSpace + 'px';
 
 
 			// the Close button
@@ -2060,14 +2074,14 @@ var jsc = {
 
 			// The redrawPosition() method needs picker.owner to be set, that's why we call it here,
 			// after setting the owner
-			if (jsc.nodeName(container) === 'body') {
+			if (jsc.nodeName(THIS.container) === 'body') {
 				jsc.redrawPosition();
 			} else {
 				jsc._drawPosition(THIS, 0, 0, 'relative', false);
 			}
 
-			if (p.wrap.parentNode != container) {
-				container.appendChild(p.wrap);
+			if (p.wrap.parentNode != THIS.container) {
+				THIS.container.appendChild(p.wrap);
 			}
 
 			jsc.addClass(THIS.targetElement, jsc.pub.activeClassName);
@@ -2127,7 +2141,7 @@ var jsc = {
 				case 'v': var yChannel = 2; break;
 				}
 				var y = Math.round((1 - THIS.hsv[yChannel] / 100) * (THIS.height - 1));
-				jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
+				jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(jsc.pub.sliderInnerSpace / 2)) + 'px';
 			}
 
 			// redraw the alpha slider
@@ -2137,7 +2151,7 @@ var jsc = {
 
 		function redrawASld () {
 			var y = Math.round((1 - THIS.alp) * (THIS.height - 1));
-			jsc.picker.asldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
+			jsc.picker.asldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(jsc.pub.sliderInnerSpace / 2)) + 'px';
 		}
 
 
@@ -2202,25 +2216,20 @@ var jsc = {
 		}
 
 
-		// current input/output format (notation)
-		this._currentFormat = null;
-
-
-		var THIS = this;
-
-		var container =
-			this.container ?
-			jsc.fetchElement(this.container) :
-			document.getElementsByTagName('body')[0];
-
-		var sliderPtrSpace = 3; // px
-
-
 		//
 		// Install the color picker on chosen element(s)
 		//
 
-		// Find the target element
+
+		// Determine picker's container element
+		this.container = jsc.fetchElement(this.container);
+
+		if (!this.container) {
+			this.container = document.body;
+		}
+
+
+		// Fetch the target element
 		this.targetElement = jsc.fetchElement(targetElement);
 
 		if (!this.targetElement) {
@@ -2229,6 +2238,7 @@ var jsc = {
 		if (this.targetElement.jscolor !== undefined) {
 			throw new Error('Color picker already installed on this element');
 		}
+
 
 		// link this instance with the target element
 		this.targetElement.jscolor = this;
@@ -2252,7 +2262,6 @@ var jsc = {
 				this.targetElement.appendChild(document.createTextNode('\xa0'));
 
 				// set min-width = previewSize, if not already greater
-				// TODO: test
 				var compStyle = jsc.getCompStyle(this.targetElement);
 				var currMinWidth = parseFloat(compStyle['min-width']) || 0;
 				if (currMinWidth < this.previewSize) {
@@ -2372,6 +2381,8 @@ var jsc = {
 
 		// determine current format based on the initial color value
 		//
+		this._currentFormat = null;
+
 		if (['auto', 'any'].indexOf(this.format.toLowerCase()) > -1) {
 			// format is 'auto' or 'any' -> let's auto-detect current format
 			var color = jsc.parseColorString(initValue);
@@ -2434,8 +2445,11 @@ jsc.pub.presets['thin'] = { borderWidth:1, insetWidth:1, pointerBorderWidth:1 };
 jsc.pub.presets['thick'] = { borderWidth:2, insetWidth:2, pointerBorderWidth:2 };
 
 
+// size of space in the sliders
+jsc.pub.sliderInnerSpace = 3; // px
+
 // transparency chessboard
-jsc.pub.chessboardSize = 8;
+jsc.pub.chessboardSize = 8; // px
 jsc.pub.chessboardColor1 = '#999999';
 jsc.pub.chessboardColor2 = '#CCCCCC';
 
