@@ -625,7 +625,7 @@ var jsc = {
 	},
 
 
-	genColorPreviewCanvas : function (color, customWidth) {
+	genColorPreviewCanvas : function (color, separatorPos, customWidth) { // TODO: implement args
 		var sqSize = jsc.pub.chessboardSize;
 		var sqColor1 = jsc.pub.chessboardColor1;
 		var sqColor2 = jsc.pub.chessboardColor2;
