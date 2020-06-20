@@ -192,10 +192,11 @@ var jsc = {
 
 
 	getButtonText : function (el) {
-		if (!el) {
-			return null;
+		// TODO: test?
+		switch (jsc.nodeName(el)) {
+			case 'input': return el.value;
+			case 'button': return el.innerHTML;
 		}
-		// TODO
 	},
 
 
@@ -400,9 +401,11 @@ var jsc = {
 
 
 	setStyle : function (elm, styles, important) {
-		// TODO
-		for () {
-			elm.style.setProperty();
+		var priority = important ? 'important' : undefined;
+		for (var prop in styles) {
+			if (styles.hasOwnProperty(prop)) {
+				elm.style.setProperty(prop, styles[prop], priority);
+			}
 		}
 	},
 
@@ -413,7 +416,7 @@ var jsc = {
 
 
 	setBoxShadow : function (elm, value) {
-		jsc.setStyle(elm, {'box-shadow', value || 'none'});
+		jsc.setStyle(elm, {'box-shadow': value || 'none'});
 	},
 
 
@@ -1604,11 +1607,11 @@ var jsc = {
 
 					var previewOnRight = false;
 
-					if (isTextInput(this.previewElement)) {
+					if (jsc.isTextInput(this.previewElement)) {
 						// text input
 						previewOnRight = true;
 						paddingRight = this.previewSize + this.previewPadding;
-					} else if (isButton(this.previewElement)) {
+					} else if (jsc.isButton(this.previewElement)) {
 						if (jsc.getButtonText(this.previewElement).trim() !== '') {
 							// non-empty button
 							previewOnRight = true;
@@ -1622,24 +1625,16 @@ var jsc = {
 						// (noop)
 					}
 
-
 					var previewCanvas = jsc.genColorPreviewCanvas(this.toRGBAString(), previewOnRight ? this.previewSize : null);
 
-					this.previewElement.style.backgroundImage = 'url(\'' + previewCanvas.toDataURL('image/png') + '\')';
-					this.previewElement.style.backgroundRepeat = (previewOnRight ? 'repeat-y' : 'repeat');
-					this.previewElement.style.backgroundPosition = (previewOnRight ? 'right top' : 'left top');
-					this.previewElement.style.paddingRight = (paddingRight !== null ? (paddingRight + 'px') : this.previewElement._jscOrigStyle['padding-right']);
-
-					// TODO
-					if (this.forceStyle) {
-						// TODO
-						/*
-						this.previewElement.setAttribute('style',
-							'background: ' + bgColor + ' !important; ' +
-							'color: ' + fgColor + ' !important;'
-						);
-						*/
-					}
+					// TODO: test forceStyle
+					jsc.setStyle(this.previewElement, {
+						'background-image': 'url(\'' + previewCanvas.toDataURL('image/png') + '\')',
+						'background-repeat': previewOnRight ? 'repeat-y' : 'repeat',
+						'background-position': previewOnRight ? 'right top' : 'left top',
+						'min-width': paddingRight !== null ? (paddingRight + 'px') : this.previewElement._jscOrigStyle['min-width'],
+						'padding-right': paddingRight !== null ? (paddingRight + 'px') : this.previewElement._jscOrigStyle['padding-right'],
+					}, this.forceStyle);
 				}
 			}
 
@@ -2417,14 +2412,10 @@ var jsc = {
 				this.targetElement.type = 'button';
 			}
 
-			// TODO: move this to the block where setting style (background)
-			// empty buttons end up too small -> let's insert non-breaking space
 			if (this.targetElement.innerHTML.trim() === '') {
+				// empty button would end up too small -> let's insert a non-breaking space
 				this.targetElement.appendChild(document.createTextNode('\xa0'));
 			}
-
-			// TODO: move this to the block where setting style (background)
-			this.targetElement.style.minWidth = this.previewSize + 'px';
 		}
 
 		// Determine the value element
