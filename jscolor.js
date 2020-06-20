@@ -502,15 +502,6 @@ var jsc = {
 	},
 
 
-	setOption : function (option, value) {
-		if (typeof this[option] === 'undefined') {
-			console.warn('Unrecognized configuration option: %s', option);
-			return false;
-		}
-		this[option] = value;
-	},
-
-
 	// r: 0-255
 	// g: 0-255
 	// b: 0-255
@@ -1272,7 +1263,7 @@ var jsc = {
 			// let's set custom default options, if specified
 			for (var opt in jsc.pub.options) {
 				if (jsc.pub.options.hasOwnProperty(opt)) {
-					jsc.setOption.call(this, opt, jsc.pub.options[opt]);
+					setOption(opt, jsc.pub.options[opt]);
 				}
 			}
 		}
@@ -1308,7 +1299,7 @@ var jsc = {
 			}
 			for (var opt in jsc.pub.presets[pres]) {
 				if (jsc.pub.presets[pres].hasOwnProperty(opt)) {
-					jsc.setOption.call(this, opt, jsc.pub.presets[pres][opt]);
+					setOption(opt, jsc.pub.presets[pres][opt]);
 				}
 			}
 		}
@@ -1319,10 +1310,14 @@ var jsc = {
 		for (var opt in opts) {
 			if (opts.hasOwnProperty(opt)) {
 				if (nonProperties.indexOf(opt) === -1) {
-					jsc.setOption.call(this, opt, opts[opt]);
+					setOption(opt, opts[opt]);
 				}
 			}
 		}
+
+
+		// check input values
+		checkEnumOption('format', ['auto', 'any', 'hex', 'rgb', 'rgba'])
 
 
 		this.hide = function () {
@@ -1694,6 +1689,25 @@ var jsc = {
 				}
 			} while ((elm = elm.parentNode) && jsc.nodeName(elm) !== 'body');
 		};
+
+
+		function checkEnumOption (optionName, possibleValues) {
+			var val = THIS[optionName];
+			if (possibleValues.indexOf(val) === -1) {
+				console.warn('Unrecognized value for option %s: %s', optionName, val);
+				return false;
+			}
+			return true;
+		}
+
+
+		function setOption (option, value) {
+			if (typeof THIS[option] === 'undefined') {
+				console.warn('Unrecognized configuration option: %s', option);
+				return false;
+			}
+			THIS[option] = value;
+		}
 
 
 		function detachPicker () {
