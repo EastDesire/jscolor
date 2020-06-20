@@ -319,7 +319,7 @@ var jsc = {
 			return false;
 		}
 
-		ev._jscData = customData;
+		ev._data_jsc = customData;
 		el.dispatchEvent(ev);
 		return true;
 	},
@@ -395,8 +395,15 @@ var jsc = {
 	},
 
 
-	getStyle : function (elm) {
-		return window.getComputedStyle ? window.getComputedStyle(elm) : elm.currentStyle;
+	getCompStyle : function (elm) {
+		var compStyle = window.getComputedStyle ? window.getComputedStyle(elm) : elm.currentStyle;
+
+		// Note: In Firefox, getComputedStyle returns null in a hidden iframe,
+		// that's why we need to check if the returned value is non-empty
+		if (!compStyle) {
+			return {};
+		}
+		return compStyle;
 	},
 
 
@@ -1421,21 +1428,22 @@ var jsc = {
 
 			if (!(flags & jsc.leaveStyle)) {
 				if (this.previewElement) {
+					var data = this.previewElement._data_jsc;
 
 					var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
-
-					// TODO
-					if (jsc.isTextInput(this.previewElement)) {
-						// text input
+					if (
+						jsc.isTextInput(this.previewElement)) { // text input
+						jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement) // button with text
+					) {
 						previewPos = this.previewPosition;
-					} else if (jsc.isButton(this.previewElement)) {
-						if (!jsc.isButtonEmpty(this.previewElement)) {
-							// button with text
-							previewPos = this.previewPosition;
-						}
-					} else {
-						// div, span, etc.
-						// (noop)
+					}
+
+					var padding = 0;
+					if (previewPos) {
+						padding = this.previewSize + Math.max(
+							5, // minimum padding
+							parseFloat(data.origCompStyle['padding-' + previewPos]) || 0
+						);
 					}
 
 					var previewCanvas = jsc.genColorPreviewCanvas(
@@ -1444,15 +1452,12 @@ var jsc = {
 						previewPos ? this.previewSize : undefined
 					);
 
-					var padding = this.previewSize + this.previewPadding;
-
-					// TODO
 					jsc.setStyle(this.previewElement, {
 						'background-image': 'url(\'' + previewCanvas.toDataURL('image/png') + '\')',
 						'background-repeat': previewPos ? 'repeat-y' : 'repeat',
 						'background-position': (previewPos ? previewPos : 'left') + ' top',
-						'padding-left': previewPos === 'left' ? (padding + 'px') : this.previewElement._jscOrigStyle['padding-left'],
-						'padding-right': previewPos === 'right' ? (padding + 'px') : this.previewElement._jscOrigStyle['padding-right'],
+						'padding-left': previewPos === 'left' ? (padding + 'px') : data.origStyle['padding-left'],
+						'padding-right': previewPos === 'right' ? (padding + 'px') : data.origStyle['padding-right'],
 					}, this.forceStyle);
 				}
 			}
@@ -1671,11 +1676,8 @@ var jsc = {
 			do {
 				// If the target element or one of its parent nodes has fixed position,
 				// then use fixed positioning instead
-				//
-				// Note: In Firefox, getComputedStyle returns null in a hidden iframe,
-				// that's why we need to check if the returned style object is non-empty
-				var currStyle = jsc.getStyle(elm);
-				if (currStyle && currStyle.position.toLowerCase() === 'fixed') {
+				var compStyle = jsc.getCompStyle(elm);
+				if (compStyle.position && compStyle.position.toLowerCase() === 'fixed') {
 					this.fixed = true;
 				}
 
@@ -2141,7 +2143,7 @@ var jsc = {
 
 
 		function handleValueChange (ev) {
-			if (ev._jscData) {
+			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
 			jsc.triggerCallback(THIS, 'onChange');
@@ -2152,7 +2154,7 @@ var jsc = {
 
 
 		function handleAlphaChange (ev) {
-			if (ev._jscData) {
+			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
 			jsc.triggerCallback(THIS, 'onChange');
@@ -2163,7 +2165,7 @@ var jsc = {
 
 
 		function handleValueInput (ev) {
-			if (ev._jscData) {
+			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
 			THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
@@ -2175,7 +2177,7 @@ var jsc = {
 
 
 		function handleAlphaInput (ev) {
-			if (ev._jscData) {
+			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
 			THIS.setAlpha(THIS.alphaElement.value, jsc.leaveAlphaValue);
@@ -2237,8 +2239,8 @@ var jsc = {
 
 				// set min-width = previewSize, if not already greater
 				// TODO: test
-				var style = jsc.getStyle(this.targetElement);
-				var currMinWidth = parseFloat(style['min-width']) || 0;
+				var compStyle = jsc.getCompStyle(this.targetElement);
+				var currMinWidth = parseFloat(compStyle['min-width']) || 0;
 				if (currMinWidth < this.previewSize) {
 					jsc.setStyle(this.targetElement, {
 						'min-width': this.previewSize + 'px',
@@ -2305,13 +2307,21 @@ var jsc = {
 
 		// previewElement
 		if (this.previewElement) {
-			this.previewElement._jscOrigStyle = {
-				'background-image': this.previewElement.style['background-image'],
-				'background-position': this.previewElement.style['background-position'],
-				'background-repeat': this.previewElement.style['background-repeat'],
-				'min-width': this.previewElement.style['min-width'],
-				'padding-left': this.previewElement.style['padding-left'],
-				'padding-right': this.previewElement.style['padding-right'],
+			var compStyle = jsc.getCompStyle(this.previewElement);
+
+			this.previewElement._data_jsc = {
+				origCompStyle : {
+					'padding-left': compStyle['padding-left'],
+					'padding-right': compStyle['padding-right'],
+				},
+				origStyle : {
+					'background-image': this.previewElement.style['background-image'],
+					'background-position': this.previewElement.style['background-position'],
+					'background-repeat': this.previewElement.style['background-repeat'],
+					'min-width': this.previewElement.style['min-width'],
+					'padding-left': this.previewElement.style['padding-left'],
+					'padding-right': this.previewElement.style['padding-right'],
+				},
 			};
 		}
 
