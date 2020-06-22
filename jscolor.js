@@ -331,12 +331,9 @@ var jsc = {
 			13: 'Enter',
 			27: 'Escape',
 		};
-		/* TODO
 		if (typeof ev.code === 'string') {
 			return ev.code;
 		} else if (ev.keyCode !== undefined && keys.hasOwnProperty(ev.keyCode)) {
-		*/
-		if (ev.keyCode !== undefined && keys.hasOwnProperty(ev.keyCode)) {
 			return keys[ev.keyCode];
 		}
 		return null;
@@ -634,62 +631,6 @@ var jsc = {
 
 		return false;
 	},
-
-
-	/* TODO
-	genColorPreviewCanvas : function (color, separatorPos, customWidth) {
-		var sqSize = jsc.pub.chessboardSize;
-		var sqColor1 = jsc.pub.chessboardColor1;
-		var sqColor2 = jsc.pub.chessboardColor2;
-
-		var canvas = document.createElement('canvas');
-		canvas.width = customWidth !== undefined ? customWidth : sqSize * 2;
-		canvas.height = sqSize * 2;
-
-		var ctx = canvas.getContext('2d');
-
-		// the color preview will start at 1/2 width of the separator line
-		var fillW = canvas.width - Math.round(jsc.pub.previewSeparator.length / 2);
-		var fillX = null;
-		switch (separatorPos) {
-			case 'left': fillX = Math.round(jsc.pub.previewSeparator.length / 2); break;
-			case 'right': fillX = 0; break;
-		}
-
-		// transparency chessboard - background
-		ctx.fillStyle = sqColor1;
-		ctx.fillRect(fillX, 0, fillW, canvas.height);
-
-		// transparency chessboard - squares
-		ctx.fillStyle = sqColor2;
-		for (var x = fillX; x < fillW; x += sqSize * 2) {
-			ctx.fillRect(x, 0, sqSize, sqSize);
-			ctx.fillRect(x + sqSize, sqSize, sqSize, sqSize);
-		}
-
-		// actual color in foreground
-		ctx.fillStyle = color;
-		ctx.fillRect(fillX, 0, fillW, canvas.height);
-
-		var start = null;
-		switch (separatorPos) {
-			case 'left': start = 0; break;
-			case 'right': start = canvas.width - jsc.pub.previewSeparator.length; break;
-		}
-		if (start !== null) {
-			ctx.lineWidth = 1;
-			for (var i = 0, x = start; i < jsc.pub.previewSeparator.length; i += 1) {
-				ctx.beginPath();
-				ctx.strokeStyle = jsc.pub.previewSeparator[i];
-				ctx.moveTo(0.5 + start + i, 0);
-				ctx.lineTo(0.5 + start + i, canvas.height);
-				ctx.stroke();
-			}
-		}
-
-		return canvas;
-	},
-	*/
 
 
 	// Canvas scaling for retina displays
@@ -2747,14 +2688,7 @@ jsc.pub.chessboardColor1 = '#999999';
 jsc.pub.chessboardColor2 = '#CCCCCC';
 
 // preview separator
-// TODO
-//jsc.pub.previewSeparator = ['#FFF', '#000'];
-//jsc.pub.previewSeparator = ['rgba(255,255,255,.5)', 'rgba(128,128,128,.5)', 'rgba(0,0,0,.5)'];
-//jsc.pub.previewSeparator = ['rgba(255,0,0,.2)','rgba(255,0,0,.2)','rgba(255,0,0,.2)'];
-//jsc.pub.previewSeparator = ['rgba(255,0,0,.2)', 'rgba(255,0,0,.2)'];
 jsc.pub.previewSeparator = ['rgba(255,255,255,.65)', 'rgba(128,128,128,.65)'];
-//jsc.pub.previewSeparator = ['rgba(255,0,0,1)'];
-//jsc.pub.previewSeparator = ['rgba(255,255,255,.25)', 'rgba(128,128,128,1)', 'rgba(0,0,0,.25)'];
 
 
 // Installs jscolor on current DOM tree
