@@ -795,7 +795,7 @@ var jsc = {
 			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.width,
 			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.height
 		];
-		var sliderSpace = 2 * thisObj.insetWidth + jsc.getPadToSliderPadding(thisObj) + thisObj.sliderSize;
+		var sliderSpace = 2 * thisObj.insetWidth + 2 * jsc.getControlPadding(thisObj) + thisObj.sliderSize;
 		if (jsc.getSliderChannel(thisObj)) {
 			dims[0] += sliderSpace;
 		}
@@ -818,8 +818,8 @@ var jsc = {
 	},
 
 
-	getPadToSliderPadding : function (thisObj) {
-		return Math.max(thisObj.padding, 1.5 * (2 * thisObj.pointerBorderWidth + thisObj.pointerThickness));
+	getControlPadding : function (thisObj) {
+		return Math.max(thisObj.padding / 2, 1.5 * (2 * thisObj.pointerBorderWidth + thisObj.pointerThickness) / 2);
 	},
 
 
@@ -1034,8 +1034,8 @@ var jsc = {
 
 	setPad : function (thisObj, e, ofsX, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var x = ofsX + pointerAbs.x - jsc._pointerOrigin.x - thisObj.padding - thisObj.insetWidth;
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
+		var x = ofsX + pointerAbs.x - jsc._pointerOrigin.x - thisObj.padding - thisObj.insetWidth - thisObj.borderWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth - thisObj.borderWidth;
 
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
@@ -2046,7 +2046,7 @@ var jsc = {
 			var displayAlphaSlider = THIS.isAlphaEnabled();
 			var dims = jsc.getPickerDims(THIS);
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
-			var padToSliderPadding = jsc.getPadToSliderPadding(THIS);
+			var controlPadding = jsc.getControlPadding(THIS);
 			var borderRadius = Math.min(
 				THIS.borderRadius,
 				Math.round(THIS.padding * Math.PI)); // px
@@ -2088,10 +2088,12 @@ var jsc = {
 			p.sldM.style.background =
 			p.asldM.style.background =
 				'#FFF';
+			/* TODO: put it back, Jack
 			p.padM.style.opacity =
 			p.sldM.style.opacity =
 			p.asldM.style.opacity =
 				'0';
+			*/
 
 			// pad
 			p.pad.style.position = 'relative';
@@ -2112,11 +2114,12 @@ var jsc = {
 			p.padM._jscInstance = THIS;
 			p.padM._jscControlName = 'pad';
 			p.padM.style.position = 'absolute';
-			p.padM.style.left = '0';
-			p.padM.style.top = '0';
-			p.padM.style.width = (THIS.padding + 2 * THIS.insetWidth + THIS.width + padToSliderPadding / 2) + 'px';
-			p.padM.style.height = dims[1] + 'px';
+			p.padM.style.left = -THIS.borderWidth + 'px';
+			p.padM.style.top = -THIS.borderWidth + 'px';
+			p.padM.style.width = (THIS.borderWidth + THIS.padding + 2 * THIS.insetWidth + THIS.width + controlPadding) + 'px';
+			p.padM.style.height = 2 * THIS.borderWidth + dims[1] + 'px';
 			p.padM.style.cursor = padCursor;
+			p.padM.style.backgroundColor = 'rgba(255,0,0,.2)'; // TODO
 
 			// pad cross
 			p.cross.style.position = 'absolute';
@@ -2179,7 +2182,7 @@ var jsc = {
 			// slider border
 			p.sldB.style.display = displaySlider ? 'block' : 'none';
 			p.sldB.style.position = 'absolute';
-			p.sldB.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + padToSliderPadding) + 'px'; // TODO
+			p.sldB.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + 2 * controlPadding) + 'px'; // TODO
 			p.sldB.style.top = THIS.padding + 'px';
 			p.sldB.style.border = THIS.insetWidth + 'px solid';
 			p.sldB.style.borderColor = THIS.insetColor;
@@ -2189,11 +2192,12 @@ var jsc = {
 			p.sldM._jscControlName = 'sld';
 			p.sldM.style.display = displaySlider ? 'block' : 'none';
 			p.sldM.style.position = 'absolute';
-			p.sldM.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + padToSliderPadding / 2) + 'px'; // TODO
+			p.sldM.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + controlPadding) + 'px'; // TODO
 			p.sldM.style.top = '0';
-			p.sldM.style.width = (THIS.sliderSize + padToSliderPadding / 2 + THIS.padding + 2 * THIS.insetWidth) + 'px';
+			p.sldM.style.width = (THIS.sliderSize + controlPadding + THIS.padding + 2 * THIS.insetWidth) + 'px';
 			p.sldM.style.height = dims[1] + 'px';
 			p.sldM.style.cursor = 'default';
+			p.sldM.style.backgroundColor = 'rgba(0,255,0,.2)'; // TODO
 
 			// slider pointer inner and outer border
 			p.sldPtrIB.style.border =
@@ -2236,9 +2240,10 @@ var jsc = {
 			p.asldM.style.position = 'absolute';
 			p.asldM.style.right = '0'; // TODO: position from left
 			p.asldM.style.top = '0';
-			p.asldM.style.width = (THIS.sliderSize + padToSliderPadding / 2 + THIS.padding + 2 * THIS.insetWidth) + 'px'; // TODO: padToSliderPadding? test if padding is 0
+			p.asldM.style.width = (THIS.sliderSize + controlPadding + THIS.padding + 2 * THIS.insetWidth) + 'px'; // TODO: controlPadding? test if padding is 0
 			p.asldM.style.height = dims[1] + 'px';
 			p.asldM.style.cursor = 'default';
+			p.asldM.style.backgroundColor = 'rgba(0,0,255,.2)'; // TODO
 
 			// alpha slider pointer inner and outer border
 			p.asldPtrIB.style.border =
