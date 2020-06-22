@@ -174,6 +174,13 @@ var jsc = {
 	},
 
 
+	removeChildren : function (node) {
+		while (node.firstChild) {
+			node.removeChild(node.firstChild);
+		}
+	},
+
+
 	isTextInput : function (el) {
 		return el && jsc.nodeName(el) === 'input' && el.type.toLowerCase() === 'text';
 	},
@@ -1277,6 +1284,7 @@ var jsc = {
 		this.previewElement = null; // element that will preview the picked color using CSS background
 		this.previewSize = 32; // width of the color preview (in px)
 		this.previewPosition = 'left'; // 'left' | 'right' - position of the color preview in previewElement
+		this.previewPadding = 8; // (px) space between color preview and content of the input/button
 		this.required = true; // whether the associated text <input> can be left empty
 		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
 		this.hash = false; // whether to prefix the HEX color code with # symbol
@@ -1620,10 +1628,7 @@ var jsc = {
 
 					var padding = 0;
 					if (previewPos) {
-						padding = this.previewSize + Math.max(
-							5, // minimum padding
-							parseFloat(data.origCompStyle['padding-' + previewPos]) || 0 // element's original padding
-						);
+						padding = this.previewSize + this.previewPadding;
 					}
 
 					var preview = jsc.genColorPreviewCanvas(
@@ -2492,6 +2497,12 @@ var jsc = {
 			}
 
 			if (jsc.isButtonEmpty(this.targetElement)) { // empty button
+				// it is important to clear element's contents first.
+				// if we're re-instantiating color pickers on DOM that has been modified by changing page's innerHTML,
+				// we would keep adding more non-breaking spaces to element's content (because element's contents survive
+				// innerHTML changes, but picker instances don't)
+				jsc.removeChildren(this.targetElement);
+
 				// let's insert a non-breaking space
 				this.targetElement.appendChild(document.createTextNode('\xa0'));
 
@@ -2569,10 +2580,6 @@ var jsc = {
 			var compStyle = jsc.getCompStyle(this.previewElement);
 
 			this.previewElement._data_jsc = {
-				origCompStyle : {
-					'padding-left': compStyle['padding-left'],
-					'padding-right': compStyle['padding-right'],
-				},
 				origStyle : {
 					'background-image': this.previewElement.style['background-image'],
 					'background-position': this.previewElement.style['background-position'],
