@@ -1150,11 +1150,6 @@ var jsc = {
 	},
 
 
-	leaveValue : 1<<0,
-	leaveAlphaValue : 1<<1,
-	leaveStyle : 1<<2,
-
-
 	BoxShadow : (function () {
 		var BoxShadow = function (hShadow, vShadow, blur, spread, color, inset) {
 			this.hShadow = hShadow;
@@ -1181,6 +1176,27 @@ var jsc = {
 
 		return BoxShadow;
 	})(),
+
+
+	flags : {
+		leaveValue : 1 << 0,
+		leaveAlpha : 1 << 1,
+		leaveStyle : 1 << 2,
+	},
+
+
+	enumOpts : {
+		// TODO
+		format: ['auto', 'any', 'hex', 'rgb', 'rgba'],
+		previewPosition: ['left', 'right'],
+		mode: ['hsv', 'hvs', 'hs', 'hv'],
+		position: ['left', 'right', 'top', 'bottom'],
+	},
+
+
+	deprecatedOpts : {
+		// TODO
+	},
 
 
 	//
@@ -1439,15 +1455,15 @@ var jsc = {
 			if (!this.required && str.trim() === '') {
 				// input's value is empty (or just whitespace) -> leave the value
 				this.previewElement.style.background = 'none';
-				this.exposeColor(jsc.leaveValue | jsc.leaveStyle);
+				this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
 				return;
 			}
 
 			if (!this.refine) {
-				if (!this.fromString(str, jsc.leaveValue)) {
+				if (!this.fromString(str, jsc.flags.leaveValue)) {
 					// input's value could not be parsed -> remove background
 					this.previewElement.style.background = 'none';
-					this.exposeColor(jsc.leaveValue | jsc.leaveStyle);
+					this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
 				}
 				return;
 			}
@@ -1469,7 +1485,7 @@ var jsc = {
 
 		this.exposeColor = function (flags) {
 
-			if (!(flags & jsc.leaveValue) && this.valueElement) {
+			if (!(flags & jsc.flags.leaveValue) && this.valueElement) {
 				var value = this.toString();
 
 				if (this._currentFormat === 'hex') {
@@ -1484,7 +1500,7 @@ var jsc = {
 				}
 			}
 
-			if (!(flags & jsc.leaveAlphaValue) && this.alphaElement) {
+			if (!(flags & jsc.flags.leaveAlpha) && this.alphaElement) {
 				var value = Math.round(this.channels.a * 100) / 100;
 
 				if (jsc.nodeName(this.alphaElement) === 'input') {
@@ -1494,7 +1510,7 @@ var jsc = {
 				}
 			}
 
-			if (!(flags & jsc.leaveStyle)) {
+			if (!(flags & jsc.flags.leaveStyle)) {
 				if (this.previewElement) {
 					var data = this.previewElement._data_jsc;
 
@@ -2263,7 +2279,7 @@ var jsc = {
 			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
-			THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
+			THIS.fromString(THIS.valueElement.value, jsc.flags.leaveValue);
 			jsc.triggerCallback(THIS, 'onInput');
 
 			// triggering valueElement's oninput
@@ -2275,7 +2291,7 @@ var jsc = {
 			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
-			THIS.setAlpha(THIS.alphaElement.value, jsc.leaveAlphaValue);
+			THIS.setAlpha(THIS.alphaElement.value, jsc.flags.leaveAlpha);
 			jsc.triggerCallback(THIS, 'onInput');
 
 			// triggering valueElement's oninput (because changing alpha changes the entire color, e.g. with rgba format)
