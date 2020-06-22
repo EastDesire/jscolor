@@ -662,8 +662,18 @@ var jsc = {
 		ctx.fillStyle = color;
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-		if (customWidth !== undefined) {
-			// TODO: draw border on the left (probably consisting of light and dark colors, like squares' colors. Light would probably look better on the left)
+		var start = null, step = null;
+		var separatorColors = ['red', 'green', 'blue'];
+		switch (separatorPos) {
+			case 'left': start = 0; step = 1; break;
+			case 'right': start = canvas.width - 1; step = -1; break; // TODO: really width - 1?
+		}
+		if (start !== null) {
+			for (var i = 0, x = start; i < separatorColors.length; i += 1, x += step) {
+				ctx.fillStyle = separatorColors[i];
+				ctx.moveTo(x, 0);
+				ctx.lineTo(x, canvas.height);
+			}
 		}
 
 		return canvas;
@@ -1243,12 +1253,6 @@ var jsc = {
 		this.hash = false; // whether to prefix the HEX color code with # symbol
 		this.uppercase = true; // whether to show the color code in upper case
 		this.forceStyle = true; // whether to overwrite CSS style of the previewElement using !important flag
-		this.minS = 0; // min allowed saturation (0 - 100)
-		this.maxS = 100; // max allowed saturation (0 - 100)
-		this.minV = 0; // min allowed value (brightness) (0 - 100)
-		this.maxV = 100; // max allowed value (brightness) (0 - 100)
-		this.minA = 0.0; // min allowed alpha (opacity) (0.0 - 1.0)
-		this.maxA = 1.0; // max allowed alpha (opacity) (0.0 - 1.0)
 
 		// Color Picker options
 		//
@@ -1281,6 +1285,15 @@ var jsc = {
 		this.pointerThickness = 2; // px
 		this.zIndex = 1000;
 		this.container = null; // where to append the color picker (BODY element by default)
+
+		// Experimental
+		//
+		this.minS = 0; // min allowed saturation (0 - 100)
+		this.maxS = 100; // max allowed saturation (0 - 100)
+		this.minV = 0; // min allowed value (brightness) (0 - 100)
+		this.maxV = 100; // max allowed value (brightness) (0 - 100)
+		this.minA = 0.0; // min allowed alpha (opacity) (0.0 - 1.0)
+		this.maxA = 1.0; // max allowed alpha (opacity) (0.0 - 1.0)
 
 
 		// let's process the DEPRECATED 'options' property (this will be later removed)
@@ -2542,7 +2555,7 @@ var jsc = {
 
 		// determine initial color value
 		//
-		var initValue = '';
+		var initValue = 'FFFFFF';
 
 		if (this.value !== null) {
 			initValue = this.value; // get initial color from the 'value' property
@@ -2557,12 +2570,12 @@ var jsc = {
 
 		// determine initial alpha value
 		//
-		var initAlpha = null;
+		var initAlpha = '1.0';
 
 		if (this.alpha !== null) {
 			initAlpha = (''+this.alpha); // get initial alpha value from the 'alpha' property
 		}
-		if (this.alphaElement && this.alphaElement.value !== '') {
+		if (this.alphaElement && this.alphaElement.value !== undefined) {
 			if (this.alpha !== null) {
 				this.alphaElement.value = (''+this.alpha); // sync alphaElement's value with the 'alpha' property
 			} else {
@@ -2584,13 +2597,11 @@ var jsc = {
 		}
 
 
-		// let's parse the color value and expose color's preview
+		// let's parse the initial color value and expose color's preview
 		this.processValueInput(initValue);
 
-		// if initial alpha value is set, let's also parse and expose the alpha value
-		if (initAlpha !== null) {
-			this.processAlphaInput(initAlpha);
-		}
+		// let's also parse and expose the initial alpha value
+		this.processAlphaInput(initAlpha);
 
 	}
 
