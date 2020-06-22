@@ -108,13 +108,13 @@ var jsc = {
 			opts = JSON.parse(str);
 		} catch (eParse) {
 			if (!jsc.pub.looseJSON) {
-				throw new Error('Could not parse options as JSON: ' + eParse);
+				throw 'Could not parse jscolor options as JSON: ' + eParse;
 			} else {
-				// loose JSON syntax is enabled -> try to evaluate the options string
+				// loose JSON syntax is enabled -> try to evaluate the options string as JavaScript object
 				try {
-					opts = (new Function ('return (' + str + ')'))();
+					opts = (new Function ('var opts = (' + str + '); return typeof opts === "object" ? opts : {};'))();
 				} catch(eEval) {
-					throw new Error('Could not evaluate options as JSON: ' + eEval);
+					throw 'Could not evaluate jscolor options: ' + eEval;
 				}
 			}
 		}
@@ -1195,7 +1195,10 @@ var jsc = {
 
 
 	deprecatedOpts : {
-		// TODO
+		// <old_option>: [<new_option>, <msg>]  (new_option or msg can be null)
+		'styleElement': ['previewElement', null],
+		'onFineChange': ['onInput', null],
+		'overwriteImportant': ['forceStyle', null],
 	},
 
 
@@ -1286,7 +1289,11 @@ var jsc = {
 			// let's set custom default options, if specified
 			for (var opt in jsc.pub.options) {
 				if (jsc.pub.options.hasOwnProperty(opt)) {
-					setOption(opt, jsc.pub.options[opt]);
+					try {
+						setOption(opt, jsc.pub.options[opt]);
+					} catch (e) {
+						console.warn(e);
+					}
 				}
 			}
 		}
@@ -1322,7 +1329,11 @@ var jsc = {
 			}
 			for (var opt in jsc.pub.presets[pres]) {
 				if (jsc.pub.presets[pres].hasOwnProperty(opt)) {
-					setOption(opt, jsc.pub.presets[pres][opt]);
+					try {
+						setOption(opt, jsc.pub.presets[pres][opt]);
+					} catch (e) {
+						console.warn(e);
+					}
 				}
 			}
 		}
@@ -1336,12 +1347,18 @@ var jsc = {
 		for (var opt in opts) {
 			if (opts.hasOwnProperty(opt)) {
 				if (nonProperties.indexOf(opt) === -1) {
-					setOption(opt, opts[opt]);
+					try {
+						setOption(opt, opts[opt]);
+					} catch (e) {
+						console.warn(e);
+					}
 				}
 			}
 		}
 
 
+		// TODO: remove
+		/*
 		// check input values
 		try {
 			checkEnumOption('format', ['auto', 'any', 'hex', 'rgb', 'rgba']);
@@ -1352,6 +1369,7 @@ var jsc = {
 			console.error(e);
 			return;
 		}
+		*/
 
 
 		this.option = function () {
@@ -1363,9 +1381,14 @@ var jsc = {
 				// getting a single option
 				return this[arguments[0]];
 
-			} else if (arguments.length === 2 && typeof arguments[0] === 'string') {
+			} else if (arguments.length >= 2 && typeof arguments[0] === 'string') {
 				// setting a single option
-				return setOption(arguments[0], arguments[1])
+				try {
+					return setOption(arguments[0], arguments[1])
+				} catch (e) {
+					console.warn(e);
+				}
+				return false;
 
 			} else if (arguments.length === 1 && typeof arguments[0] === 'object') {
 				// setting multiple options
@@ -1373,7 +1396,10 @@ var jsc = {
 				var ret = true;
 				for (var opt in opts) {
 					if (opts.hasOwnProperty(opt)) {
-						if (!setOption(opt, opts[opt])) {
+						try {
+							setOption(opt, opts[opt]);
+						} catch (e) {
+							console.warn(e);
 							ret = false;
 						}
 					}
@@ -1386,26 +1412,30 @@ var jsc = {
 
 
 		this.channel = function (name, value) {
-			if (typeof name !== 'string' || ['h','s','v','r','g','b','a'].indexOf(name.toLowerCase()) === -1) {
-				throw 'Invalid channel name: ' + name;
+			if (typeof name !== 'string') {
+				throw 'Invalid value for channel name: ' + name;
 			}
-			name = name.toLowerCase();
 
 			if (value === undefined) {
-				return this.channels[name];
+				// getting channel value
+				if (this.channels[name.toLowerCase()] !== undefined) {
+					return this.channels[name.toLowerCase()];
+				}
 			} else {
-				switch (name) {
-					case 'h': return this.fromHSVA(null, null, null, null); break;
-					case 's': return this.fromHSVA(null, null, null, null); break;
-					case 'v': return this.fromHSVA(null, null, null, null); break;
-					case 'a': return this.fromHSVA(null, null, null, null); break;
-					case 'r': return this.fromRGBA(null, null, null, null); break;
-					case 'g': return this.fromRGBA(null, null, null, null); break;
-					case 'b': return this.fromRGBA(null, null, null, null); break;
+				// setting channel value
+				switch (name.toLowerCase()) {
+					case 'h': return this.fromHSVA(value, null, null, null); break;
+					case 's': return this.fromHSVA(null, value, null, null); break;
+					case 'v': return this.fromHSVA(null, null, value, null); break;
+					case 'a': return this.fromHSVA(null, null, null, value); break;
+					case 'r': return this.fromRGBA(value, null, null, null); break;
+					case 'g': return this.fromRGBA(null, value, null, null); break;
+					case 'b': return this.fromRGBA(null, null, value, null); break;
 				}
 			}
 
-			throw 'Invalid arguments passed';
+			console.warn('Unknown channel: ' + name);
+			return false;
 		}
 
 
@@ -1664,7 +1694,7 @@ var jsc = {
 		// v: 0-100
 		//
 		this.fromHSV = function (h, s, v, flags) { // null = don't change
-			console.warn('fromHSV() method is DEPRECATED. Use fromHSVA() instead.');
+			console.warn('fromHSV() method is DEPRECATED. Using fromHSVA() instead.');
 			return this.fromHSVA(h, s, v, null, flags);
 		};
 
@@ -1676,7 +1706,7 @@ var jsc = {
 		// b: 0-255
 		//
 		this.fromRGB = function (r, g, b, flags) { // null = don't change
-			console.warn('fromRGB() method is DEPRECATED. Use fromRGBA() instead.');
+			console.warn('fromRGB() method is DEPRECATED. Using fromRGBA() instead.');
 			return this.fromRGBA(r, g, b, null, flags);
 		};
 
@@ -1793,6 +1823,7 @@ var jsc = {
 		};
 
 
+		// TODO: remove
 		// checks if the option's value is in the defined list
 		//
 		// string values in possibleValues array must be in lowercase,
@@ -1800,15 +1831,44 @@ var jsc = {
 		function checkEnumOption (optionName, possibleValues) {
 			var val = THIS[optionName];
 			if (possibleValues.indexOf(typeof val === 'string' ? val.toLowerCase() : val) === -1) {
-				throw new Error('Option \'' + optionName + '\' has invalid value: ' + val);
+				throw 'Option \'' + optionName + '\' has invalid value: ' + val;
 			}
 		}
 
 
 		function setOption (option, value) {
-			if (typeof THIS[option] === 'undefined') {
-				console.warn('Unrecognized configuration option: %s', option);
-				return false;
+			if (typeof option !== 'string') {
+				throw 'Invalid value for option name: ' + option;
+			}
+
+			// enum option
+			if (jsc.enumOpts.hasOwnProperty(option)) {
+				if (typeof value === 'string') { // enum string values are case insensitive
+					value = value.toLowerCase();
+				}
+				if (jsc.enumOpts[option].indexOf(value) === -1) {
+					throw 'Option \'' + option + '\' has invalid value: ' + val;
+				}
+			}
+
+			// deprecated option
+			if (jsc.deprecatedOpts.hasOwnProperty(option)) {
+				var rules = jsc.deprecatedOpts[option];
+				var newOpt = rules[0];
+				var msg = rules[1];
+				if (newOpt) {
+					var oldOpt = option;
+					// if we have a new name for this option, let's log a warning and use the new name
+					console.warn(msg ? msg : 'Option \'%s\' is DEPRECATED, using \'%s\' instead', oldOpt, newOpt);
+					option = newOpt;
+				} else {
+					// new name not available for the option
+					throw msg ? msg : 'Option \'' + option + '\' is DEPRECATED';
+				}
+			}
+
+			if (THIS[option] === undefined) {
+				throw 'Unrecognized configuration option: ' + option;
 			}
 			THIS[option] = value;
 		}
@@ -2304,22 +2364,14 @@ var jsc = {
 		//
 
 
-		// Determine picker's container element
-		this.container = jsc.fetchElement(this.container);
-
-		if (!this.container) {
-			this.container = document.body;
-		}
-
-
 		// Fetch the target element
 		this.targetElement = jsc.fetchElement(targetElement);
 
 		if (!this.targetElement) {
-			throw new Error('Cannot instantiate color picker without a target element');
+			throw 'Cannot instantiate color picker without a target element';
 		}
 		if (this.targetElement.jscolor !== undefined) {
-			throw new Error('Color picker already installed on this element');
+			throw 'Color picker already installed on this element';
 		}
 
 
@@ -2329,6 +2381,14 @@ var jsc = {
 
 		// register this instance
 		jsc.instances.push(this);
+
+
+		// Determine picker's container element
+		this.container = jsc.fetchElement(this.container);
+
+		if (!this.container) {
+			this.container = document.body;
+		}
 
 
 		// if target is BUTTON
@@ -2591,7 +2651,7 @@ jsc.pub.lookupClass = 'jscolor';
 // DEPRECATED. Use jscolor.install() instead
 //
 jsc.pub.init = function () {
-	console.warn('jscolor.init() is DEPRECATED. Use jscolor.install()');
+	console.warn('jscolor.init() is DEPRECATED. Using jscolor.install() instead.');
 	return jsc.pub.install();
 };
 
