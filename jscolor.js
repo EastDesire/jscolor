@@ -1195,10 +1195,10 @@ var jsc = {
 
 
 	deprecatedOpts : {
-		// <old_option>: [<new_option>, <msg>]  (new_option or msg can be null)
-		'styleElement': ['previewElement', null],
-		'onFineChange': ['onInput', null],
-		'overwriteImportant': ['forceStyle', null],
+		// <old_option>: <new_option>  (<new_option> can be null)
+		'styleElement': 'previewElement',
+		'onFineChange': 'onInput',
+		'overwriteImportant': 'forceStyle',
 	},
 
 
@@ -1230,8 +1230,8 @@ var jsc = {
 		// General options
 		//
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
-		this.value = null; // INITIAL color value in any supported format. To change it later, use methods fromString(), fromHSVA() and fromRGBA()
-		this.alpha = null; // INITIAL alpha value. To change it later, use method setAlpha()
+		this.value = null; // INITIAL color value in any supported format. To change it later, use methods fromString(), fromHSVA(), fromRGBA() and channel()
+		this.alpha = null; // INITIAL alpha value. To change it later, call channel('A', <value>)
 		this.onChange = null; // called when color changes. Value can be either a function or a string with javascript code.
 		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging slider. Value can be either a function or a string with javascript code.
 		this.valueElement = null; // element that will be used to display and input the color code
@@ -1357,21 +1357,6 @@ var jsc = {
 		}
 
 
-		// TODO: remove
-		/*
-		// check input values
-		try {
-			checkEnumOption('format', ['auto', 'any', 'hex', 'rgb', 'rgba']);
-			checkEnumOption('previewPosition', ['left', 'right']);
-			checkEnumOption('mode', ['hsv', 'hvs', 'hs', 'hv']);
-			checkEnumOption('position', ['left', 'right', 'top', 'bottom']);
-		} catch (e) {
-			console.error(e);
-			return;
-		}
-		*/
-
-
 		this.option = function () {
 			if (!arguments.length) {
 				throw 'No option specified';
@@ -1379,12 +1364,17 @@ var jsc = {
 
 			if (arguments.length === 1 && typeof arguments[0] === 'string') {
 				// getting a single option
-				return this[arguments[0]];
+				try {
+					return getOption(arguments[0]);
+				} catch (e) {
+					console.warn(e);
+				}
+				return false;
 
 			} else if (arguments.length >= 2 && typeof arguments[0] === 'string') {
 				// setting a single option
 				try {
-					return setOption(arguments[0], arguments[1])
+					return setOption(arguments[0], arguments[1]);
 				} catch (e) {
 					console.warn(e);
 				}
@@ -1506,7 +1496,7 @@ var jsc = {
 
 
 		this.processAlphaInput = function (str) {
-			if (!this.setAlpha(str)) {
+			if (!this.fromHSVA(null, null, null, parseFloat(str))) {
 				// could not parse the alpha value - let's just expose the current color
 				this.exposeColor();
 			}
@@ -1581,17 +1571,6 @@ var jsc = {
 				redrawSld();
 				redrawASld();
 			}
-		};
-
-
-		// alpha: 0.0-1.0
-		this.setAlpha = function (alpha, flags) {
-			if (isNaN(alpha)) {
-				return false;
-			}
-			this.channels.a = Math.max(0, Math.min(1, this.maxA, alpha), this.minA);
-
-			this.exposeColor(flags);
 		};
 
 
@@ -1823,19 +1802,6 @@ var jsc = {
 		};
 
 
-		// TODO: remove
-		// checks if the option's value is in the defined list
-		//
-		// string values in possibleValues array must be in lowercase,
-		// as we're lowercasing option's value too for case-insensitive comparison
-		function checkEnumOption (optionName, possibleValues) {
-			var val = THIS[optionName];
-			if (possibleValues.indexOf(typeof val === 'string' ? val.toLowerCase() : val) === -1) {
-				throw 'Option \'' + optionName + '\' has invalid value: ' + val;
-			}
-		}
-
-
 		function setOption (option, value) {
 			if (typeof option !== 'string') {
 				throw 'Invalid value for option name: ' + option;
@@ -1847,23 +1813,21 @@ var jsc = {
 					value = value.toLowerCase();
 				}
 				if (jsc.enumOpts[option].indexOf(value) === -1) {
-					throw 'Option \'' + option + '\' has invalid value: ' + val;
+					throw 'Option \'' + option + '\' has invalid value: ' + value;
 				}
 			}
 
 			// deprecated option
 			if (jsc.deprecatedOpts.hasOwnProperty(option)) {
-				var rules = jsc.deprecatedOpts[option];
-				var newOpt = rules[0];
-				var msg = rules[1];
+				var oldOpt = option;
+				var newOpt = jsc.deprecatedOpts[option];
 				if (newOpt) {
-					var oldOpt = option;
 					// if we have a new name for this option, let's log a warning and use the new name
-					console.warn(msg ? msg : 'Option \'%s\' is DEPRECATED, using \'%s\' instead', oldOpt, newOpt);
+					console.warn('Option \'%s\' is DEPRECATED, using \'%s\' instead', oldOpt, newOpt);
 					option = newOpt;
 				} else {
 					// new name not available for the option
-					throw msg ? msg : 'Option \'' + option + '\' is DEPRECATED';
+					throw 'Option \'' + option + '\' is DEPRECATED';
 				}
 			}
 
@@ -1871,6 +1835,29 @@ var jsc = {
 				throw 'Unrecognized configuration option: ' + option;
 			}
 			THIS[option] = value;
+		}
+
+
+		function getOption (option) {
+			// deprecated option
+			if (jsc.deprecatedOpts.hasOwnProperty(option)) {
+				var oldOpt = option;
+				var newOpt = jsc.deprecatedOpts[option];
+				if (newOpt) {
+					// if we have a new name for this option, let's log a warning and use the new name
+					console.warn('Option \'%s\' is DEPRECATED, using \'%s\' instead', oldOpt, newOpt);
+					option = newOpt;
+				} else {
+					// new name not available for the option
+					throw 'Option \'' + option + '\' is DEPRECATED';
+				}
+			}
+
+			if (THIS[option] === undefined) {
+				throw 'Unrecognized configuration option: ' + option;
+			}
+
+			return THIS[option];
 		}
 
 
@@ -2303,17 +2290,17 @@ var jsc = {
 		}
 
 
-		function handleValueBlur () {
+		function onValueBlur () {
 			THIS.processValueInput(THIS.valueElement.value);
 		}
 
 
-		function handleAlphaBlur () {
+		function onAlphaBlur () {
 			THIS.processAlphaInput(THIS.alphaElement.value);
 		}
 
 
-		function handleValueChange (ev) {
+		function onValueChange (ev) {
 			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
@@ -2324,7 +2311,7 @@ var jsc = {
 		}
 
 
-		function handleAlphaChange (ev) {
+		function onAlphaChange (ev) {
 			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
@@ -2335,7 +2322,7 @@ var jsc = {
 		}
 
 
-		function handleValueInput (ev) {
+		function onValueInput (ev) {
 			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
@@ -2347,11 +2334,11 @@ var jsc = {
 		}
 
 
-		function handleAlphaInput (ev) {
+		function onAlphaInput (ev) {
 			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
 			}
-			THIS.setAlpha(THIS.alphaElement.value, jsc.flags.leaveAlpha);
+			THIS.fromHSVA(null, null, null, parseFloat(THIS.alphaElement.value), jsc.flags.leaveAlpha);
 			jsc.triggerCallback(THIS, 'onInput');
 
 			// triggering valueElement's oninput (because changing alpha changes the entire color, e.g. with rgba format)
@@ -2451,9 +2438,9 @@ var jsc = {
 			};
 			this.valueElement.oninput = null;
 
-			jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
-			jsc.attachEvent(this.valueElement, 'change', handleValueChange);
-			jsc.attachEvent(this.valueElement, 'input', handleValueInput);
+			jsc.attachEvent(this.valueElement, 'blur', onValueBlur);
+			jsc.attachEvent(this.valueElement, 'change', onValueChange);
+			jsc.attachEvent(this.valueElement, 'input', onValueInput);
 			// the original event listener must be attached AFTER our handler (to let it first set picker's color)
 			if (valueElementOrigEvents.oninput) {
 				jsc.attachEvent(this.valueElement, 'input', valueElementOrigEvents.oninput);
@@ -2464,9 +2451,9 @@ var jsc = {
 
 		// alphaElement
 		if (jsc.isTextInput(this.alphaElement)) {
-			jsc.attachEvent(this.alphaElement, 'blur', handleAlphaBlur);
-			jsc.attachEvent(this.alphaElement, 'change', handleAlphaChange);
-			jsc.attachEvent(this.alphaElement, 'input', handleAlphaInput);
+			jsc.attachEvent(this.alphaElement, 'blur', onAlphaBlur);
+			jsc.attachEvent(this.alphaElement, 'change', onAlphaChange);
+			jsc.attachEvent(this.alphaElement, 'input', onAlphaInput);
 
 			this.alphaElement.setAttribute('autocomplete', 'off');
 		}
