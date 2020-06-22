@@ -1052,7 +1052,7 @@ var jsc = {
 
 	setSld : function (thisObj, e, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth - thisObj.borderWidth;
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
 		switch (jsc.getSliderChannel(thisObj)) {
@@ -1064,7 +1064,7 @@ var jsc = {
 
 	setASld : function (thisObj, e, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth - thisObj.borderWidth;
 		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
 
 		thisObj.fromHSVA(null, null, null, yVal);
