@@ -212,13 +212,6 @@ var jsc = {
 	})(),
 
 
-	// TODO: do not use and remove (always consider canvas supported)
-	isCanvasSupported : (function () {
-		var elm = document.createElement('canvas');
-		return !!(elm.getContext && elm.getContext('2d'));
-	})(),
-
-
 	getDataAttr : function (el, name) {
 		var attrName = 'data-' + name;
 		var attrValue = el.getAttribute(attrName);
@@ -329,6 +322,24 @@ var jsc = {
 		if (jsc.isTextInput(el)) {
 			jsc.triggerEvent(el, eventName, bubbles, cancelable, customData);
 		}
+	},
+
+
+	eventKey : function (ev) {
+		var keys = {
+			9: 'Tab',
+			13: 'Enter',
+			27: 'Escape',
+		};
+		/* TODO
+		if (typeof ev.code === 'string') {
+			return ev.code;
+		} else if (ev.keyCode !== undefined && keys.hasOwnProperty(ev.keyCode)) {
+		*/
+		if (ev.keyCode !== undefined && keys.hasOwnProperty(ev.keyCode)) {
+			return keys[ev.keyCode];
+		}
+		return null;
 	},
 
 
@@ -741,7 +752,7 @@ var jsc = {
 		if (jsc.getSliderChannel(thisObj)) {
 			dims[0] += sliderSpace;
 		}
-		if (jsc.hasAlphaSlider(thisObj)) {
+		if (thisObj.isAlphaMode()) {
 			dims[0] += sliderSpace;
 		}
 		if (thisObj.closable) {
@@ -784,14 +795,6 @@ var jsc = {
 	},
 
 
-	hasAlphaSlider : function (thisObj) {
-		if (thisObj.alphaSlider || thisObj.alphaElement || thisObj._currentFormat === 'rgba') {
-			return true;
-		}
-		return false;
-	},
-
-
 	onDocumentMouseDown : function (e) {
 		var target = e.target || e.srcElement;
 
@@ -828,11 +831,7 @@ var jsc = {
 
 
 	onDocumentKeyUp : function (e) {
-		if (
-			(e.code && e.code === 'Escape' || e.keyCode === 27) ||
-			(e.code && e.code === 'Enter' || e.keyCode === 13) ||
-			(e.code && e.code === 'Tab' || e.keyCode === 9)
-		) {
+		if (['Tab', 'Escape'].indexOf(jsc.eventKey(e)) !== -1) {
 			if (jsc.picker && jsc.picker.owner) {
 				jsc.picker.owner.hide();
 			}
@@ -1357,6 +1356,10 @@ var jsc = {
 		}
 
 
+		// Getting: option(name)
+		// Setting: option(name, value)
+		//          option({option: value, option: value, ...})
+		//
 		this.option = function () {
 			if (!arguments.length) {
 				throw 'No option specified';
@@ -1404,6 +1407,9 @@ var jsc = {
 		}
 
 
+		// Getting: channel(name)
+		// Setting: channel(name, value)
+		//
 		this.channel = function (name, value) {
 			if (typeof name !== 'string') {
 				throw 'Invalid value for channel name: ' + name;
@@ -1480,6 +1486,14 @@ var jsc = {
 
 			// trigger standard DOM event listeners on the value element
 			jsc.triggerInputEvent(this.valueElement, ev, true, true);
+		};
+
+
+		this.isAlphaMode = function () {
+			if (this.alphaSlider || this.alphaElement || this._currentFormat === 'rgba') {
+				return true;
+			}
+			return false;
 		};
 
 
@@ -1610,7 +1624,7 @@ var jsc = {
 				if (isNaN(v)) { return false; }
 				this.channels.v = Math.max(0, Math.min(100, this.maxV, v), this.minV);
 			}
-			if (a !== null) {
+			if (a !== null && this.isAlphaMode()) { // change alpha only if the picker is in alpha mode
 				if (isNaN(a)) { return false; }
 				this.channels.a = Math.max(0, Math.min(1, this.maxA, a), this.minA);
 			}
@@ -1652,7 +1666,7 @@ var jsc = {
 				if (isNaN(b)) { return false; }
 				b = Math.max(0, Math.min(255, b));
 			}
-			if (a !== null) {
+			if (a !== null && this.isAlphaMode()) {
 				if (isNaN(a)) { return false; }
 				this.channels.a = Math.max(0, Math.min(1, this.maxA, a), this.minA);
 			}
@@ -1967,7 +1981,7 @@ var jsc = {
 			var p = jsc.picker;
 
 			var displaySlider = !!jsc.getSliderChannel(THIS);
-			var displayAlphaSlider = jsc.hasAlphaSlider(THIS);
+			var displayAlphaSlider = THIS.isAlphaMode();
 			var dims = jsc.getPickerDims(THIS);
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
 			var padToSliderPadding = jsc.getPadToSliderPadding(THIS);
@@ -2317,6 +2331,22 @@ var jsc = {
 		}
 
 
+		function onValueKeyDown (ev) {
+			if (jsc.eventKey(ev) === 'Enter') {
+				THIS.processValueInput(THIS.valueElement.value);
+				THIS.hide();
+			}
+		}
+
+
+		function onAlphaKeyDown (ev) {
+			if (jsc.eventKey(ev) === 'Enter') {
+				THIS.processAlphaInput(THIS.alphaElement.value);
+				THIS.hide();
+			}
+		}
+
+
 		function onValueChange (ev) {
 			if (ev._data_jsc) {
 				return; // skip if the event was internally triggered by jscolor
@@ -2456,6 +2486,7 @@ var jsc = {
 			this.valueElement.oninput = null;
 
 			jsc.attachEvent(this.valueElement, 'blur', onValueBlur);
+			jsc.attachEvent(this.valueElement, 'keydown', onValueKeyDown);
 			jsc.attachEvent(this.valueElement, 'change', onValueChange);
 			jsc.attachEvent(this.valueElement, 'input', onValueInput);
 			// the original event listener must be attached AFTER our handler (to let it first set picker's color)
@@ -2469,6 +2500,7 @@ var jsc = {
 		// alphaElement
 		if (jsc.isTextInput(this.alphaElement)) {
 			jsc.attachEvent(this.alphaElement, 'blur', onAlphaBlur);
+			jsc.attachEvent(this.alphaElement, 'keydown', onAlphaKeyDown);
 			jsc.attachEvent(this.alphaElement, 'change', onAlphaChange);
 			jsc.attachEvent(this.alphaElement, 'input', onAlphaInput);
 
