@@ -940,10 +940,9 @@ var jsc = {
 
 		switch (controlName) {
 		case 'pad':
-			// if the slider is at the bottom, move it up
-			switch (jsc.getSliderChannel(thisObj)) {
-			case 's': if (thisObj.channels.s === 0) { thisObj.fromHSVA(null, 100, null, null); }; break;
-			case 'v': if (thisObj.channels.v === 0) { thisObj.fromHSVA(null, null, 100, null); }; break;
+			// if the value slider is at the bottom, move it up
+			if (jsc.getSliderChannel(thisObj) === 'v' && thisObj.channels.v === 0) {
+				thisObj.fromHSVA(null, null, 100, null);
 			}
 			jsc.setPad(thisObj, e, 0, 0);
 			break;
@@ -1703,10 +1702,10 @@ var jsc = {
 			if (hsv[0] !== null) {
 				this.channels.h = Math.max(0, Math.min(360, hsv[0]));
 			}
-			if (hsv[2] !== 0) {
-				this.channels.s = hsv[1]===null ? null : Math.max(0, this.minS, Math.min(100, this.maxS, hsv[1]));
+			if (hsv[2] !== 0) { // fully black color stays black through entire saturation range, so let's not change saturation
+				this.channels.s = Math.max(0, this.minS, Math.min(100, this.maxS, hsv[1]));
 			}
-			this.channels.v = hsv[2]===null ? null : Math.max(0, this.minV, Math.min(100, this.maxV, hsv[2]));
+			this.channels.v = Math.max(0, this.minV, Math.min(100, this.maxV, hsv[2]));
 
 			// update RGB according to final HSV, as some values might be trimmed
 			var rgb = jsc.HSV_RGB(this.channels.h, this.channels.s, this.channels.v);
