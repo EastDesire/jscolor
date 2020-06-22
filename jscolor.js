@@ -802,7 +802,7 @@ var jsc = {
 		if (thisObj.isAlphaEnabled()) {
 			dims[0] += sliderSpace;
 		}
-		if (thisObj.closable) {
+		if (thisObj.closeButton) {
 			dims[1] += 2 * thisObj.insetWidth + thisObj.padding + thisObj.buttonHeight;
 		}
 		return dims;
@@ -1247,6 +1247,7 @@ var jsc = {
 		'styleElement': 'previewElement',
 		'onFineChange': 'onInput',
 		'overwriteImportant': 'forceStyle',
+		'closable': 'closeButton',
 	},
 
 
@@ -1278,20 +1279,20 @@ var jsc = {
 		// General options
 		//
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
-		this.value = null; // INITIAL color value in any supported format. To change it later, use methods fromString(), fromHSVA(), fromRGBA() and channel()
-		this.alpha = null; // INITIAL alpha value. To change it later, call channel('A', <value>)
-		this.onChange = null; // called when color changes. Value can be either a function or a string with javascript code.
-		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging slider. Value can be either a function or a string with javascript code.
-		this.valueElement = null; // element that will be used to display and input the color code
+		this.value = null; // INITIAL color value in any supported format. To change it later, use methods fromString(), fromHSVA(), fromRGBA() or channel()
+		this.alpha = null; // INITIAL alpha value. To change it later, call method channel('A', <value>)
+		this.onChange = null; // called when color changes. Value can be either a function or a string with JS code.
+		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging a slider. Value can be either a function or a string with JS code.
+		this.valueElement = null; // element that will be used to display and input the color value
 		this.alphaElement = null; // element that will be used to display and input the alpha (opacity) value
 		this.previewElement = null; // element that will preview the picked color using CSS background
-		this.previewSize = 32; // width of the color preview (in px)
+		this.previewSize = 32; // (px) width of the color preview displayed in previewElement
 		this.previewPosition = 'left'; // 'left' | 'right' - position of the color preview in previewElement
-		this.previewPadding = 8; // (px) space between color preview and content of the input/button
-		this.required = true; // whether the associated text <input> can be left empty
-		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
-		this.hash = false; // whether to prefix the HEX color code with # symbol
-		this.uppercase = true; // whether to show the color code in upper case
+		this.previewPadding = 8; // (px) space between color preview and content of the previewElement
+		this.required = true; // whether the associated text input must always contain a color value. If false, the input can be left empty.
+		this.refine = true; // whether to auto format the entered color code (e.g. remove whitespace)
+		this.hash = false; // whether to prefix the HEX color code with # symbol (only applicable for HEX format)
+		this.uppercase = true; // whether to show the HEX color code in upper case (only applicable for HEX format)
 		this.forceStyle = true; // whether to overwrite CSS style of the previewElement using !important flag
 
 		// Color Picker options
@@ -1305,7 +1306,7 @@ var jsc = {
 		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
-		this.closable = false; // whether to display the Close button
+		this.closeButton = false; // whether to display the Close button
 		this.closeText = 'Close';
 		this.buttonColor = '#000000'; // CSS color
 		this.buttonHeight = 18; // px
@@ -1316,7 +1317,7 @@ var jsc = {
 		this.borderRadius = 8; // px
 		this.insetWidth = 1; // px
 		this.insetColor = '#BBBBBB'; // CSS color
-		this.shadow = true; // whether to display shadow
+		this.shadow = true; // whether to display a shadow
 		this.shadowBlur = 15; // px
 		this.shadowColor = 'rgba(0,0,0,0.2)'; // CSS color
 		this.pointerColor = '#4C4C4C'; // px
@@ -2279,7 +2280,7 @@ var jsc = {
 				p.btn.style.borderColor = outsetColor;
 			}
 			p.btn.className = 'jscolor-btn-close';
-			p.btn.style.display = THIS.closable ? 'block' : 'none';
+			p.btn.style.display = THIS.closeButton ? 'block' : 'none';
 			p.btn.style.position = 'absolute';
 			p.btn.style.left = THIS.padding + 'px';
 			p.btn.style.bottom = THIS.padding + 'px';
