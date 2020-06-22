@@ -562,7 +562,7 @@ var jsc = {
 	parseColorString : function (str) {
 		var ret = {
 			rgba: null,
-			format: null // hex | rgb | rgba
+			format: null // 'hex' | 'rgb' | 'rgba'
 		};
 
 		var m;
@@ -933,8 +933,8 @@ var jsc = {
 		case 'pad':
 			// if the slider is at the bottom, move it up
 			switch (jsc.getSliderChannel(thisObj)) {
-			case 's': if (thisObj.hsv[1] === 0) { thisObj.fromHSVA(null, 100, null, null); }; break;
-			case 'v': if (thisObj.hsv[2] === 0) { thisObj.fromHSVA(null, null, 100, null); }; break;
+			case 's': if (thisObj.channels.s === 0) { thisObj.fromHSVA(null, 100, null, null); }; break;
+			case 'v': if (thisObj.channels.v === 0) { thisObj.fromHSVA(null, null, 100, null); }; break;
 			}
 			jsc.setPad(thisObj, e, 0, 0);
 			break;
@@ -1198,11 +1198,15 @@ var jsc = {
 			opts = {};
 		}
 
-		// Accessing the picked color
-		//
-		this.hsv = [0, 0, 100]; // (read-only)  hue, saturation, value  [0-360, 0-100, 0-100]
-		this.rgb = [255, 255, 255]; // (read-only)  red, green, blue  [0-255, 0-255, 0-255]
-		this.alp = 1.0; // (read-only) alpha channel (opacity) value  0.0-1.0
+		this.channels = {
+			h: 0, // hue [0-360]
+			s: 0, // saturation [0-100]
+			v: 100, // value (brightness) [0-100]
+			r: 255, // red [0-255]
+			g: 255, // green [0-255]
+			b: 255, // blue [0-255]
+			a: 1.0, // alpha (opacity) [0.0 - 1.0]
+		};
 
 		// General options
 		//
@@ -1481,7 +1485,7 @@ var jsc = {
 			}
 
 			if (!(flags & jsc.leaveAlphaValue) && this.alphaElement) {
-				var value = Math.round(this.alp * 100) / 100;
+				var value = Math.round(this.channels.a * 100) / 100;
 
 				if (jsc.nodeName(this.alphaElement) === 'input') {
 					this.alphaElement.value = value;
@@ -1539,7 +1543,7 @@ var jsc = {
 			if (isNaN(alpha)) {
 				return false;
 			}
-			this.alp = Math.max(0, Math.min(1, this.maxA, alpha), this.minA);
+			this.channels.a = Math.max(0, Math.min(1, this.maxA, alpha), this.minA);
 
 			this.exposeColor(flags);
 		};
@@ -1558,26 +1562,29 @@ var jsc = {
 
 			if (h !== null) {
 				if (isNaN(h)) { return false; }
-				h = Math.max(0, Math.min(360, h));
+				this.channels.h = Math.max(0, Math.min(360, h));
 			}
 			if (s !== null) {
 				if (isNaN(s)) { return false; }
-				s = Math.max(0, Math.min(100, this.maxS, s), this.minS);
+				this.channels.s = Math.max(0, Math.min(100, this.maxS, s), this.minS);
 			}
 			if (v !== null) {
 				if (isNaN(v)) { return false; }
-				v = Math.max(0, Math.min(100, this.maxV, v), this.minV);
+				this.channels.v = Math.max(0, Math.min(100, this.maxV, v), this.minV);
 			}
 			if (a !== null) {
 				if (isNaN(a)) { return false; }
-				this.alp = Math.max(0, Math.min(1, this.maxA, a), this.minA);
+				this.channels.a = Math.max(0, Math.min(1, this.maxA, a), this.minA);
 			}
 
-			this.rgb = jsc.HSV_RGB(
-				h===null ? this.hsv[0] : (this.hsv[0]=h),
-				s===null ? this.hsv[1] : (this.hsv[1]=s),
-				v===null ? this.hsv[2] : (this.hsv[2]=v)
+			var rgb = jsc.HSV_RGB(
+				this.channels.h,
+				this.channels.s,
+				this.channels.v
 			);
+			this.channels.r = rgb[0];
+			this.channels.g = rgb[1];
+			this.channels.b = rgb[2];
 
 			this.exposeColor(flags);
 		};
@@ -1608,27 +1615,27 @@ var jsc = {
 			}
 			if (a !== null) {
 				if (isNaN(a)) { return false; }
-				this.alp = Math.max(0, Math.min(1, this.maxA, a), this.minA);
+				this.channels.a = Math.max(0, Math.min(1, this.maxA, a), this.minA);
 			}
 
 			var hsv = jsc.RGB_HSV(
-				r===null ? this.rgb[0] : r,
-				g===null ? this.rgb[1] : g,
-				b===null ? this.rgb[2] : b
+				r===null ? this.channels.r : r,
+				g===null ? this.channels.g : g,
+				b===null ? this.channels.b : b
 			);
 			if (hsv[0] !== null) {
-				this.hsv[0] = Math.max(0, Math.min(360, hsv[0]));
+				this.channels.h = Math.max(0, Math.min(360, hsv[0]));
 			}
 			if (hsv[2] !== 0) {
-				this.hsv[1] = hsv[1]===null ? null : Math.max(0, this.minS, Math.min(100, this.maxS, hsv[1]));
+				this.channels.s = hsv[1]===null ? null : Math.max(0, this.minS, Math.min(100, this.maxS, hsv[1]));
 			}
-			this.hsv[2] = hsv[2]===null ? null : Math.max(0, this.minV, Math.min(100, this.maxV, hsv[2]));
+			this.channels.v = hsv[2]===null ? null : Math.max(0, this.minV, Math.min(100, this.maxV, hsv[2]));
 
 			// update RGB according to final HSV, as some values might be trimmed
-			var rgb = jsc.HSV_RGB(this.hsv[0], this.hsv[1], this.hsv[2]);
-			this.rgb[0] = rgb[0];
-			this.rgb[1] = rgb[1];
-			this.rgb[2] = rgb[2];
+			var rgb = jsc.HSV_RGB(this.channels.h, this.channels.s, this.channels.v);
+			this.channels.r = rgb[0];
+			this.channels.g = rgb[1];
+			this.channels.b = rgb[2];
 
 			this.exposeColor(flags);
 		};
@@ -1692,28 +1699,28 @@ var jsc = {
 
 		this.toHEXString = function () {
 			return '#' + (
-				('0' + Math.round(this.rgb[0]).toString(16)).substr(-2) +
-				('0' + Math.round(this.rgb[1]).toString(16)).substr(-2) +
-				('0' + Math.round(this.rgb[2]).toString(16)).substr(-2)
+				('0' + Math.round(this.channels.r).toString(16)).substr(-2) +
+				('0' + Math.round(this.channels.g).toString(16)).substr(-2) +
+				('0' + Math.round(this.channels.b).toString(16)).substr(-2)
 			).toUpperCase();
 		};
 
 
 		this.toRGBString = function () {
 			return ('rgb(' +
-				Math.round(this.rgb[0]) + ',' +
-				Math.round(this.rgb[1]) + ',' +
-				Math.round(this.rgb[2]) +
+				Math.round(this.channels.r) + ',' +
+				Math.round(this.channels.g) + ',' +
+				Math.round(this.channels.b) +
 			')');
 		};
 
 
 		this.toRGBAString = function () {
 			return ('rgba(' +
-				Math.round(this.rgb[0]) + ',' +
-				Math.round(this.rgb[1]) + ',' +
-				Math.round(this.rgb[2]) + ',' +
-				(Math.round(this.alp * 100) / 100) +
+				Math.round(this.channels.r) + ',' +
+				Math.round(this.channels.g) + ',' +
+				Math.round(this.channels.b) + ',' +
+				(Math.round(this.channels.a * 100) / 100) +
 			')');
 		};
 
@@ -1730,9 +1737,9 @@ var jsc = {
 
 		this.toGrayscale = function () {
 			return (
-				0.213 * this.rgb[0] +
-				0.715 * this.rgb[1] +
-				0.072 * this.rgb[2]
+				0.213 * this.channels.r +
+				0.715 * this.channels.g +
+				0.072 * this.channels.b
 			);
 		};
 
@@ -2157,12 +2164,9 @@ var jsc = {
 
 		function redrawPad () {
 			// redraw the pad pointer
-			switch (jsc.getPadYChannel(THIS)) {
-			case 's': var yChannel = 1; break;
-			case 'v': var yChannel = 2; break;
-			}
-			var x = Math.round((THIS.hsv[0] / 360) * (THIS.width - 1));
-			var y = Math.round((1 - THIS.hsv[yChannel] / 100) * (THIS.height - 1));
+			var yChannel = jsc.getPadYChannel(THIS);
+			var x = Math.round((THIS.channels.h / 360) * (THIS.width - 1));
+			var y = Math.round((1 - THIS.channels[yChannel] / 100) * (THIS.height - 1));
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
 			var ofs = -Math.floor(crossOuterSize / 2);
 			jsc.picker.cross.style.left = (x + ofs) + 'px';
@@ -2171,8 +2175,8 @@ var jsc = {
 			// redraw the slider
 			switch (jsc.getSliderChannel(THIS)) {
 			case 's':
-				var rgb1 = jsc.HSV_RGB(THIS.hsv[0], 100, THIS.hsv[2]);
-				var rgb2 = jsc.HSV_RGB(THIS.hsv[0], 0, THIS.hsv[2]);
+				var rgb1 = jsc.HSV_RGB(THIS.channels.h, 100, THIS.channels.v);
+				var rgb2 = jsc.HSV_RGB(THIS.channels.h, 0, THIS.channels.v);
 				var color1 = 'rgb(' +
 					Math.round(rgb1[0]) + ',' +
 					Math.round(rgb1[1]) + ',' +
@@ -2184,7 +2188,7 @@ var jsc = {
 				jsc.picker.sldGrad.draw(THIS.sliderSize, THIS.height, color1, color2);
 				break;
 			case 'v':
-				var rgb = jsc.HSV_RGB(THIS.hsv[0], THIS.hsv[1], 100);
+				var rgb = jsc.HSV_RGB(THIS.channels.h, THIS.channels.s, 100);
 				var color1 = 'rgb(' +
 					Math.round(rgb[0]) + ',' +
 					Math.round(rgb[1]) + ',' +
@@ -2203,11 +2207,7 @@ var jsc = {
 			var sldChannel = jsc.getSliderChannel(THIS);
 			if (sldChannel) {
 				// redraw the slider pointer
-				switch (sldChannel) {
-				case 's': var yChannel = 1; break;
-				case 'v': var yChannel = 2; break;
-				}
-				var y = Math.round((1 - THIS.hsv[yChannel] / 100) * (THIS.height - 1));
+				var y = Math.round((1 - THIS.channels[sldChannel] / 100) * (THIS.height - 1));
 				jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(jsc.pub.sliderInnerSpace / 2)) + 'px';
 			}
 
@@ -2217,7 +2217,7 @@ var jsc = {
 
 
 		function redrawASld () {
-			var y = Math.round((1 - THIS.alp) * (THIS.height - 1));
+			var y = Math.round((1 - THIS.channels.a) * (THIS.height - 1));
 			jsc.picker.asldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(jsc.pub.sliderInnerSpace / 2)) + 'px';
 		}
 
@@ -2254,7 +2254,7 @@ var jsc = {
 			}
 			jsc.triggerCallback(THIS, 'onChange');
 
-			// triggering valueElement's onchange (because changing alpha changes entire color, e.g. with rgba format)
+			// triggering valueElement's onchange (because changing alpha changes the entire color, e.g. with rgba format)
 			jsc.triggerInputEvent(THIS.valueElement, 'change', true, true);
 		}
 
@@ -2278,7 +2278,7 @@ var jsc = {
 			THIS.setAlpha(THIS.alphaElement.value, jsc.leaveAlphaValue);
 			jsc.triggerCallback(THIS, 'onInput');
 
-			// triggering valueElement's oninput (because changing alpha changes entire color, e.g. with rgba format)
+			// triggering valueElement's oninput (because changing alpha changes the entire color, e.g. with rgba format)
 			jsc.triggerInputEvent(THIS.valueElement, 'input', true, true);
 		}
 
