@@ -636,7 +636,8 @@ var jsc = {
 	},
 
 
-	genColorPreviewCanvas : function (color, separatorPos, customWidth) { // TODO: implement args
+	/* TODO
+	genColorPreviewCanvas : function (color, separatorPos, customWidth) {
 		var sqSize = jsc.pub.chessboardSize;
 		var sqColor1 = jsc.pub.chessboardColor1;
 		var sqColor2 = jsc.pub.chessboardColor2;
@@ -646,6 +647,73 @@ var jsc = {
 		canvas.height = sqSize * 2;
 
 		var ctx = canvas.getContext('2d');
+
+		// the color preview will start at 1/2 width of the separator line
+		var fillW = canvas.width - Math.round(jsc.pub.previewSeparatorColors.length / 2);
+		var fillX = null;
+		switch (separatorPos) {
+			case 'left': fillX = Math.round(jsc.pub.previewSeparatorColors.length / 2); break;
+			case 'right': fillX = 0; break;
+		}
+
+		// transparency chessboard - background
+		ctx.fillStyle = sqColor1;
+		ctx.fillRect(fillX, 0, fillW, canvas.height);
+
+		// transparency chessboard - squares
+		ctx.fillStyle = sqColor2;
+		for (var x = fillX; x < fillW; x += sqSize * 2) {
+			ctx.fillRect(x, 0, sqSize, sqSize);
+			ctx.fillRect(x + sqSize, sqSize, sqSize, sqSize);
+		}
+
+		// actual color in foreground
+		ctx.fillStyle = color;
+		ctx.fillRect(fillX, 0, fillW, canvas.height);
+
+		var start = null;
+		switch (separatorPos) {
+			case 'left': start = 0; break;
+			case 'right': start = canvas.width - jsc.pub.previewSeparatorColors.length; break;
+		}
+		if (start !== null) {
+			ctx.lineWidth = 1;
+			for (var i = 0, x = start; i < jsc.pub.previewSeparatorColors.length; i += 1) {
+				ctx.beginPath();
+				ctx.strokeStyle = jsc.pub.previewSeparatorColors[i];
+				ctx.moveTo(0.5 + start + i, 0);
+				ctx.lineTo(0.5 + start + i, canvas.height);
+				ctx.stroke();
+			}
+		}
+
+		return canvas;
+	},
+	*/
+
+
+	genColorPreviewCanvas : function (color, separatorPos, customWidth) {
+		var sqSize = jsc.pub.chessboardSize;
+		var sqColor1 = jsc.pub.chessboardColor1;
+		var sqColor2 = jsc.pub.chessboardColor2;
+		var sepW = Math.round(jsc.pub.previewSeparatorColors.length);
+
+		var canvas = document.createElement('canvas');
+		canvas.width = customWidth !== undefined ? customWidth : sqSize * 2;
+		canvas.height = sqSize * 2;
+
+		var ctx = canvas.getContext('2d');
+
+
+		/*
+		// TODO
+		// the color preview will start at 1/2 width of the separator line
+		var fillX = null;
+		switch (separatorPos) {
+			case 'left': fillX = Math.round(jsc.pub.previewSeparatorColors.length / 2); break;
+			case 'right': fillX = 0; break;
+		}
+		*/
 
 		// transparency chessboard - background
 		ctx.fillStyle = sqColor1;
@@ -662,17 +730,24 @@ var jsc = {
 		ctx.fillStyle = color;
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-		var start = null, step = null;
-		var separatorColors = ['red', 'green', 'blue'];
+		var start = null;
 		switch (separatorPos) {
-			case 'left': start = 0; step = 1; break;
-			case 'right': start = canvas.width - 1; step = -1; break; // TODO: really width - 1?
+			case 'left':
+				start = 0;
+				ctx.clearRect(0, 0, sepW / 2, canvas.height);
+				break;
+			case 'right':
+				start = canvas.width - sepW;
+				break;
 		}
 		if (start !== null) {
-			for (var i = 0, x = start; i < separatorColors.length; i += 1, x += step) {
-				ctx.fillStyle = separatorColors[i];
-				ctx.moveTo(x, 0);
-				ctx.lineTo(x, canvas.height);
+			ctx.lineWidth = 1;
+			for (var i = 0, x = start; i < jsc.pub.previewSeparatorColors.length; i += 1) {
+				ctx.beginPath();
+				ctx.strokeStyle = jsc.pub.previewSeparatorColors[i];
+				ctx.moveTo(0.5 + start + i, 0);
+				ctx.lineTo(0.5 + start + i, canvas.height);
+				ctx.stroke();
 			}
 		}
 
@@ -2653,6 +2728,15 @@ jsc.pub.sliderInnerSpace = 3; // px
 jsc.pub.chessboardSize = 8; // px
 jsc.pub.chessboardColor1 = '#999999';
 jsc.pub.chessboardColor2 = '#CCCCCC';
+
+// preview separator
+// TODO
+//jsc.pub.previewSeparatorColors = ['#FFF', '#000'];
+//jsc.pub.previewSeparatorColors = ['rgba(255,255,255,.5)', 'rgba(128,128,128,.5)', 'rgba(0,0,0,.5)'];
+jsc.pub.previewSeparatorColors = ['rgba(255,0,0,.2)','rgba(255,0,0,.2)','rgba(255,0,0,.2)'];
+//jsc.pub.previewSeparatorColors = ['rgba(255,255,255,.5)', 'rgba(128,128,128,.5)', 'rgba(0,0,0,.5)'];
+//jsc.pub.previewSeparatorColors = ['rgba(255,0,0,1)'];
+//jsc.pub.previewSeparatorColors = ['rgba(255,255,255,.25)', 'rgba(128,128,128,1)', 'rgba(0,0,0,.25)'];
 
 
 // Installs jscolor on current DOM tree
