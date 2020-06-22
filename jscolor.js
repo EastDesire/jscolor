@@ -412,7 +412,9 @@ var jsc = {
 		var priority = important ? 'important' : '';
 
 		for (var prop in styles) {
-			elm.style.setProperty(prop, styles[prop], priority);
+			if (styles.hasOwnProperty(prop)) {
+				elm.style.setProperty(prop, styles[prop], priority);
+			}
 		}
 	},
 
@@ -1329,6 +1331,61 @@ var jsc = {
 		} catch (e) {
 			console.error(e);
 			return;
+		}
+
+
+		this.option = function () {
+			if (!arguments.length) {
+				throw 'No option specified';
+			}
+
+			if (arguments.length === 1 && typeof arguments[0] === 'string') {
+				// getting a single option
+				return this[arguments[0]];
+
+			} else if (arguments.length === 2 && typeof arguments[0] === 'string') {
+				// setting a single option
+				return setOption(arguments[0], arguments[1])
+
+			} else if (arguments.length === 1 && typeof arguments[0] === 'object') {
+				// setting multiple options
+				var opts = arguments[0];
+				var ret = true;
+				for (var opt in opts) {
+					if (opts.hasOwnProperty(opt)) {
+						if (!setOption(opt, opts[opt])) {
+							ret = false;
+						}
+					}
+				}
+				return ret;
+			}
+
+			throw 'Invalid arguments passed';
+		}
+
+
+		this.channel = function (name, value) {
+			if (typeof name !== 'string' || ['h','s','v','r','g','b','a'].indexOf(name.toLowerCase()) === -1) {
+				throw 'Invalid channel name: ' + name;
+			}
+			name = name.toLowerCase();
+
+			if (value === undefined) {
+				return this.channels[name];
+			} else {
+				switch (name) {
+					case 'h': return this.fromHSVA(null, null, null, null); break;
+					case 's': return this.fromHSVA(null, null, null, null); break;
+					case 'v': return this.fromHSVA(null, null, null, null); break;
+					case 'a': return this.fromHSVA(null, null, null, null); break;
+					case 'r': return this.fromRGBA(null, null, null, null); break;
+					case 'g': return this.fromRGBA(null, null, null, null); break;
+					case 'b': return this.fromRGBA(null, null, null, null); break;
+				}
+			}
+
+			throw 'Invalid arguments passed';
 		}
 
 
