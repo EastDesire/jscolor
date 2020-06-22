@@ -1218,12 +1218,12 @@ var jsc = {
 		}
 
 		this.channels = {
-			h: 0, // hue [0-360]
-			s: 0, // saturation [0-100]
-			v: 100, // value (brightness) [0-100]
 			r: 255, // red [0-255]
 			g: 255, // green [0-255]
 			b: 255, // blue [0-255]
+			h: 0, // hue [0-360]
+			s: 0, // saturation [0-100]
+			v: 100, // value (brightness) [0-100]
 			a: 1.0, // alpha (opacity) [0.0 - 1.0]
 		};
 
@@ -1374,7 +1374,9 @@ var jsc = {
 			} else if (arguments.length >= 2 && typeof arguments[0] === 'string') {
 				// setting a single option
 				try {
-					return setOption(arguments[0], arguments[1]);
+					if (setOption(arguments[0], arguments[1])) {
+						this.redraw(); // immediately redraws the picker, if it's displayed
+					}
 				} catch (e) {
 					console.warn(e);
 				}
@@ -1394,6 +1396,7 @@ var jsc = {
 						}
 					}
 				}
+				this.redraw(); // immediately redraws the picker, if it's displayed
 				return ret;
 			}
 
@@ -1408,23 +1411,33 @@ var jsc = {
 
 			if (value === undefined) {
 				// getting channel value
-				if (this.channels[name.toLowerCase()] !== undefined) {
-					return this.channels[name.toLowerCase()];
+				if (this.channels[name.toLowerCase()] === undefined) {
+					console.warn('Getting unknown channel: ' + name);
+					return false;
 				}
+				return this.channels[name.toLowerCase()];
+
 			} else {
 				// setting channel value
+				var res = false;
 				switch (name.toLowerCase()) {
-					case 'h': return this.fromHSVA(value, null, null, null); break;
-					case 's': return this.fromHSVA(null, value, null, null); break;
-					case 'v': return this.fromHSVA(null, null, value, null); break;
-					case 'a': return this.fromHSVA(null, null, null, value); break;
-					case 'r': return this.fromRGBA(value, null, null, null); break;
-					case 'g': return this.fromRGBA(null, value, null, null); break;
-					case 'b': return this.fromRGBA(null, null, value, null); break;
+					case 'r': res = this.fromRGBA(value, null, null, null); break;
+					case 'g': res = this.fromRGBA(null, value, null, null); break;
+					case 'b': res = this.fromRGBA(null, null, value, null); break;
+					case 'h': res = this.fromHSVA(value, null, null, null); break;
+					case 's': res = this.fromHSVA(null, value, null, null); break;
+					case 'v': res = this.fromHSVA(null, null, value, null); break;
+					case 'a': res = this.fromHSVA(null, null, null, value); break;
+					default:
+						console.warn('Setting unknown channel: ' + name);
+						return false;
+				}
+				if (res) {
+					this.redraw(); // immediately redraws the picker, if it's displayed
+					return true;
 				}
 			}
 
-			console.warn('Unknown channel: ' + name);
 			return false;
 		}
 
@@ -1612,6 +1625,7 @@ var jsc = {
 			this.channels.b = rgb[2];
 
 			this.exposeColor(flags);
+			return true;
 		};
 
 
@@ -1663,6 +1677,7 @@ var jsc = {
 			this.channels.b = rgb[2];
 
 			this.exposeColor(flags);
+			return true;
 		};
 
 
@@ -1834,7 +1849,9 @@ var jsc = {
 			if (THIS[option] === undefined) {
 				throw 'Unrecognized configuration option: ' + option;
 			}
+
 			THIS[option] = value;
+			return true;
 		}
 
 
