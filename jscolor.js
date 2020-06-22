@@ -752,7 +752,7 @@ var jsc = {
 		if (jsc.getSliderChannel(thisObj)) {
 			dims[0] += sliderSpace;
 		}
-		if (thisObj.isAlphaMode()) {
+		if (thisObj.isAlphaEnabled()) {
 			dims[0] += sliderSpace;
 		}
 		if (thisObj.closable) {
@@ -1185,11 +1185,11 @@ var jsc = {
 
 
 	enumOpts : {
-		// TODO
 		format: ['auto', 'any', 'hex', 'rgb', 'rgba'],
 		previewPosition: ['left', 'right'],
 		mode: ['hsv', 'hvs', 'hs', 'hv'],
 		position: ['left', 'right', 'top', 'bottom'],
+		alphaChannel: ['auto', true, false],
 	},
 
 
@@ -1255,7 +1255,7 @@ var jsc = {
 		this.width = 181; // width of color palette (in px)
 		this.height = 101; // height of color palette (in px)
 		this.mode = 'HSV'; // 'HSV' | 'HVS' | 'HS' | 'HV' - layout of the color picker controls
-		this.alphaSlider = false; // whether to display a slider for tweaking the alpha channel
+		this.alphaChannel = 'auto'; // 'auto' | true | false - if alpha channel is enabled, the alpha slider will be visible. If 'auto', it will be determined according to color format
 		this.position = 'bottom'; // 'left' | 'right' | 'top' | 'bottom' - position relative to the target element
 		this.smartPosition = true; // automatically change picker position when there is not enough space for it
 		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
@@ -1489,9 +1489,16 @@ var jsc = {
 		};
 
 
-		this.isAlphaMode = function () {
-			if (this.alphaSlider || this.alphaElement || this._currentFormat === 'rgba') {
-				return true;
+		this.isAlphaEnabled = function () {
+			if (this.alphaChannel === true) {
+				return true; // the alpha channel is explicitly enabled
+			}
+			if (this.alphaChannel === 'auto') {
+				return (
+					this.format.toLowerCase() === 'any' || // when the format is 'any', it can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
+					this._currentFormat === 'rgba' || // the current format supports alpha channel
+					this.alphaElement // the alpha value is redirected, so we're working with alpha channel
+				);
 			}
 			return false;
 		};
@@ -1624,9 +1631,11 @@ var jsc = {
 				if (isNaN(v)) { return false; }
 				this.channels.v = Math.max(0, Math.min(100, this.maxV, v), this.minV);
 			}
-			if (a !== null && this.isAlphaMode()) { // change alpha only if the picker is in alpha mode
+			if (a !== null) {
 				if (isNaN(a)) { return false; }
-				this.channels.a = Math.max(0, Math.min(1, this.maxA, a), this.minA);
+				this.channels.a = this.isAlphaEnabled() ?
+					Math.max(0, Math.min(1, this.maxA, a), this.minA) :
+					1.0; // if alpha channel is disabled, the color should stay 100% opaque
 			}
 
 			var rgb = jsc.HSV_RGB(
@@ -1666,9 +1675,11 @@ var jsc = {
 				if (isNaN(b)) { return false; }
 				b = Math.max(0, Math.min(255, b));
 			}
-			if (a !== null && this.isAlphaMode()) {
+			if (a !== null) {
 				if (isNaN(a)) { return false; }
-				this.channels.a = Math.max(0, Math.min(1, this.maxA, a), this.minA);
+				this.channels.a = this.isAlphaEnabled() ?
+					Math.max(0, Math.min(1, this.maxA, a), this.minA) :
+					1.0; // if alpha channel is disabled, the color should stay 100% opaque
 			}
 
 			var hsv = jsc.RGB_HSV(
@@ -1726,6 +1737,7 @@ var jsc = {
 			}
 			if (this.format.toLowerCase() === 'any') {
 				this._currentFormat = color.format; // adapt format
+				this.redraw(); // redraw the picker, in case the format has changed and it is necessary to show/hide the alpha slider
 			}
 			this.fromRGBA(
 				color.rgba[0],
@@ -1981,7 +1993,7 @@ var jsc = {
 			var p = jsc.picker;
 
 			var displaySlider = !!jsc.getSliderChannel(THIS);
-			var displayAlphaSlider = THIS.isAlphaMode();
+			var displayAlphaSlider = THIS.isAlphaEnabled();
 			var dims = jsc.getPickerDims(THIS);
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
 			var padToSliderPadding = jsc.getPadToSliderPadding(THIS);
