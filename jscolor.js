@@ -927,11 +927,12 @@ var jsc = {
 	},
 
 
-	// triggers a color change related event on all picker instances
-	triggerGlobal : function (eventName) {
+	// Triggers a color change related event(s) on all picker instances.
+	// It is possible to specify multiple events separated with a space.
+	triggerGlobal : function (eventNames) {
 		var inst = jsc.getInstances();
 		for (var i = 0; i < inst.length; i += 1) {
-			inst[i].trigger(eventName);
+			inst[i].trigger(eventNames);
 		}
 	},
 
@@ -1521,25 +1522,30 @@ var jsc = {
 		};
 
 
-		// Triggers a color change related event by:
-		// - executing on<Event> callback stored in picker's properties
+		// Triggers given input event(s) by:
+		// - executing on<Event> callback specified as picker's option
 		// - triggering standard DOM event listeners attached to the value element
 		//
-		this.trigger = function (eventName) {
-			var ev = eventName.toLowerCase();
+		// It is possible to specify multiple events separated with a space.
+		//
+		this.trigger = function (eventNames) {
+			var evs = jsc.strList(eventNames);
+			for (var i = 0; i < evs.length; i += 1) {
+				var ev = evs[i].toLowerCase();
 
-			// trigger a callback
-			var callbackProp = null;
-			switch (ev) {
-				case 'input': callbackProp = 'onInput'; break;
-				case 'change': callbackProp = 'onChange'; break;
-			}
-			if (callbackProp) {
-				jsc.triggerCallback(this, callbackProp); 
-			}
+				// trigger a callback
+				var callbackProp = null;
+				switch (ev) {
+					case 'input': callbackProp = 'onInput'; break;
+					case 'change': callbackProp = 'onChange'; break;
+				}
+				if (callbackProp) {
+					jsc.triggerCallback(this, callbackProp); 
+				}
 
-			// trigger standard DOM event listeners on the value element
-			jsc.triggerInputEvent(this.valueElement, ev, true, true);
+				// trigger standard DOM event listeners on the value element
+				jsc.triggerInputEvent(this.valueElement, ev, true, true);
+			}
 		};
 
 
@@ -2727,18 +2733,16 @@ jsc.pub.install = function () {
 };
 
 
-// Triggers given color change event (e.g. 'input' or 'change') on all color pickers.
+// Triggers given input event(s) (e.g. 'input' or 'change') on all color pickers.
+//
 // It is possible to specify multiple events separated with a space.
-// If called before jscolor is initialized, then the events will triggered after initialization.
+// If called before jscolor is initialized, then the events will be triggered after initialization.
+//
 jsc.pub.trigger = function (eventNames) {
-	var evs = jsc.strList(eventNames);
-	for (var i = 0; i < evs.length; i += 1) {
-		var ev = evs[i];
-		if (jsc.initialized) {
-			jsc.triggerGlobal(ev);
-		} else {
-			jsc.triggerQueue.push(ev);
-		}
+	if (jsc.initialized) {
+		jsc.triggerGlobal(eventNames);
+	} else {
+		jsc.triggerQueue.push(eventNames);
 	}
 };
 
