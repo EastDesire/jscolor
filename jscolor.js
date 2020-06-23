@@ -792,10 +792,10 @@ var jsc = {
 
 	getPickerDims : function (thisObj) {
 		var dims = [
-			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.width,
-			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.height
+			2 * thisObj.controlBorderWidth + 2 * thisObj.padding + thisObj.width,
+			2 * thisObj.controlBorderWidth + 2 * thisObj.padding + thisObj.height
 		];
-		var sliderSpace = 2 * thisObj.insetWidth + 2 * jsc.getControlPadding(thisObj) + thisObj.sliderSize;
+		var sliderSpace = 2 * thisObj.controlBorderWidth + 2 * jsc.getControlPadding(thisObj) + thisObj.sliderSize;
 		if (jsc.getSliderChannel(thisObj)) {
 			dims[0] += sliderSpace;
 		}
@@ -803,7 +803,7 @@ var jsc = {
 			dims[0] += sliderSpace;
 		}
 		if (thisObj.closeButton) {
-			dims[1] += 2 * thisObj.insetWidth + thisObj.padding + thisObj.buttonHeight;
+			dims[1] += 2 * thisObj.controlBorderWidth + thisObj.padding + thisObj.buttonHeight;
 		}
 		return dims;
 	},
@@ -821,7 +821,7 @@ var jsc = {
 	getControlPadding : function (thisObj) {
 		return Math.max(
 			thisObj.padding / 2,
-			(2 * thisObj.pointerBorderWidth + thisObj.pointerThickness) - thisObj.insetWidth
+			(2 * thisObj.pointerBorderWidth + thisObj.pointerThickness) - thisObj.controlBorderWidth
 		);
 	},
 
@@ -1038,8 +1038,8 @@ var jsc = {
 
 	setPad : function (thisObj, e, ofsX, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var x = ofsX + pointerAbs.x - jsc._pointerOrigin.x - thisObj.padding - thisObj.insetWidth - thisObj.borderWidth;
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth - thisObj.borderWidth;
+		var x = ofsX + pointerAbs.x - jsc._pointerOrigin.x - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
 
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
@@ -1053,7 +1053,7 @@ var jsc = {
 
 	setSld : function (thisObj, e, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth - thisObj.borderWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
 		switch (jsc.getSliderChannel(thisObj)) {
@@ -1065,7 +1065,7 @@ var jsc = {
 
 	setASld : function (thisObj, e, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth - thisObj.borderWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
 		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
 
 		thisObj.fromHSVA(null, null, null, yVal);
@@ -1249,6 +1249,8 @@ var jsc = {
 		'onFineChange': 'onInput',
 		'overwriteImportant': 'forceStyle',
 		'closable': 'closeButton',
+		'insetWidth': 'controlBorderWidth',
+		'insetColor': 'controlBorderColor',
 	},
 
 
@@ -1287,11 +1289,11 @@ var jsc = {
 		this.valueElement = null; // element that will be used to display and input the color value
 		this.alphaElement = null; // element that will be used to display and input the alpha (opacity) value
 		this.previewElement = null; // element that will preview the picked color using CSS background
-		this.previewSize = 32; // (px) width of the color preview displayed in previewElement
 		this.previewPosition = 'left'; // 'left' | 'right' - position of the color preview in previewElement
+		this.previewSize = 32; // (px) width of the color preview displayed in previewElement
 		this.previewPadding = 8; // (px) space between color preview and content of the previewElement
 		this.required = true; // whether the associated text input must always contain a color value. If false, the input can be left empty.
-		this.refine = true; // whether to auto format the entered color code (e.g. remove whitespace)
+		this.refine = true; // whether to auto-format the entered color code (e.g. remove whitespace)
 		this.hash = false; // whether to prefix the HEX color code with # symbol (only applicable for HEX format)
 		this.uppercase = true; // whether to show the HEX color code in upper case (only applicable for HEX format)
 		this.forceStyle = true; // whether to overwrite CSS style of the previewElement using !important flag
@@ -1316,14 +1318,14 @@ var jsc = {
 		this.borderWidth = 1; // px
 		this.borderColor = '#BBBBBB'; // CSS color
 		this.borderRadius = 8; // px
-		this.insetWidth = 1; // px
-		this.insetColor = '#BBBBBB'; // CSS color
+		this.controlBorderWidth = 1; // px
+		this.controlBorderColor = '#BBBBBB'; // CSS color
 		this.shadow = true; // whether to display a shadow
 		this.shadowBlur = 15; // px
 		this.shadowColor = 'rgba(0,0,0,0.2)'; // CSS color
 		this.pointerColor = '#4C4C4C'; // px
-		this.pointerBorderColor = '#FFFFFF'; // CSS color
 		this.pointerBorderWidth = 1; // px
+		this.pointerBorderColor = '#FFFFFF'; // CSS color
 		this.pointerThickness = 2; // px
 		this.zIndex = 1000;
 		this.container = null; // where to append the color picker (BODY element by default)
@@ -1413,7 +1415,7 @@ var jsc = {
 
 		// Getter: option(name)
 		// Setter: option(name, value)
-		//         option({option: value, option: value, ...})
+		//         option({name:value, ...})
 		//
 		this.option = function () {
 			if (!arguments.length) {
@@ -1723,7 +1725,7 @@ var jsc = {
 		};
 
 
-		this.toImageURL = function () {
+		this.toDataURL = function () {
 			return this.toCanvas().toDataURL('image/png');
 		};
 
@@ -2120,8 +2122,8 @@ var jsc = {
 			p.padB.style.position = 'absolute';
 			p.padB.style.left = THIS.padding + 'px';
 			p.padB.style.top = THIS.padding + 'px';
-			p.padB.style.border = THIS.insetWidth + 'px solid';
-			p.padB.style.borderColor = THIS.insetColor;
+			p.padB.style.border = THIS.controlBorderWidth + 'px solid';
+			p.padB.style.borderColor = THIS.controlBorderColor;
 
 			// pad mouse area
 			p.padM._jscInstance = THIS;
@@ -2129,7 +2131,7 @@ var jsc = {
 			p.padM.style.position = 'absolute';
 			p.padM.style.left = -THIS.borderWidth + 'px';
 			p.padM.style.top = -THIS.borderWidth + 'px';
-			p.padM.style.width = (THIS.borderWidth + THIS.padding + 2 * THIS.insetWidth + THIS.width + controlPadding) + 'px';
+			p.padM.style.width = (THIS.borderWidth + THIS.padding + 2 * THIS.controlBorderWidth + THIS.width + controlPadding) + 'px';
 			p.padM.style.height = (2 * THIS.borderWidth + dims[1]) + 'px';
 			p.padM.style.cursor = padCursor;
 
@@ -2194,20 +2196,20 @@ var jsc = {
 			// slider border
 			p.sldB.style.display = displaySlider ? 'block' : 'none';
 			p.sldB.style.position = 'absolute';
-			p.sldB.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + 2 * controlPadding) + 'px';
+			p.sldB.style.left = (THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + 2 * controlPadding) + 'px';
 			p.sldB.style.top = THIS.padding + 'px';
-			p.sldB.style.border = THIS.insetWidth + 'px solid';
-			p.sldB.style.borderColor = THIS.insetColor;
+			p.sldB.style.border = THIS.controlBorderWidth + 'px solid';
+			p.sldB.style.borderColor = THIS.controlBorderColor;
 
 			// slider mouse area
 			p.sldM._jscInstance = THIS;
 			p.sldM._jscControlName = 'sld';
 			p.sldM.style.display = displaySlider ? 'block' : 'none';
 			p.sldM.style.position = 'absolute';
-			p.sldM.style.left = (THIS.padding + THIS.width + 2 * THIS.insetWidth + controlPadding) + 'px';
+			p.sldM.style.left = (THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + controlPadding) + 'px';
 			p.sldM.style.top = -THIS.borderWidth + 'px';
 			p.sldM.style.width = (
-					(THIS.sliderSize + 2 * controlPadding + 2 * THIS.insetWidth) +
+					(THIS.sliderSize + 2 * controlPadding + 2 * THIS.controlBorderWidth) +
 					(displayAlphaSlider ? 0 : Math.max(0, THIS.padding - controlPadding)) // remaining padding to the right edge
 				) + 'px';
 			p.sldM.style.height = (2 * THIS.borderWidth + dims[1]) + 'px';
@@ -2243,12 +2245,12 @@ var jsc = {
 			p.asldB.style.display = displayAlphaSlider ? 'block' : 'none';
 			p.asldB.style.position = 'absolute';
 			p.asldB.style.left = (
-					(THIS.padding + THIS.width + 2 * THIS.insetWidth + controlPadding) +
-					(displaySlider ? (THIS.sliderSize + 3 * controlPadding + 2 * THIS.insetWidth) : 0)
+					(THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + controlPadding) +
+					(displaySlider ? (THIS.sliderSize + 3 * controlPadding + 2 * THIS.controlBorderWidth) : 0)
 				) + 'px';
 			p.asldB.style.top = THIS.padding + 'px';
-			p.asldB.style.border = THIS.insetWidth + 'px solid';
-			p.asldB.style.borderColor = THIS.insetColor;
+			p.asldB.style.border = THIS.controlBorderWidth + 'px solid';
+			p.asldB.style.borderColor = THIS.controlBorderColor;
 
 			// alpha slider mouse area
 			p.asldM._jscInstance = THIS;
@@ -2256,12 +2258,12 @@ var jsc = {
 			p.asldM.style.display = displayAlphaSlider ? 'block' : 'none';
 			p.asldM.style.position = 'absolute';
 			p.asldM.style.left = (
-					(THIS.padding + THIS.width + 2 * THIS.insetWidth + controlPadding) +
-					(displaySlider ? (THIS.sliderSize + 2 * controlPadding + 2 * THIS.insetWidth) : 0)
+					(THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + controlPadding) +
+					(displaySlider ? (THIS.sliderSize + 2 * controlPadding + 2 * THIS.controlBorderWidth) : 0)
 				) + 'px';
 			p.asldM.style.top = -THIS.borderWidth + 'px';
 			p.asldM.style.width = (
-					(THIS.sliderSize + 2 * controlPadding + 2 * THIS.insetWidth) +
+					(THIS.sliderSize + 2 * controlPadding + 2 * THIS.controlBorderWidth) +
 					Math.max(0, THIS.padding - controlPadding) // remaining padding to the right edge
 				) + 'px';
 			p.asldM.style.height = (2 * THIS.borderWidth + dims[1]) + 'px';
@@ -2287,7 +2289,7 @@ var jsc = {
 
 			// the Close button
 			function setBtnBorder () {
-				var insetColors = THIS.insetColor.split(/\s+/);
+				var insetColors = THIS.controlBorderColor.split(/\s+/);
 				var outsetColor = insetColors.length < 2 ? insetColors[0] : insetColors[1] + ' ' + insetColors[0] + ' ' + insetColors[0] + ' ' + insetColors[1];
 				p.btn.style.borderColor = outsetColor;
 			}
@@ -2298,7 +2300,7 @@ var jsc = {
 			p.btn.style.bottom = THIS.padding + 'px';
 			p.btn.style.padding = '0 15px';
 			p.btn.style.height = THIS.buttonHeight + 'px';
-			p.btn.style.border = THIS.insetWidth + 'px solid';
+			p.btn.style.border = THIS.controlBorderWidth + 'px solid';
 			setBtnBorder();
 			p.btn.style.color = THIS.buttonColor;
 			p.btn.style.font = '12px sans-serif';
@@ -2714,15 +2716,15 @@ jsc.pub.presets = {};
 // built-in presets
 jsc.pub.presets['default'] = {}; // baseline for customization
 
-jsc.pub.presets['light'] = { backgroundColor:'#FFFFFF', insetColor:'#BBBBBB' }; // default color scheme
-jsc.pub.presets['dark'] = { backgroundColor:'#333333', insetColor:'#999999' };
+jsc.pub.presets['light'] = { backgroundColor:'#FFFFFF', controlBorderColor:'#BBBBBB' }; // default color scheme
+jsc.pub.presets['dark'] = { backgroundColor:'#333333', controlBorderColor:'#999999' };
 
 jsc.pub.presets['small'] = { width:101, height:101, padding:10 };
 jsc.pub.presets['medium'] = { width:181, height:101, padding:12 }; // default size
 jsc.pub.presets['large'] = { width:271, height:151, padding:12 };
 
-jsc.pub.presets['thin'] = { borderWidth:1, insetWidth:1, pointerBorderWidth:1 }; // default thickness
-jsc.pub.presets['thick'] = { borderWidth:2, insetWidth:2, pointerBorderWidth:2 };
+jsc.pub.presets['thin'] = { borderWidth:1, controlBorderWidth:1, pointerBorderWidth:1 }; // default thickness
+jsc.pub.presets['thick'] = { borderWidth:2, controlBorderWidth:2, pointerBorderWidth:2 };
 
 
 // size of space in the sliders
