@@ -108,13 +108,13 @@ var jsc = {
 			opts = JSON.parse(str);
 		} catch (eParse) {
 			if (!jsc.pub.looseJSON) {
-				throw 'Could not parse jscolor options as JSON: ' + eParse;
+				throw new Error('Could not parse jscolor options as JSON: ' + eParse);
 			} else {
 				// loose JSON syntax is enabled -> try to evaluate the options string as JavaScript object
 				try {
 					opts = (new Function ('var opts = (' + str + '); return typeof opts === "object" ? opts : {};'))();
 				} catch(eEval) {
-					throw 'Could not evaluate jscolor options: ' + eEval;
+					throw new Error('Could not evaluate jscolor options: ' + eEval);
 				}
 			}
 		}
@@ -1417,7 +1417,7 @@ var jsc = {
 		//
 		this.option = function () {
 			if (!arguments.length) {
-				throw 'No option specified';
+				throw new Error('No option specified');
 			}
 
 			if (arguments.length === 1 && typeof arguments[0] === 'string') {
@@ -1464,7 +1464,7 @@ var jsc = {
 				return success;
 			}
 
-			throw 'Invalid arguments passed';
+			throw new Error('Invalid arguments passed');
 		}
 
 
@@ -1473,7 +1473,7 @@ var jsc = {
 		//
 		this.channel = function (name, value) {
 			if (typeof name !== 'string') {
-				throw 'Invalid value for channel name: ' + name;
+				throw new Error('Invalid value for channel name: ' + name);
 			}
 
 			if (value === undefined) {
@@ -1910,7 +1910,7 @@ var jsc = {
 
 		function setOption (option, value) {
 			if (typeof option !== 'string') {
-				throw 'Invalid value for option name: ' + option;
+				throw new Error('Invalid value for option name: ' + option);
 			}
 
 			// enum option
@@ -1919,7 +1919,7 @@ var jsc = {
 					value = value.toLowerCase();
 				}
 				if (jsc.enumOpts[option].indexOf(value) === -1) {
-					throw 'Option \'' + option + '\' has invalid value: ' + value;
+					throw new Error('Option \'' + option + '\' has invalid value: ' + value);
 				}
 			}
 
@@ -1933,12 +1933,12 @@ var jsc = {
 					option = newOpt;
 				} else {
 					// new name not available for the option
-					throw 'Option \'' + option + '\' is DEPRECATED';
+					throw new Error('Option \'' + option + '\' is DEPRECATED');
 				}
 			}
 
 			if (THIS[option] === undefined) {
-				throw 'Unrecognized configuration option: ' + option;
+				throw new Error('Unrecognized configuration option: ' + option);
 			}
 
 			THIS[option] = value;
@@ -1957,12 +1957,12 @@ var jsc = {
 					option = newOpt;
 				} else {
 					// new name not available for the option
-					throw 'Option \'' + option + '\' is DEPRECATED';
+					throw new Error('Option \'' + option + '\' is DEPRECATED');
 				}
 			}
 
 			if (THIS[option] === undefined) {
-				throw 'Unrecognized configuration option: ' + option;
+				throw new Error('Unrecognized configuration option: ' + option);
 			}
 
 			return THIS[option];
@@ -2495,12 +2495,12 @@ var jsc = {
 			if (typeof targetElement === 'string' && /^[a-zA-Z][\w:.-]*$/.test(targetElement)) {
 				// targetElement looks like valid ID
 				var possiblyId = targetElement;
-				throw 'jscolor 2.2 uses CSS selectors. If \'' + possiblyId + '\' is supposed to be an ID, please use \'#' + possiblyId + '\' or any valid CSS selector.';
+				throw new Error('jscolor 2.2 uses CSS selectors. If \'' + possiblyId + '\' is supposed to be an ID, please use \'#' + possiblyId + '\' or any valid CSS selector.');
 			}
-			throw 'Cannot instantiate color picker without a target element';
+			throw new Error('Cannot instantiate color picker without a target element');
 		}
 		if (this.targetElement.jscolor !== undefined) {
-			throw 'Color picker already installed on this element';
+			throw new Error('Color picker already installed on this element');
 		}
 
 
