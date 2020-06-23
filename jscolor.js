@@ -1549,125 +1549,6 @@ var jsc = {
 		};
 
 
-		this.isAlphaEnabled = function () {
-			if (this.alphaChannel === true) {
-				return true; // the alpha channel is explicitly enabled
-			}
-			if (this.alphaChannel === 'auto') {
-				return (
-					this.format.toLowerCase() === 'any' || // when the format is 'any', it can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
-					this._currentFormat === 'rgba' || // the current format supports alpha channel
-					this.alphaElement // the alpha value is redirected, so we're working with alpha channel
-				);
-			}
-			return false;
-		};
-
-
-		this.processValueInput = function (str) {
-
-			if (!this.required && str.trim() === '') {
-				// input's value is empty (or just whitespace) -> leave the value
-				this.previewElement.style.background = 'none';
-				this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
-				return;
-			}
-
-			if (!this.refine) {
-				if (!this.fromString(str, jsc.flags.leaveValue)) {
-					// input's value could not be parsed -> remove background
-					this.previewElement.style.background = 'none';
-					this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
-				}
-				return;
-			}
-
-			if (!this.fromString(str)) {
-				// could not parse the color value - let's just expose the current color
-				this.exposeColor();
-			}
-		};
-
-
-		this.processAlphaInput = function (str) {
-			if (!this.fromHSVA(null, null, null, parseFloat(str))) {
-				// could not parse the alpha value - let's just expose the current color
-				this.exposeColor();
-			}
-		};
-
-
-		this.exposeColor = function (flags) {
-
-			if (!(flags & jsc.flags.leaveValue) && this.valueElement) {
-				var value = this.toString();
-
-				if (this._currentFormat === 'hex') {
-					if (!this.uppercase) { value = value.toLowerCase(); }
-					if (!this.hash) { value = value.replace(/^#/, ''); }
-				}
-
-				if (jsc.nodeName(this.valueElement) === 'input') {
-					this.valueElement.value = value;
-				} else {
-					this.valueElement.innerHTML = value;
-				}
-			}
-
-			if (!(flags & jsc.flags.leaveAlpha) && this.alphaElement) {
-				var value = Math.round(this.channels.a * 100) / 100;
-
-				if (jsc.nodeName(this.alphaElement) === 'input') {
-					this.alphaElement.value = value;
-				} else {
-					this.alphaElement.innerHTML = value;
-				}
-			}
-
-			if (!(flags & jsc.flags.leaveStyle)) {
-				if (this.previewElement) {
-					var data = this.previewElement._data_jsc;
-
-					var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
-					if (
-						jsc.isTextInput(this.previewElement) || // text input
-						(jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement)) // button with text
-					) {
-						previewPos = this.previewPosition;
-					}
-
-					var padding = 0;
-					if (previewPos) {
-						padding = this.previewSize + this.previewPadding;
-					}
-
-					var preview = jsc.genColorPreviewCanvas(
-						this.toRGBAString(),
-						previewPos ? {'left':'right', 'right':'left'}[previewPos] : undefined,
-						previewPos ? this.previewSize : undefined,
-						true
-					);
-
-					var sty = {
-						'background-image': 'url(\'' + preview.canvas.toDataURL('image/png') + '\')',
-						'background-repeat': previewPos ? 'repeat-y' : 'repeat',
-						'background-position': (previewPos ? previewPos : 'left') + ' top',
-						'background-size': preview.width + 'px ' + preview.height + 'px',
-						'padding-left': previewPos === 'left' ? (padding + 'px') : data.origStyle['padding-left'],
-						'padding-right': previewPos === 'right' ? (padding + 'px') : data.origStyle['padding-right'],
-					};
-					jsc.setStyle(this.previewElement, sty, this.forceStyle);
-				}
-			}
-
-			if (isPickerOwner()) {
-				redrawPad();
-				redrawSld();
-				redrawASld();
-			}
-		};
-
-
 		// h: 0-360
 		// s: 0-100
 		// v: 0-100
@@ -1871,6 +1752,125 @@ var jsc = {
 
 		this.isLight = function () {
 			return this.toGrayscale() > 255 / 2;
+		};
+
+
+		this.isAlphaEnabled = function () {
+			if (this.alphaChannel === true) {
+				return true; // the alpha channel is explicitly enabled
+			}
+			if (this.alphaChannel === 'auto') {
+				return (
+					this.format.toLowerCase() === 'any' || // when the format is 'any', it can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
+					this._currentFormat === 'rgba' || // the current format supports alpha channel
+					this.alphaElement // the alpha value is redirected, so we're working with alpha channel
+				);
+			}
+			return false;
+		};
+
+
+		this.processValueInput = function (str) {
+
+			if (!this.required && str.trim() === '') {
+				// input's value is empty (or just whitespace) -> leave the value
+				this.previewElement.style.background = 'none';
+				this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
+				return;
+			}
+
+			if (!this.refine) {
+				if (!this.fromString(str, jsc.flags.leaveValue)) {
+					// input's value could not be parsed -> remove background
+					this.previewElement.style.background = 'none';
+					this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
+				}
+				return;
+			}
+
+			if (!this.fromString(str)) {
+				// could not parse the color value - let's just expose the current color
+				this.exposeColor();
+			}
+		};
+
+
+		this.processAlphaInput = function (str) {
+			if (!this.fromHSVA(null, null, null, parseFloat(str))) {
+				// could not parse the alpha value - let's just expose the current color
+				this.exposeColor();
+			}
+		};
+
+
+		this.exposeColor = function (flags) {
+
+			if (!(flags & jsc.flags.leaveValue) && this.valueElement) {
+				var value = this.toString();
+
+				if (this._currentFormat === 'hex') {
+					if (!this.uppercase) { value = value.toLowerCase(); }
+					if (!this.hash) { value = value.replace(/^#/, ''); }
+				}
+
+				if (jsc.nodeName(this.valueElement) === 'input') {
+					this.valueElement.value = value;
+				} else {
+					this.valueElement.innerHTML = value;
+				}
+			}
+
+			if (!(flags & jsc.flags.leaveAlpha) && this.alphaElement) {
+				var value = Math.round(this.channels.a * 100) / 100;
+
+				if (jsc.nodeName(this.alphaElement) === 'input') {
+					this.alphaElement.value = value;
+				} else {
+					this.alphaElement.innerHTML = value;
+				}
+			}
+
+			if (!(flags & jsc.flags.leaveStyle)) {
+				if (this.previewElement) {
+					var data = this.previewElement._data_jsc;
+
+					var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
+					if (
+						jsc.isTextInput(this.previewElement) || // text input
+						(jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement)) // button with text
+					) {
+						previewPos = this.previewPosition;
+					}
+
+					var padding = 0;
+					if (previewPos) {
+						padding = this.previewSize + this.previewPadding;
+					}
+
+					var preview = jsc.genColorPreviewCanvas(
+						this.toRGBAString(),
+						previewPos ? {'left':'right', 'right':'left'}[previewPos] : undefined,
+						previewPos ? this.previewSize : undefined,
+						true
+					);
+
+					var sty = {
+						'background-image': 'url(\'' + preview.canvas.toDataURL('image/png') + '\')',
+						'background-repeat': previewPos ? 'repeat-y' : 'repeat',
+						'background-position': (previewPos ? previewPos : 'left') + ' top',
+						'background-size': preview.width + 'px ' + preview.height + 'px',
+						'padding-left': previewPos === 'left' ? (padding + 'px') : data.origStyle['padding-left'],
+						'padding-right': previewPos === 'right' ? (padding + 'px') : data.origStyle['padding-right'],
+					};
+					jsc.setStyle(this.previewElement, sty, this.forceStyle);
+				}
+			}
+
+			if (isPickerOwner()) {
+				redrawPad();
+				redrawSld();
+				redrawASld();
+			}
 		};
 
 
