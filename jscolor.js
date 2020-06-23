@@ -1411,9 +1411,9 @@ var jsc = {
 		}
 
 
-		// Getting: option(name)
-		// Setting: option(name, value)
-		//          option({option: value, option: value, ...})
+		// Getter: option(name)
+		// Setter: option(name, value)
+		//         option({option: value, option: value, ...})
 		//
 		this.option = function () {
 			if (!arguments.length) {
@@ -1432,38 +1432,44 @@ var jsc = {
 			} else if (arguments.length >= 2 && typeof arguments[0] === 'string') {
 				// setting a single option
 				try {
-					if (setOption(arguments[0], arguments[1])) {
-						this.redraw(); // immediately redraws the picker, if it's displayed
+					if (!setOption(arguments[0], arguments[1])) {
+						return false;
 					}
 				} catch (e) {
 					console.warn(e);
+					return false;
 				}
-				return false;
+				this.redraw(); // immediately redraws the picker, if it's displayed
+				this.exposeColor(); // in case some preview-related or format-related option was changed
+				return true;
 
 			} else if (arguments.length === 1 && typeof arguments[0] === 'object') {
 				// setting multiple options
 				var opts = arguments[0];
-				var ret = true;
+				var success = true;
 				for (var opt in opts) {
 					if (opts.hasOwnProperty(opt)) {
 						try {
-							setOption(opt, opts[opt]);
+							if (!setOption(opt, opts[opt])) {
+								success = false;
+							}
 						} catch (e) {
 							console.warn(e);
-							ret = false;
+							success = false;
 						}
 					}
 				}
 				this.redraw(); // immediately redraws the picker, if it's displayed
-				return ret;
+				this.exposeColor(); // in case some preview-related or format-related option was changed
+				return success;
 			}
 
 			throw 'Invalid arguments passed';
 		}
 
 
-		// Getting: channel(name)
-		// Setting: channel(name, value)
+		// Getter: channel(name)
+		// Setter: channel(name, value)
 		//
 		this.channel = function (name, value) {
 			if (typeof name !== 'string') {
@@ -1472,7 +1478,7 @@ var jsc = {
 
 			if (value === undefined) {
 				// getting channel value
-				if (this.channels[name.toLowerCase()] === undefined) {
+				if (!this.channels.hasOwnProperty(name.toLowerCase())) {
 					console.warn('Getting unknown channel: ' + name);
 					return false;
 				}
@@ -1501,25 +1507,6 @@ var jsc = {
 
 			return false;
 		}
-
-
-		this.hide = function () {
-			if (isPickerOwner()) {
-				detachPicker();
-			}
-		};
-
-
-		this.show = function () {
-			drawPicker();
-		};
-
-
-		this.redraw = function () {
-			if (isPickerOwner()) {
-				drawPicker();
-			}
-		};
 
 
 		// Triggers given input event(s) by:
@@ -1752,6 +1739,25 @@ var jsc = {
 
 		this.isLight = function () {
 			return this.toGrayscale() > 255 / 2;
+		};
+
+
+		this.hide = function () {
+			if (isPickerOwner()) {
+				detachPicker();
+			}
+		};
+
+
+		this.show = function () {
+			drawPicker();
+		};
+
+
+		this.redraw = function () {
+			if (isPickerOwner()) {
+				drawPicker();
+			}
 		};
 
 
