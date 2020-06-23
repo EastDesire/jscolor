@@ -1280,7 +1280,7 @@ var jsc = {
 		// General options
 		//
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
-		this.value = null; // INITIAL color value in any supported format. To change it later, use methods fromString(), fromHSVA(), fromRGBA() or channel()
+		this.value = null; // INITIAL color value in any supported format. To change it later, use method fromString(), fromHSVA(), fromRGBA() or channel()
 		this.alpha = null; // INITIAL alpha value. To change it later, call method channel('A', <value>)
 		this.onChange = null; // called when color changes. Value can be either a function or a string with JS code.
 		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging a slider. Value can be either a function or a string with JS code.
@@ -2636,7 +2636,7 @@ var jsc = {
 
 		// determine initial alpha value
 		//
-		var initAlpha = '1.0';
+		var initAlpha = null;
 
 		if (this.alpha !== null) {
 			initAlpha = (''+this.alpha); // get initial alpha value from the 'alpha' property
@@ -2666,8 +2666,14 @@ var jsc = {
 		// let's parse the initial color value and expose color's preview
 		this.processValueInput(initValue);
 
-		// let's also parse and expose the initial alpha value
-		this.processAlphaInput(initAlpha);
+		// let's also parse and expose the initial alpha value, if any
+		//
+		// Note: If the initial color value contains alpha value in it (e.g. in rgba format),
+		// this will overwrite it. So we should only process alpha input if there was any initial
+		// alpha explicitly set, otherwise we could needlessly lose initial value's alpha
+		if (initAlpha !== null) {
+			this.processAlphaInput(initAlpha);
+		}
 
 	}
 
