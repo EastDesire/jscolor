@@ -609,7 +609,7 @@ var jsc = {
 			// rgb(...) or rgba(...) notation
 
 			var params = m[1].split(',');
-			var re = /^\s*(\d*)(\.\d+)?\s*$/;
+			var re = /^\s*(\d+|\d*\.\d+)\s*$/;
 			var mR, mG, mB, mA;
 			if (
 				params.length >= 3 &&
@@ -619,9 +619,9 @@ var jsc = {
 			) {
 				ret.format = 'rgb';
 				ret.rgba = [
-					parseFloat((mR[1] || '0') + (mR[2] || '')),
-					parseFloat((mG[1] || '0') + (mG[2] || '')),
-					parseFloat((mB[1] || '0') + (mB[2] || '')),
+					parseFloat(mR[1]) || 0,
+					parseFloat(mG[1]) || 0,
+					parseFloat(mB[1]) || 0,
 					null
 				];
 
@@ -630,7 +630,7 @@ var jsc = {
 					(mA = params[3].match(re))
 				) {
 					ret.format = 'rgba';
-					ret.rgba[3] = parseFloat((mA[1] || '0') + (mA[2] || ''));
+					ret.rgba[3] = parseFloat(mA[1]) || 0;
 				}
 				return ret;
 			}
