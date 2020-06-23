@@ -2491,6 +2491,12 @@ var jsc = {
 		this.targetElement = jsc.fetchElement(targetElement);
 
 		if (!this.targetElement) {
+			// temporarily customized error message to help with migrating from versions prior to 2.2
+			if (typeof targetElement === 'string' && /^[a-zA-Z][\w:.-]*$/.test(targetElement)) {
+				// targetElement looks like valid ID
+				var possiblyId = targetElement;
+				throw 'jscolor 2.2 uses CSS selectors. If \'' + possiblyId + '\' is supposed to be an ID, please use \'#' + possiblyId + '\' or any valid CSS selector.';
+			}
 			throw 'Cannot instantiate color picker without a target element';
 		}
 		if (this.targetElement.jscolor !== undefined) {
