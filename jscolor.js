@@ -219,34 +219,6 @@ var jsc = {
 	})(),
 
 
-	// TODO
-	delayed : (function () {
-		var currTimeout = null;
-
-		return function (func, milliseconds, thisObj) {
-			// collect the rest of the arguments
-			var restArgs = [];
-			for (var i = 3; i < arguments.length; i += 1) {
-				restArgs.push(arguments[i]);
-			}
-
-			// clear previous timeout
-			if (currTimeout !== null) {
-				window.clearTimeout(currTimeout);
-				currTimeout = null;
-			}
-
-			currTimeout = window.setTimeout(
-				function () {
-					console.log('applying style'); // TODO
-					func.apply(thisObj, restArgs);
-				},
-				milliseconds
-			);
-		};
-	})(),
-
-
 	dataProp : '_data_jscolor',
 
 
