@@ -1820,7 +1820,7 @@ var jsc = {
 
 
 		this.toDataURL = function () {
-			return this.toCanvas().toDataURL('image/png');
+			return this.toCanvas().toDataURL();
 		};
 
 
@@ -1952,22 +1952,6 @@ var jsc = {
 						previewPos = this.previewPosition;
 					}
 
-					/* TODO
-					var preview = jsc.genColorPreviewCanvas(
-						this.toRGBAString(),
-						previewPos ? {'left':'right', 'right':'left'}[previewPos] : undefined,
-						previewPos ? this.previewSize : undefined,
-						true
-					);
-
-					this.setPreviewElementBg(
-						preview.canvas.toDataURL('image/png'),
-						(previewPos ? previewPos : 'left') + ' top',
-						preview.width + 'px ' + preview.height + 'px',
-						previewPos ? 'repeat-y' : 'repeat'
-					);
-					*/
-
 					this.setPreviewElementBg(
 						this.toRGBAString(),
 						previewPos,
@@ -1984,38 +1968,11 @@ var jsc = {
 		};
 
 
-		//this.setPreviewElementBg = function (url, pos, size, repeat) { // TODO
-
 		// if position is not set => generate repeatable pattern
 		//
 		this.setPreviewElementBg = function (color, position, width) {
 
 			var prevElmData = jsc.getData(this.previewElement);
-
-			//var newBg = !url ? null : {url: url, pos: pos, size: size, repeat: repeat}; // TODO
-
-			//if (newBg) {
-			// TODO: probably remove this workaround
-			/*
-			var lastBg = jsc.getData(this.previewElement, 'lastBg');
-
-			// This workaround is to prevent flickering in some browsers (e.g. FF)
-			// We will put the previous background image behind the actual background image.
-			if (
-				lastBg &&
-				lastBg.pos === newBg.pos &&
-				lastBg.size === newBg.size &&
-				lastBg.repeat === newBg.repeat
-			) {
-				// If the last background image has the same properties as the new one,
-				// we can assume the new one will fully cover it
-				backgrounds.push([
-					'url(\'' + lastBg.url + '\')',
-					lastBg.pos + '/' + lastBg.size,
-					lastBg.repeat
-				].join(' '));
-			}
-			*/
 
 			var backgrounds = [];
 
@@ -2054,7 +2011,6 @@ var jsc = {
 			var sty = {
 				'background': backgrounds.join(', '),
 			};
-			console.log(sty); // TODO
 			jsc.setStyle(this.previewElement, sty, this.forceStyle);
 
 			// left/right padding to make space for color preview, if displayed
@@ -2073,9 +2029,6 @@ var jsc = {
 				'padding-right': padding.right,
 			};
 			jsc.setStyle(this.previewElement, sty, this.forceStyle);
-
-			// last background is the new one
-			//jsc.setData(this.previewElement, 'lastBg', newBg); // TODO
 		};
 
 
@@ -2813,18 +2766,12 @@ var jsc = {
 
 			jsc.setData(this.previewElement, {
 				origStyle: {
-					/* TODO: remove?
-					'background-image': this.previewElement.style['background-image'],
-					'background-position': this.previewElement.style['background-position'],
-					'background-repeat': this.previewElement.style['background-repeat'],
-					'min-width': this.previewElement.style['min-width'],
-					*/
-					'background-color': this.previewElement.style['background-color'], // TODO: used?
+					'background-color': this.previewElement.style['background-color'],
 					'padding-left': this.previewElement.style['padding-left'],
 					'padding-right': this.previewElement.style['padding-right'],
 				},
 				origCompStyle: {
-					'background-color': compStyle['background-color'], // TODO: used?
+					'background-color': compStyle['background-color'],
 				},
 			});
 		}
@@ -2970,15 +2917,13 @@ jsc.pub.trigger = function (eventNames) {
 };
 
 
-// TODO
 // Returns a data URL of a gray chessboard image that indicates transparency
 jsc.pub.chessboard = function (color) {
 	if (!color) {
 		color = 'rgba(0,0,0,0)';
 	}
 	var preview = jsc.genColorPreviewCanvas(color);
-	//console.log(preview.canvas.toDataURL('image/png')); // TODO
-	return preview.canvas.toDataURL('image/png');
+	return preview.canvas.toDataURL();
 };
 
 
