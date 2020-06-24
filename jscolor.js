@@ -1898,6 +1898,9 @@ var jsc = {
 					var backgrounds = [];
 
 					// TODO: store latestBgImageURL in previewElement's _data_jsc (create jsc.getJSCData() and jsc.setJSCData first
+					// TODO: maybe better to store the entire background as lastBackground
+					// TODO: ale asi ne, protože co když se změní background position v důsledku změny preview pos? to by vznikly situace, kdy bude jeden náhled vlevo, druhý vpravo
+					// možná po nějakém timeoutu nastavit 
 					if (jsc._latestBgImageURL) {
 						backgrounds.push([
 							'url(\'' + jsc._latestBgImageURL + '\')',
@@ -2109,7 +2112,7 @@ var jsc = {
 					asldPtrOB : document.createElement('div'), // slider pointer outer border
 					btn : document.createElement('div'),
 					btnT : document.createElement('span'), // text
-					helper : document.createElement('div'),
+					helper : document.createElement('div'), // TODO: used?
 				};
 
 				jsc.picker.pad.appendChild(jsc.picker.padPal.elm);
@@ -2146,7 +2149,7 @@ var jsc = {
 				jsc.picker.boxB.appendChild(jsc.picker.box);
 				jsc.picker.wrap.appendChild(jsc.picker.boxS);
 				jsc.picker.wrap.appendChild(jsc.picker.boxB);
-				jsc.picker.wrap.appendChild(jsc.picker.helper);
+				jsc.picker.wrap.appendChild(jsc.picker.helper);// TODO: used?
 			}
 
 			var p = jsc.picker;
@@ -2409,6 +2412,7 @@ var jsc = {
 			p.btnT.innerHTML = '';
 			p.btnT.appendChild(document.createTextNode(THIS.closeText));
 
+			// TODO: used?
 			// helper element
 			p.helper.style.width = '1px';
 			p.helper.style.height = '1px';
