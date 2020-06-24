@@ -740,9 +740,11 @@ var jsc = {
 			ctx.fillRect(x + sqSize, sqSize, sqSize, sqSize);
 		}
 
-		// actual color in foreground
-		ctx.fillStyle = color;
-		ctx.fillRect(0, 0, cWidth, cHeight);
+		if (color) {
+			// actual color in foreground
+			ctx.fillStyle = color;
+			ctx.fillRect(0, 0, cWidth, cHeight);
+		}
 
 		var start = null;
 		switch (separatorPos) {
@@ -796,14 +798,6 @@ var jsc = {
 		}
 
 		var grad = 'linear-gradient(' + params.join(', ') + ')';
-		/* TODO
-			'to ' + to + ', ' +
-			color + ' 0%, ' +
-			color + ' ' + width + 'px, ' +
-			'rgba(0,0,0,0) ' + (width + 1) + 'px, ' +
-			'rgba(0,0,0,0) 100%' +
-			')';
-		*/
 		return grad;
 	},
 
@@ -1321,7 +1315,7 @@ var jsc = {
 	flags : {
 		leaveValue : 1 << 0,
 		leaveAlpha : 1 << 1,
-		leaveStyle : 1 << 2,
+		leavePreview : 1 << 2,
 	},
 
 
@@ -1830,14 +1824,20 @@ var jsc = {
 		};
 
 
-		// TODO: test
 		this.toBackground = function () {
-			var color = this.toRGBAString();
-			var backgrounds = [
-				'linear-gradient(to bottom, ' + color + ', ' + color + ')', //, ' + this.toRGBAString(),
-				'url(\'' + jsc.pub.chessboard() + '\')',
-			];
-			//console.log(backgrounds.join(', ')); // TODO
+			var backgrounds = [];
+
+			// CSS gradient for background color preview
+			backgrounds.push(jsc.genColorPreviewGradient(this.toRGBAString()));
+
+			// data URL of generated PNG image with a gray transparency chessboard
+			var preview = jsc.genColorPreviewCanvas();
+			backgrounds.push([
+				'url(\'' + preview.canvas.toDataURL() + '\')',
+				'left top',
+				'repeat',
+			].join(' '));
+
 			return backgrounds.join(', ');
 		};
 
@@ -1886,7 +1886,7 @@ var jsc = {
 			if (!this.required && str.trim() === '') {
 				// input's value is empty (or just whitespace) -> leave the value
 				this.setPreviewElementBg(null);
-				this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
+				this.exposeColor(jsc.flags.leaveValue | jsc.flags.leavePreview);
 				return;
 			}
 
@@ -1894,7 +1894,7 @@ var jsc = {
 				if (!this.fromString(str, jsc.flags.leaveValue)) {
 					// input's value could not be parsed -> remove background
 					this.setPreviewElementBg(null);
-					this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
+					this.exposeColor(jsc.flags.leaveValue | jsc.flags.leavePreview);
 				}
 				return;
 			}
@@ -1941,7 +1941,7 @@ var jsc = {
 				}
 			}
 
-			if (!(flags & jsc.flags.leaveStyle)) {
+			if (!(flags & jsc.flags.leavePreview)) {
 				if (this.previewElement) {
 
 					var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
@@ -1973,15 +1973,6 @@ var jsc = {
 						previewPos,
 						previewPos ? this.previewSize : null
 					);
-
-					var origStyle = jsc.getData(this.previewElement, 'origStyle');
-					var padding = previewPos ? (this.previewSize + this.previewPadding) : 0;
-
-					var sty = {
-						'padding-left': previewPos === 'left' ? (padding + 'px') : origStyle['padding-left'],
-						'padding-right': previewPos === 'right' ? (padding + 'px') : origStyle['padding-right'],
-					};
-					jsc.setStyle(this.previewElement, sty, this.forceStyle);
 				}
 			}
 
@@ -2018,7 +2009,7 @@ var jsc = {
 			) {
 				// If the last background image has the same properties as the new one,
 				// we can assume the new one will fully cover it
-				cssBackgrounds.push([
+				backgrounds.push([
 					'url(\'' + lastBg.url + '\')',
 					lastBg.pos + '/' + lastBg.size,
 					lastBg.repeat
@@ -2026,32 +2017,34 @@ var jsc = {
 			}
 			*/
 
-			var cssBackgrounds = [];
+			var backgrounds = [];
 
-			// CSS gradient for background color preview
-			cssBackgrounds.push(
-				jsc.genColorPreviewGradient(
-					color,
-					position,
-					width ? width - jsc.pub.previewSeparator.length : undefined
-				)
-			);
+			if (color) {
+				// CSS gradient for background color preview
+				backgrounds.push(
+					jsc.genColorPreviewGradient(
+						color,
+						position,
+						width ? width - jsc.pub.previewSeparator.length : undefined
+					)
+				);
 
-			// data URL of generated PNG image with a gray transparency chessboard
-			var preview = jsc.genColorPreviewCanvas(
-				'rgba(0,0,0,0)',
-				position ? {'left':'right', 'right':'left'}[position] : undefined,
-				width || undefined,
-				true
-			);
-			cssBackgrounds.push([
-				'url(\'' + preview.canvas.toDataURL() + '\')',
-				(position || 'left') + ' top/' + preview.width + 'px ' + preview.height + 'px',
-				width ? 'repeat-y' : 'repeat'
-			].join(' '));
+				// data URL of generated PNG image with a gray transparency chessboard
+				var preview = jsc.genColorPreviewCanvas(
+					'rgba(0,0,0,0)',
+					position ? {'left':'right', 'right':'left'}[position] : undefined,
+					width || undefined,
+					true
+				);
+				backgrounds.push([
+					'url(\'' + preview.canvas.toDataURL() + '\')',
+					(position || 'left') + ' top/' + preview.width + 'px ' + preview.height + 'px',
+					width ? 'repeat-y' : 'repeat',
+				].join(' '));
+			}
 
 			// original background color
-			cssBackgrounds.push(
+			backgrounds.push(
 				prevElmData.origStyle['background-color'] ||
 				prevElmData.origCompStyle['background-color'] ||
 				'none'
@@ -2059,9 +2052,26 @@ var jsc = {
 
 			// set background image(s)
 			var sty = {
-				'background': cssBackgrounds.join(', '),
+				'background': backgrounds.join(', '),
 			};
 			console.log(sty); // TODO
+			jsc.setStyle(this.previewElement, sty, this.forceStyle);
+
+			// left/right padding to make space for color preview, if displayed
+			//
+			var origStyle = jsc.getData(this.previewElement, 'origStyle');
+			var padding = {
+				left: origStyle['padding-left'],
+				right: origStyle['padding-right'],
+			};
+
+			if (color && position) {
+				padding[position] = (this.previewSize + this.previewPadding) + 'px';
+			}
+			var sty = {
+				'padding-left': padding.left,
+				'padding-right': padding.right,
+			};
 			jsc.setStyle(this.previewElement, sty, this.forceStyle);
 
 			// last background is the new one
