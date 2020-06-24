@@ -774,6 +774,20 @@ var jsc = {
 	},
 
 
+	genColorPreviewGradient : function (color, position, width) {
+		// TODO: also try at least -webkit-linear-gradient alternative. See https://stackoverflow.com/questions/17134929/
+		var to = {'left':'right', 'right':'left'}[position];
+		var grad =
+			'linear-gradient(' +
+			'to ' + to + ', ' +
+			color + ' 0%, ' +
+			color + ' ' + width + 'px, ' +
+			'rgba(0,0,0,0) ' + (width + 1) + 'px, ' +
+			'rgba(0,0,0,0) 100%' +
+			')';
+	},
+
+
 	redrawPosition : function () {
 
 		if (jsc.picker && jsc.picker.owner) {
@@ -1918,6 +1932,7 @@ var jsc = {
 						previewPos = this.previewPosition;
 					}
 
+					/* TODO
 					var preview = jsc.genColorPreviewCanvas(
 						this.toRGBAString(),
 						previewPos ? {'left':'right', 'right':'left'}[previewPos] : undefined,
@@ -1930,6 +1945,13 @@ var jsc = {
 						(previewPos ? previewPos : 'left') + ' top',
 						preview.width + 'px ' + preview.height + 'px',
 						previewPos ? 'repeat-y' : 'repeat'
+					);
+					*/
+
+					this.setPreviewElementBg(
+						this.toRGBAString(),
+						previewPos,
+						previewPos ? this.previewSize : undefined
 					);
 
 					var origStyle = jsc.getData(this.previewElement, 'origStyle');
@@ -1951,39 +1973,56 @@ var jsc = {
 		};
 
 
-		this.setPreviewElementBg = function (url, pos, size, repeat) {
+		//this.setPreviewElementBg = function (url, pos, size, repeat) { // TODO
+		this.setPreviewElementBg = function (color, position, width) {
 
 			var prevElmData = jsc.getData(this.previewElement);
 
-			var newBg = !url ? null : {url: url, pos: pos, size: size, repeat: repeat};
+			//var newBg = !url ? null : {url: url, pos: pos, size: size, repeat: repeat}; // TODO
+
+
+			//if (newBg) {
+			// TODO: probably remove this workaround
+			/*
+			var lastBg = jsc.getData(this.previewElement, 'lastBg');
+
+			// This workaround is to prevent flickering in some browsers (e.g. FF)
+			// We will put the previous background image behind the actual background image.
+			if (
+				lastBg &&
+				lastBg.pos === newBg.pos &&
+				lastBg.size === newBg.size &&
+				lastBg.repeat === newBg.repeat
+			) {
+				// If the last background image has the same properties as the new one,
+				// we can assume the new one will fully cover it
+				cssBackgrounds.push([
+					'url(\'' + lastBg.url + '\')',
+					lastBg.pos + '/' + lastBg.size,
+					lastBg.repeat
+				].join(' '));
+			}
+			*/
 
 			var cssBackgrounds = [];
 
-			if (newBg) {
-				var lastBg = jsc.getData(this.previewElement, 'lastBg');
+			if (color) {
+				// CSS gradient for background color preview
+				cssBackgrounds.push(
+					jsc.genColorPreviewGradient(color, position, width)
+				);
 
-				// This workaround is to prevent flickering in some browsers (e.g. FF)
-				// We will put the previous background image behind the actual background image.
-				if (
-					lastBg &&
-					lastBg.pos === newBg.pos &&
-					lastBg.size === newBg.size &&
-					lastBg.repeat === newBg.repeat
-				) {
-					// If the last background image has the same properties as the new one,
-					// we can assume the new one will fully cover it
-					cssBackgrounds.push([
-						'url(\'' + lastBg.url + '\')',
-						lastBg.pos + '/' + lastBg.size,
-						lastBg.repeat
-					].join(' '));
-				}
-
-				// new background image
+				// data URL of generated PNG image with a gray transparency chessboard
+				var preview = jsc.genColorPreviewCanvas(
+					'rgba(0,0,0,0)',
+					position ? {'left':'right', 'right':'left'}[position] : undefined,
+					position ? width : undefined,
+					true
+				);
 				cssBackgrounds.push([
-					'url(\'' + newBg.url + '\')',
-					newBg.pos + '/' + newBg.size,
-					newBg.repeat
+					'url(\'' + preview.canvas.toDataURL() + '\')',
+					position + ' top/' + preview.width + 'px ' + preview.height + 'px',
+					position ? 'repeat-y' : 'repeat'
 				].join(' '));
 			}
 
