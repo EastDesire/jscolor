@@ -774,17 +774,37 @@ var jsc = {
 	},
 
 
+	// if position or width is not set => fill the entire element (0%-100%)
 	genColorPreviewGradient : function (color, position, width) {
 		// TODO: also try at least -webkit-linear-gradient alternative. See https://stackoverflow.com/questions/17134929/
-		var to = {'left':'right', 'right':'left'}[position];
-		var grad =
-			'linear-gradient(' +
+		var params = [];
+
+		if (position && width) {
+			params = [
+				'to ' + {'left':'right', 'right':'left'}[position],
+				color + ' 0%',
+				color + ' ' + width + 'px',
+				'rgba(0,0,0,0) ' + (width + 1) + 'px',
+				'rgba(0,0,0,0) 100%',
+			];
+		} else {
+			params = [
+				'to right',
+				color + ' 0%',
+				color + ' 100%',
+			];
+		}
+
+		var grad = 'linear-gradient(' + params.join(', ') + ')';
+		/* TODO
 			'to ' + to + ', ' +
 			color + ' 0%, ' +
 			color + ' ' + width + 'px, ' +
 			'rgba(0,0,0,0) ' + (width + 1) + 'px, ' +
 			'rgba(0,0,0,0) 100%' +
 			')';
+		*/
+		return grad;
 	},
 
 
@@ -1817,7 +1837,7 @@ var jsc = {
 				'linear-gradient(to bottom, ' + color + ', ' + color + ')', //, ' + this.toRGBAString(),
 				'url(\'' + jsc.pub.chessboard() + '\')',
 			];
-			console.log(backgrounds.join(', ')); // TODO
+			//console.log(backgrounds.join(', ')); // TODO
 			return backgrounds.join(', ');
 		};
 
@@ -1951,7 +1971,7 @@ var jsc = {
 					this.setPreviewElementBg(
 						this.toRGBAString(),
 						previewPos,
-						previewPos ? this.previewSize : undefined
+						previewPos ? this.previewSize : null
 					);
 
 					var origStyle = jsc.getData(this.previewElement, 'origStyle');
@@ -1974,12 +1994,14 @@ var jsc = {
 
 
 		//this.setPreviewElementBg = function (url, pos, size, repeat) { // TODO
+
+		// if position is not set => generate repeatable pattern
+		//
 		this.setPreviewElementBg = function (color, position, width) {
 
 			var prevElmData = jsc.getData(this.previewElement);
 
 			//var newBg = !url ? null : {url: url, pos: pos, size: size, repeat: repeat}; // TODO
-
 
 			//if (newBg) {
 			// TODO: probably remove this workaround
@@ -2006,25 +2028,27 @@ var jsc = {
 
 			var cssBackgrounds = [];
 
-			if (color) {
-				// CSS gradient for background color preview
-				cssBackgrounds.push(
-					jsc.genColorPreviewGradient(color, position, width)
-				);
+			// CSS gradient for background color preview
+			cssBackgrounds.push(
+				jsc.genColorPreviewGradient(
+					color,
+					position,
+					width ? width - jsc.pub.previewSeparator.length : undefined
+				)
+			);
 
-				// data URL of generated PNG image with a gray transparency chessboard
-				var preview = jsc.genColorPreviewCanvas(
-					'rgba(0,0,0,0)',
-					position ? {'left':'right', 'right':'left'}[position] : undefined,
-					position ? width : undefined,
-					true
-				);
-				cssBackgrounds.push([
-					'url(\'' + preview.canvas.toDataURL() + '\')',
-					position + ' top/' + preview.width + 'px ' + preview.height + 'px',
-					position ? 'repeat-y' : 'repeat'
-				].join(' '));
-			}
+			// data URL of generated PNG image with a gray transparency chessboard
+			var preview = jsc.genColorPreviewCanvas(
+				'rgba(0,0,0,0)',
+				position ? {'left':'right', 'right':'left'}[position] : undefined,
+				width || undefined,
+				true
+			);
+			cssBackgrounds.push([
+				'url(\'' + preview.canvas.toDataURL() + '\')',
+				(position || 'left') + ' top/' + preview.width + 'px ' + preview.height + 'px',
+				width ? 'repeat-y' : 'repeat'
+			].join(' '));
 
 			// original background color
 			cssBackgrounds.push(
@@ -2037,10 +2061,11 @@ var jsc = {
 			var sty = {
 				'background': cssBackgrounds.join(', '),
 			};
+			console.log(sty); // TODO
 			jsc.setStyle(this.previewElement, sty, this.forceStyle);
 
 			// last background is the new one
-			jsc.setData(this.previewElement, 'lastBg', newBg);
+			//jsc.setData(this.previewElement, 'lastBg', newBg); // TODO
 		};
 
 
