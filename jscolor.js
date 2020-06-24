@@ -1891,17 +1891,48 @@ var jsc = {
 						true
 					);
 
+					// TODO: test
+
+					var bgImageURL = preview.canvas.toDataURL('image/png');
+
+					var backgrounds = [];
+
+					// TODO: store latestBgImageURL in previewElement's _data_jsc (create jsc.getJSCData() and jsc.setJSCData first
+					if (jsc._latestBgImageURL) {
+						backgrounds.push([
+							'url(\'' + jsc._latestBgImageURL + '\')',
+							(previewPos ? previewPos : 'left') + ' top' + '/' + preview.width + 'px ' + preview.height + 'px',
+							previewPos ? 'repeat-y' : 'repeat'
+						].join(' '));
+					}
+
+					backgrounds.push([
+						//'url(\'' + preview.canvas.toDataURL('image/png') + '\')',
+						'url(\'' + bgImageURL + '\')',
+						(previewPos ? previewPos : 'left') + ' top' + '/' + preview.width + 'px ' + preview.height + 'px',
+						previewPos ? 'repeat-y' : 'repeat'
+					].join(' '));
+
 					var sty = {
+						/*
 						'background-image': 'url(\'' + preview.canvas.toDataURL('image/png') + '\')',
 						'background-repeat': previewPos ? 'repeat-y' : 'repeat',
 						'background-position': (previewPos ? previewPos : 'left') + ' top',
 						'background-size': preview.width + 'px ' + preview.height + 'px',
+						*/
+						'background': backgrounds.join(', '),
 						'padding-left': previewPos === 'left' ? (padding + 'px') : data.origStyle['padding-left'],
 						'padding-right': previewPos === 'right' ? (padding + 'px') : data.origStyle['padding-right'],
 					};
 
+					jsc.setStyle(this.previewElement, sty, this.forceStyle);
+
+					// TODO
+					jsc._latestBgImageURL = bgImageURL;
+
 					// TODO
 
+					/*
 					var helper = document.createElement('div');
 					helper.style.width = '1px';
 					helper.style.height = '1px';
@@ -1911,7 +1942,10 @@ var jsc = {
 					helper.style.visibility = 'hidden';
 					helper.style.backgroundImage = 'url(\'' + preview.canvas.toDataURL('image/png') + '\')';
 					document.body.appendChild(helper);
+					*/
 
+
+					/*
 					if (!(flags & jsc.flags.preloadBgImage)) {
 						jsc.setStyle(this.previewElement, sty, this.forceStyle);
 					} else {
@@ -1924,6 +1958,7 @@ var jsc = {
 							sty
 						);
 					}
+					*/
 
 					//document.body.removeChild(helper);
 				}
