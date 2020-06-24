@@ -1777,6 +1777,15 @@ var jsc = {
 		};
 
 
+		this.toGrayscale = function () {
+			return (
+				0.213 * this.channels.r +
+				0.715 * this.channels.g +
+				0.072 * this.channels.b
+			);
+		};
+
+
 		this.toCanvas = function () {
 			return jsc.genColorPreviewCanvas(this.toRGBAString()).canvas;
 		};
@@ -1787,12 +1796,15 @@ var jsc = {
 		};
 
 
-		this.toGrayscale = function () {
-			return (
-				0.213 * this.channels.r +
-				0.715 * this.channels.g +
-				0.072 * this.channels.b
-			);
+		// TODO: test
+		this.toBackground = function () {
+			var color = this.toRGBAString();
+			var backgrounds = [
+				'linear-gradient(to bottom, ' + color + ', ' + color + ')', //, ' + this.toRGBAString(),
+				'url(\'' + jsc.pub.chessboard() + '\')',
+			];
+			console.log(backgrounds.join(', ')); // TODO
+			return backgrounds.join(', ');
 		};
 
 
@@ -2881,6 +2893,18 @@ jsc.pub.trigger = function (eventNames) {
 	} else {
 		jsc.triggerQueue.push(eventNames);
 	}
+};
+
+
+// TODO
+// Returns a data URL of a gray chessboard image that indicates transparency
+jsc.pub.chessboard = function (color) {
+	if (!color) {
+		color = 'rgba(0,0,0,0)';
+	}
+	var preview = jsc.genColorPreviewCanvas(color);
+	//console.log(preview.canvas.toDataURL('image/png')); // TODO
+	return preview.canvas.toDataURL('image/png');
 };
 
 
