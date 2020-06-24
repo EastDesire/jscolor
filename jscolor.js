@@ -1873,12 +1873,16 @@ var jsc = {
 
 			// TODO: support if url is null -> remove background image
 
-			var newBg = {
-				url: url,
-				pos: pos,
-				size: size,
-				repeat: repeat,
-			};
+			var newBg = null;
+
+			if (url !== null) {
+				newBg = null;
+					url: url,
+					pos: pos,
+					size: size,
+					repeat: repeat,
+				};
+			}
 		
 			var lastBg = jsc.getData(this.previewElement, 'lastBg'); // TODO
 
