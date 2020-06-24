@@ -1947,14 +1947,6 @@ var jsc = {
 
 			var cssBackgrounds = [];
 
-			// first background
-			cssBackgrounds.push(
-				prevElmData.origStyle['background-color'] ||
-				prevElmData.origCompStyle['background-color'] ||
-				'none'
-			); // TODO
-			console.log(cssBackgrounds); // TODO
-
 			if (newBg) {
 				var lastBg = jsc.getData(this.previewElement, 'lastBg');
 
@@ -1982,6 +1974,13 @@ var jsc = {
 					newBg.repeat
 				].join(' '));
 			}
+
+			// original background color
+			cssBackgrounds.push(
+				prevElmData.origStyle['background-color'] ||
+				prevElmData.origCompStyle['background-color'] ||
+				'none'
+			);
 
 			// set background image(s)
 			var sty = {
