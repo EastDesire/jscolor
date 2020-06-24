@@ -219,15 +219,6 @@ var jsc = {
 	})(),
 
 
-	getDataAttr : function (el, name) {
-		var attrName = 'data-' + name;
-		var attrValue = el.getAttribute(attrName);
-		if (attrValue !== null) {
-			return attrValue;
-		}
-		return null;
-	},
-
 	// TODO
 	delayed : (function () {
 		var currTimeout = null;
@@ -255,6 +246,79 @@ var jsc = {
 			);
 		};
 	})(),
+
+
+	dataProp : '_data_jscolor',
+
+
+	// usage:
+	//   setData(obj, prop, value)
+	//   setData(obj, {prop:value, ...})
+	//
+	setData : function () {
+		var obj = arguments[0];
+
+		if (arguments.length === 3) {
+			// setting a single property
+			// TODO: test
+
+			var data = obj.hasOwnProperty(jsc.dataProp) ? obj[jsc.dataProp] : (obj[jsc.dataProp] = {});
+			var prop = arguments[1];
+			var value = arguments[2];
+
+			data[prop] = value;
+			return true;
+
+		} else if (arguments.length === 2 && typeof arguments[1] === 'object') {
+			// setting multiple properties
+			// TODO: test
+
+			var data = obj.hasOwnProperty(jsc.dataProp) ? obj[jsc.dataProp] : (obj[jsc.dataProp] = {});
+			var map = arguments[1];
+
+			for (var prop in map) {
+				if (map.hasOwnProperty(prop)) {
+					data[prop] = map[prop];
+				}
+			}
+			return true;
+		}
+
+		throw new Error('Invalid arguments');
+	},
+
+
+	// TODO: test
+	// usage:
+	//   removeData(obj, prop, [prop...])
+	//
+	removeData : function () {
+		if (!obj.hasOwnProperty(jsc.dataProp)) {
+			return true;
+		}
+		for (var i = 1, i < arguments.length; i += 1) {
+			var prop = arguments[i];
+			delete obj[prop];
+		}
+		return true;
+	},
+
+
+	// if prop is not specified, a hashmap will be returned containing all data
+	getData : function (obj, prop) {
+		var data = obj.hasOwnProperty(jsc.dataProp) ? obj[jsc.dataProp] : {};
+		if (prop !== undefined) {
+			return data[prop];
+		}
+		return data;
+	},
+
+
+	getDataAttr : function (el, name) {
+		var attrName = 'data-' + name;
+		var attrValue = el.getAttribute(attrName);
+		return attrValue;
+	},
 
 
 	attachEvent : function (el, evnt, func) {
@@ -321,13 +385,9 @@ var jsc = {
 	},
 
 
-	triggerEvent : function (el, eventName, bubbles, cancelable, customData) {
+	triggerEvent : function (el, eventName, bubbles, cancelable) {
 		if (!el) {
 			return;
-		}
-
-		if (customData === undefined) {
-			customData = {};
 		}
 
 		var ev = null;
@@ -347,15 +407,17 @@ var jsc = {
 			return false;
 		}
 
-		ev._data_jsc = customData;
+		// so that we know that the event was triggered internally
+		jsc.setData(ev, 'internal', true);
+
 		el.dispatchEvent(ev);
 		return true;
 	},
 
 
-	triggerInputEvent : function (el, eventName, bubbles, cancelable, customData) {
+	triggerInputEvent : function (el, eventName, bubbles, cancelable) {
 		if (jsc.isTextInput(el)) {
-			jsc.triggerEvent(el, eventName, bubbles, cancelable, customData);
+			jsc.triggerEvent(el, eventName, bubbles, cancelable);
 		}
 	},
 
@@ -1807,11 +1869,61 @@ var jsc = {
 		};
 
 
+		this.setPreviewElementBg = function (url, pos, size, repeat) {
+
+			// TODO: support if url is null -> remove background image
+
+			var newBg = {
+				url: url,
+				pos: pos,
+				size: size,
+				repeat: repeat,
+			};
+		
+			var lastBg = jsc.getData(this.previewElement, 'lastBg'); // TODO
+
+			var cssBackgrounds = [];
+
+			// This workaround is to prevent flickering in some browsers (e.g. FF)
+			// We will put the previous background image behind the actual background image.
+			if (
+				lastBg &&
+				lastBg.pos === newBg.pos &&
+				lastBg.size === newBg.size &&
+				lastBg.repeat === newBg.repeat
+			) {
+				// If the last background image has the same properties as the new one,
+				// we can assume the new one will fully cover it
+				cssBackgrounds.push([
+					'url(\'' + lastBg.url + '\')',
+					lastBg.pos + '/' + lastBg.size,
+					lastBg.repeat
+				].join(' '));
+			}
+
+			cssBackgrounds.push([
+				'url(\'' + newBg.url + '\')',
+				newBg.pos + '/' + newBg.size,
+				newBg.repeat
+			].join(' '));
+
+			// set background image(s)
+			var sty = {
+				'background': backgrounds.join(', '),
+			};
+			jsc.setStyle(this.previewElement, sty, this.forceStyle);
+
+			// last background is the new one
+			jsc.setData(this.previewElement, 'lastBg', newBg);
+		};
+
+
 		this.processValueInput = function (str) {
 
 			if (!this.required && str.trim() === '') {
 				// input's value is empty (or just whitespace) -> leave the value
-				this.previewElement.style.background = 'none';
+				this.setPreviewElementBg(null); // TODO: implement null
+				//this.previewElement.style.background = 'none'; // TODO: remove
 				this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
 				return;
 			}
@@ -1819,7 +1931,8 @@ var jsc = {
 			if (!this.refine) {
 				if (!this.fromString(str, jsc.flags.leaveValue)) {
 					// input's value could not be parsed -> remove background
-					this.previewElement.style.background = 'none';
+					this.setPreviewElementBg(null); // TODO: implement null
+					//this.previewElement.style.background = 'none'; // TODO: remove
 					this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
 				}
 				return;
@@ -1869,7 +1982,7 @@ var jsc = {
 
 			if (!(flags & jsc.flags.leaveStyle)) {
 				if (this.previewElement) {
-					var data = this.previewElement._data_jsc;
+					var origStyle = jsc.getData(this.previewElement, 'origStyle');
 
 					var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
 					if (
@@ -1893,19 +2006,21 @@ var jsc = {
 
 					// TODO: test
 
-					var bgImageURL = preview.canvas.toDataURL('image/png');
+					this.setPreviewElementBg(
+						preview.canvas.toDataURL('image/png'),
+						(previewPos ? previewPos : 'left') + ' top',
+						preview.width + 'px ' + preview.height + 'px',
+						previewPos ? 'repeat-y' : 'repeat'
+					);
 
+					/*
 					var backgrounds = [];
-
-					// TODO: store latestBgImageURL in previewElement's _data_jsc (create jsc.getJSCData() and jsc.setJSCData first
-					// TODO: maybe better to store the entire background as lastBackground
-					// TODO: ale asi ne, protože co když se změní background position v důsledku změny preview pos? to by vznikly situace, kdy bude jeden náhled vlevo, druhý vpravo
-					// možná po nějakém timeoutu nastavit 
-					if (jsc._latestBgImageURL) {
+				
+					if (jsc._lastBgImageURL) {
 						backgrounds.push([
-							'url(\'' + jsc._latestBgImageURL + '\')',
-							(previewPos ? previewPos : 'left') + ' top' + '/' + preview.width + 'px ' + preview.height + 'px',
-							previewPos ? 'repeat-y' : 'repeat'
+							'url(\'' + jsc._lastBgImageURL + '\')',
+							 + '/' + preview.width + 'px ' + preview.height + 'px',
+							
 						].join(' '));
 					}
 
@@ -1915,6 +2030,7 @@ var jsc = {
 						(previewPos ? previewPos : 'left') + ' top' + '/' + preview.width + 'px ' + preview.height + 'px',
 						previewPos ? 'repeat-y' : 'repeat'
 					].join(' '));
+					*/
 
 					var sty = {
 						/*
@@ -1923,15 +2039,14 @@ var jsc = {
 						'background-position': (previewPos ? previewPos : 'left') + ' top',
 						'background-size': preview.width + 'px ' + preview.height + 'px',
 						*/
-						'background': backgrounds.join(', '),
-						'padding-left': previewPos === 'left' ? (padding + 'px') : data.origStyle['padding-left'],
-						'padding-right': previewPos === 'right' ? (padding + 'px') : data.origStyle['padding-right'],
+						//'background': backgrounds.join(', '),
+						'padding-left': previewPos === 'left' ? (padding + 'px') : origStyle['padding-left'],
+						'padding-right': previewPos === 'right' ? (padding + 'px') : origStyle['padding-right'],
 					};
-
 					jsc.setStyle(this.previewElement, sty, this.forceStyle);
 
 					// TODO
-					jsc._latestBgImageURL = bgImageURL;
+					//jsc._lastBgImageURL = bgImageURL;
 
 					// TODO
 
@@ -2543,7 +2658,7 @@ var jsc = {
 
 
 		function onValueChange (ev) {
-			if (ev._data_jsc) {
+			if (jsc.getData(ev, 'internal')) {
 				return; // skip if the event was internally triggered by jscolor
 			}
 			jsc.triggerCallback(THIS, 'onChange');
@@ -2554,7 +2669,7 @@ var jsc = {
 
 
 		function onAlphaChange (ev) {
-			if (ev._data_jsc) {
+			if (jsc.getData(ev, 'internal')) {
 				return; // skip if the event was internally triggered by jscolor
 			}
 			jsc.triggerCallback(THIS, 'onChange');
@@ -2565,7 +2680,8 @@ var jsc = {
 
 
 		function onValueInput (ev) {
-			if (ev._data_jsc) {
+			if (jsc.getData(ev, 'internal')) {
+				console.log('Skipping an internal event'); // TODO
 				return; // skip if the event was internally triggered by jscolor
 			}
 			THIS.fromString(THIS.valueElement.value, jsc.flags.leaveValue);
@@ -2577,7 +2693,7 @@ var jsc = {
 
 
 		function onAlphaInput (ev) {
-			if (ev._data_jsc) {
+			if (jsc.getData(ev, 'internal')) {
 				return; // skip if the event was internally triggered by jscolor
 			}
 			THIS.fromHSVA(null, null, null, parseFloat(THIS.alphaElement.value), jsc.flags.leaveAlpha);
@@ -2718,16 +2834,14 @@ var jsc = {
 		if (this.previewElement) {
 			var compStyle = jsc.getCompStyle(this.previewElement);
 
-			this.previewElement._data_jsc = {
-				origStyle : {
-					'background-image': this.previewElement.style['background-image'],
-					'background-position': this.previewElement.style['background-position'],
-					'background-repeat': this.previewElement.style['background-repeat'],
-					'min-width': this.previewElement.style['min-width'],
-					'padding-left': this.previewElement.style['padding-left'],
-					'padding-right': this.previewElement.style['padding-right'],
-				},
-			};
+			jsc.setData(this.previewElement, 'origStyle', {
+				'background-image': this.previewElement.style['background-image'],
+				'background-position': this.previewElement.style['background-position'],
+				'background-repeat': this.previewElement.style['background-repeat'],
+				'min-width': this.previewElement.style['min-width'],
+				'padding-left': this.previewElement.style['padding-left'],
+				'padding-right': this.previewElement.style['padding-right'],
+			}};
 		}
 
 
