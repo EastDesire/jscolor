@@ -1259,7 +1259,7 @@ var jsc = {
 		leaveValue : 1 << 0,
 		leaveAlpha : 1 << 1,
 		leaveStyle : 1 << 2,
-		preloadBgImage : 1 << 3,
+		preloadBgImage : 1 << 3, // TODO: used?
 	},
 
 
