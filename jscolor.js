@@ -1873,43 +1873,48 @@ var jsc = {
 
 			// TODO: support if url is null -> remove background image
 
+			var lastBg = jsc.getData(this.previewElement, 'lastBg'); // TODO
+
 			var newBg = null;
 
 			if (url !== null) {
-				newBg = null;
+				newBg = {
 					url: url,
 					pos: pos,
 					size: size,
 					repeat: repeat,
 				};
 			}
-		
-			var lastBg = jsc.getData(this.previewElement, 'lastBg'); // TODO
 
 			var cssBackgrounds = [];
 
-			// This workaround is to prevent flickering in some browsers (e.g. FF)
-			// We will put the previous background image behind the actual background image.
-			if (
-				lastBg &&
-				lastBg.pos === newBg.pos &&
-				lastBg.size === newBg.size &&
-				lastBg.repeat === newBg.repeat
-			) {
-				// If the last background image has the same properties as the new one,
-				// we can assume the new one will fully cover it
+			if (newBg === null)
+				cssBackgrounds.push('none');
+
+			} else {
+				// This workaround is to prevent flickering in some browsers (e.g. FF)
+				// We will put the previous background image behind the actual background image.
+				if (
+					lastBg &&
+					lastBg.pos === newBg.pos &&
+					lastBg.size === newBg.size &&
+					lastBg.repeat === newBg.repeat
+				) {
+					// If the last background image has the same properties as the new one,
+					// we can assume the new one will fully cover it
+					cssBackgrounds.push([
+						'url(\'' + lastBg.url + '\')',
+						lastBg.pos + '/' + lastBg.size,
+						lastBg.repeat
+					].join(' '));
+				}
+
 				cssBackgrounds.push([
-					'url(\'' + lastBg.url + '\')',
-					lastBg.pos + '/' + lastBg.size,
-					lastBg.repeat
+					'url(\'' + newBg.url + '\')',
+					newBg.pos + '/' + newBg.size,
+					newBg.repeat
 				].join(' '));
 			}
-
-			cssBackgrounds.push([
-				'url(\'' + newBg.url + '\')',
-				newBg.pos + '/' + newBg.size,
-				newBg.repeat
-			].join(' '));
 
 			// set background image(s)
 			var sty = {
