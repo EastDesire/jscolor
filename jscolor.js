@@ -236,7 +236,6 @@ var jsc = {
 				currTimeout = null;
 			}
 
-			//currTimeout = window.setTimeout(func, milliseconds); // TODO
 			currTimeout = window.setTimeout(
 				function () {
 					console.log('applying style'); // TODO
@@ -260,8 +259,6 @@ var jsc = {
 
 		if (arguments.length === 3) {
 			// setting a single property
-			// TODO: test
-
 			var data = obj.hasOwnProperty(jsc.dataProp) ? obj[jsc.dataProp] : (obj[jsc.dataProp] = {});
 			var prop = arguments[1];
 			var value = arguments[2];
@@ -271,8 +268,6 @@ var jsc = {
 
 		} else if (arguments.length === 2 && typeof arguments[1] === 'object') {
 			// setting multiple properties
-			// TODO: test
-
 			var data = obj.hasOwnProperty(jsc.dataProp) ? obj[jsc.dataProp] : (obj[jsc.dataProp] = {});
 			var map = arguments[1];
 
@@ -288,17 +283,17 @@ var jsc = {
 	},
 
 
-	// TODO: test
 	// usage:
 	//   removeData(obj, prop, [prop...])
 	//
 	removeData : function () {
+		var obj = arguments[0];
 		if (!obj.hasOwnProperty(jsc.dataProp)) {
 			return true;
 		}
-		for (var i = 1, i < arguments.length; i += 1) {
+		for (var i = 1; i < arguments.length; i += 1) {
 			var prop = arguments[i];
-			delete obj[prop];
+			delete obj[jsc.dataProp][prop];
 		}
 		return true;
 	},
@@ -1321,7 +1316,6 @@ var jsc = {
 		leaveValue : 1 << 0,
 		leaveAlpha : 1 << 1,
 		leaveStyle : 1 << 2,
-		preloadBgImage : 1 << 3, // TODO: used?
 	},
 
 
@@ -1871,27 +1865,16 @@ var jsc = {
 
 		this.setPreviewElementBg = function (url, pos, size, repeat) {
 
-			// TODO: support if url is null -> remove background image
-
-			var lastBg = jsc.getData(this.previewElement, 'lastBg'); // TODO
-
-			var newBg = null;
-
-			if (url !== null) {
-				newBg = {
-					url: url,
-					pos: pos,
-					size: size,
-					repeat: repeat,
-				};
-			}
+			var newBg = !url ? null : {url: url, pos: pos, size: size, repeat: repeat};
 
 			var cssBackgrounds = [];
 
-			if (newBg === null)
+			if (!newBg) {
 				cssBackgrounds.push('none');
 
 			} else {
+				var lastBg = jsc.getData(this.previewElement, 'lastBg');
+
 				// This workaround is to prevent flickering in some browsers (e.g. FF)
 				// We will put the previous background image behind the actual background image.
 				if (
@@ -1909,6 +1892,7 @@ var jsc = {
 					].join(' '));
 				}
 
+				// new background image
 				cssBackgrounds.push([
 					'url(\'' + newBg.url + '\')',
 					newBg.pos + '/' + newBg.size,
@@ -1931,8 +1915,7 @@ var jsc = {
 
 			if (!this.required && str.trim() === '') {
 				// input's value is empty (or just whitespace) -> leave the value
-				this.setPreviewElementBg(null); // TODO: implement null
-				//this.previewElement.style.background = 'none'; // TODO: remove
+				this.setPreviewElementBg(null);
 				this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
 				return;
 			}
@@ -1940,8 +1923,7 @@ var jsc = {
 			if (!this.refine) {
 				if (!this.fromString(str, jsc.flags.leaveValue)) {
 					// input's value could not be parsed -> remove background
-					this.setPreviewElementBg(null); // TODO: implement null
-					//this.previewElement.style.background = 'none'; // TODO: remove
+					this.setPreviewElementBg(null);
 					this.exposeColor(jsc.flags.leaveValue | jsc.flags.leaveStyle);
 				}
 				return;
@@ -1991,7 +1973,6 @@ var jsc = {
 
 			if (!(flags & jsc.flags.leaveStyle)) {
 				if (this.previewElement) {
-					var origStyle = jsc.getData(this.previewElement, 'origStyle');
 
 					var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
 					if (
@@ -2001,19 +1982,12 @@ var jsc = {
 						previewPos = this.previewPosition;
 					}
 
-					var padding = 0;
-					if (previewPos) {
-						padding = this.previewSize + this.previewPadding;
-					}
-
 					var preview = jsc.genColorPreviewCanvas(
 						this.toRGBAString(),
 						previewPos ? {'left':'right', 'right':'left'}[previewPos] : undefined,
 						previewPos ? this.previewSize : undefined,
 						true
 					);
-
-					// TODO: test
 
 					this.setPreviewElementBg(
 						preview.canvas.toDataURL('image/png'),
@@ -2022,72 +1996,14 @@ var jsc = {
 						previewPos ? 'repeat-y' : 'repeat'
 					);
 
-					/*
-					var backgrounds = [];
-				
-					if (jsc._lastBgImageURL) {
-						backgrounds.push([
-							'url(\'' + jsc._lastBgImageURL + '\')',
-							 + '/' + preview.width + 'px ' + preview.height + 'px',
-							
-						].join(' '));
-					}
-
-					backgrounds.push([
-						//'url(\'' + preview.canvas.toDataURL('image/png') + '\')',
-						'url(\'' + bgImageURL + '\')',
-						(previewPos ? previewPos : 'left') + ' top' + '/' + preview.width + 'px ' + preview.height + 'px',
-						previewPos ? 'repeat-y' : 'repeat'
-					].join(' '));
-					*/
+					var origStyle = jsc.getData(this.previewElement, 'origStyle');
+					var padding = previewPos ? (this.previewSize + this.previewPadding) : 0;
 
 					var sty = {
-						/*
-						'background-image': 'url(\'' + preview.canvas.toDataURL('image/png') + '\')',
-						'background-repeat': previewPos ? 'repeat-y' : 'repeat',
-						'background-position': (previewPos ? previewPos : 'left') + ' top',
-						'background-size': preview.width + 'px ' + preview.height + 'px',
-						*/
-						//'background': backgrounds.join(', '),
 						'padding-left': previewPos === 'left' ? (padding + 'px') : origStyle['padding-left'],
 						'padding-right': previewPos === 'right' ? (padding + 'px') : origStyle['padding-right'],
 					};
 					jsc.setStyle(this.previewElement, sty, this.forceStyle);
-
-					// TODO
-					//jsc._lastBgImageURL = bgImageURL;
-
-					// TODO
-
-					/*
-					var helper = document.createElement('div');
-					helper.style.width = '1px';
-					helper.style.height = '1px';
-					helper.style.position ='absolute';
-					helper.style.left = '0';
-					helper.style.top = '0';
-					helper.style.visibility = 'hidden';
-					helper.style.backgroundImage = 'url(\'' + preview.canvas.toDataURL('image/png') + '\')';
-					document.body.appendChild(helper);
-					*/
-
-
-					/*
-					if (!(flags & jsc.flags.preloadBgImage)) {
-						jsc.setStyle(this.previewElement, sty, this.forceStyle);
-					} else {
-						jsc.delayed(
-							function (sty) {
-								jsc.setStyle(this.previewElement, sty, this.forceStyle);
-							},
-							10,
-							this,
-							sty
-						);
-					}
-					*/
-
-					//document.body.removeChild(helper);
 				}
 			}
 
@@ -2236,7 +2152,6 @@ var jsc = {
 					asldPtrOB : document.createElement('div'), // slider pointer outer border
 					btn : document.createElement('div'),
 					btnT : document.createElement('span'), // text
-					helper : document.createElement('div'), // TODO: used?
 				};
 
 				jsc.picker.pad.appendChild(jsc.picker.padPal.elm);
@@ -2273,7 +2188,6 @@ var jsc = {
 				jsc.picker.boxB.appendChild(jsc.picker.box);
 				jsc.picker.wrap.appendChild(jsc.picker.boxS);
 				jsc.picker.wrap.appendChild(jsc.picker.boxB);
-				jsc.picker.wrap.appendChild(jsc.picker.helper);// TODO: used?
 			}
 
 			var p = jsc.picker;
@@ -2536,15 +2450,6 @@ var jsc = {
 			p.btnT.innerHTML = '';
 			p.btnT.appendChild(document.createTextNode(THIS.closeText));
 
-			// TODO: used?
-			// helper element
-			p.helper.style.width = '1px';
-			p.helper.style.height = '1px';
-			p.helper.style.position ='absolute';
-			p.helper.style.left = '0';
-			p.helper.style.top = '0';
-			p.helper.style.visibility = 'hidden';
-
 			// reposition the pointers
 			redrawPad();
 			redrawSld();
@@ -2690,7 +2595,6 @@ var jsc = {
 
 		function onValueInput (ev) {
 			if (jsc.getData(ev, 'internal')) {
-				console.log('Skipping an internal event'); // TODO
 				return; // skip if the event was internally triggered by jscolor
 			}
 			THIS.fromString(THIS.valueElement.value, jsc.flags.leaveValue);
@@ -2841,8 +2745,6 @@ var jsc = {
 
 		// previewElement
 		if (this.previewElement) {
-			var compStyle = jsc.getCompStyle(this.previewElement);
-
 			jsc.setData(this.previewElement, 'origStyle', {
 				'background-image': this.previewElement.style['background-image'],
 				'background-position': this.previewElement.style['background-position'],
@@ -2850,7 +2752,7 @@ var jsc = {
 				'min-width': this.previewElement.style['min-width'],
 				'padding-left': this.previewElement.style['padding-left'],
 				'padding-right': this.previewElement.style['padding-right'],
-			}};
+			});
 		}
 
 
