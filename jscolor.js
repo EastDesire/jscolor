@@ -1909,7 +1909,7 @@ var jsc = {
 
 			// set background image(s)
 			var sty = {
-				'background': backgrounds.join(', '),
+				'background': cssBackgrounds.join(', '),
 			};
 			jsc.setStyle(this.previewElement, sty, this.forceStyle);
 
