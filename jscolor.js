@@ -228,6 +228,34 @@ var jsc = {
 		return null;
 	},
 
+	// TODO
+	delayed : (function () {
+		var currTimeout = null;
+
+		return function (func, milliseconds, thisObj) {
+			// collect the rest of the arguments
+			var restArgs = [];
+			for (var i = 3; i < arguments.length; i += 1) {
+				restArgs.push(arguments[i]);
+			}
+
+			// clear previous timeout
+			if (currTimeout !== null) {
+				window.clearTimeout(currTimeout);
+				currTimeout = null;
+			}
+
+			//currTimeout = window.setTimeout(func, milliseconds); // TODO
+			currTimeout = window.setTimeout(
+				function () {
+					console.log('applying style'); // TODO
+					func.apply(thisObj, restArgs);
+				},
+				milliseconds
+			);
+		};
+	})(),
+
 
 	attachEvent : function (el, evnt, func) {
 		el.addEventListener(evnt, func, false);
@@ -1231,6 +1259,7 @@ var jsc = {
 		leaveValue : 1 << 0,
 		leaveAlpha : 1 << 1,
 		leaveStyle : 1 << 2,
+		preloadBgImage : 1 << 3,
 	},
 
 
@@ -1870,7 +1899,33 @@ var jsc = {
 						'padding-left': previewPos === 'left' ? (padding + 'px') : data.origStyle['padding-left'],
 						'padding-right': previewPos === 'right' ? (padding + 'px') : data.origStyle['padding-right'],
 					};
-					jsc.setStyle(this.previewElement, sty, this.forceStyle);
+
+					// TODO
+
+					var helper = document.createElement('div');
+					helper.style.width = '1px';
+					helper.style.height = '1px';
+					helper.style.position ='absolute';
+					helper.style.left = '0';
+					helper.style.top = '0';
+					helper.style.visibility = 'hidden';
+					helper.style.backgroundImage = 'url(\'' + preview.canvas.toDataURL('image/png') + '\')';
+					document.body.appendChild(helper);
+
+					if (!(flags & jsc.flags.preloadBgImage)) {
+						jsc.setStyle(this.previewElement, sty, this.forceStyle);
+					} else {
+						jsc.delayed(
+							function (sty) {
+								jsc.setStyle(this.previewElement, sty, this.forceStyle);
+							},
+							10,
+							this,
+							sty
+						);
+					}
+
+					//document.body.removeChild(helper);
 				}
 			}
 
@@ -1987,7 +2042,7 @@ var jsc = {
 
 			if (!jsc.picker) {
 				jsc.picker = {
-					owner: null,
+					owner: null, // owner picker instance
 					wrap : document.createElement('div'),
 					box : document.createElement('div'),
 					boxS : document.createElement('div'), // shadow area
@@ -2018,7 +2073,8 @@ var jsc = {
 					asldPtrMB : document.createElement('div'), // slider pointer middle border
 					asldPtrOB : document.createElement('div'), // slider pointer outer border
 					btn : document.createElement('div'),
-					btnT : document.createElement('span') // text
+					btnT : document.createElement('span'), // text
+					helper : document.createElement('div'),
 				};
 
 				jsc.picker.pad.appendChild(jsc.picker.padPal.elm);
@@ -2055,6 +2111,7 @@ var jsc = {
 				jsc.picker.boxB.appendChild(jsc.picker.box);
 				jsc.picker.wrap.appendChild(jsc.picker.boxS);
 				jsc.picker.wrap.appendChild(jsc.picker.boxB);
+				jsc.picker.wrap.appendChild(jsc.picker.helper);
 			}
 
 			var p = jsc.picker;
@@ -2317,7 +2374,15 @@ var jsc = {
 			p.btnT.innerHTML = '';
 			p.btnT.appendChild(document.createTextNode(THIS.closeText));
 
-			// place pointers
+			// helper element
+			p.helper.style.width = '1px';
+			p.helper.style.height = '1px';
+			p.helper.style.position ='absolute';
+			p.helper.style.left = '0';
+			p.helper.style.top = '0';
+			p.helper.style.visibility = 'hidden';
+
+			// reposition the pointers
 			redrawPad();
 			redrawSld();
 			redrawASld();
@@ -2328,7 +2393,7 @@ var jsc = {
 				jsc.removeClass(jsc.picker.owner.targetElement, jsc.pub.activeClassName);
 			}
 
-			// Set the new picker owner
+			// Set a new picker owner
 			jsc.picker.owner = THIS;
 
 			// The redrawPosition() method needs picker.owner to be set, that's why we call it here,
