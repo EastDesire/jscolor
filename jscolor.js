@@ -1941,14 +1941,21 @@ var jsc = {
 
 		this.setPreviewElementBg = function (url, pos, size, repeat) {
 
+			var prevElmData = jsc.getData(this.previewElement);
+
 			var newBg = !url ? null : {url: url, pos: pos, size: size, repeat: repeat};
 
 			var cssBackgrounds = [];
 
-			if (!newBg) {
-				cssBackgrounds.push('none');
+			// first background
+			cssBackgrounds.push(
+				prevElmData.origStyle['background-color'] ||
+				prevElmData.origCompStyle['background-color'] ||
+				'none'
+			); // TODO
+			console.log(cssBackgrounds); // TODO
 
-			} else {
+			if (newBg) {
 				var lastBg = jsc.getData(this.previewElement, 'lastBg');
 
 				// This workaround is to prevent flickering in some browsers (e.g. FF)
@@ -2717,13 +2724,23 @@ var jsc = {
 
 		// previewElement
 		if (this.previewElement) {
-			jsc.setData(this.previewElement, 'origStyle', {
-				'background-image': this.previewElement.style['background-image'],
-				'background-position': this.previewElement.style['background-position'],
-				'background-repeat': this.previewElement.style['background-repeat'],
-				'min-width': this.previewElement.style['min-width'],
-				'padding-left': this.previewElement.style['padding-left'],
-				'padding-right': this.previewElement.style['padding-right'],
+			var compStyle = jsc.getCompStyle(this.previewElement);
+
+			jsc.setData(this.previewElement, {
+				origStyle: {
+					/* TODO: remove?
+					'background-image': this.previewElement.style['background-image'],
+					'background-position': this.previewElement.style['background-position'],
+					'background-repeat': this.previewElement.style['background-repeat'],
+					'min-width': this.previewElement.style['min-width'],
+					*/
+					'background-color': this.previewElement.style['background-color'], // TODO: used?
+					'padding-left': this.previewElement.style['padding-left'],
+					'padding-right': this.previewElement.style['padding-right'],
+				},
+				origCompStyle: {
+					'background-color': compStyle['background-color'], // TODO: used?
+				},
 			});
 		}
 
