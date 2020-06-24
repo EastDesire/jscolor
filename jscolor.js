@@ -1835,54 +1835,6 @@ var jsc = {
 		};
 
 
-		this.setPreviewElementBg = function (url, pos, size, repeat) {
-
-			var newBg = !url ? null : {url: url, pos: pos, size: size, repeat: repeat};
-
-			var cssBackgrounds = [];
-
-			if (!newBg) {
-				cssBackgrounds.push('none');
-
-			} else {
-				var lastBg = jsc.getData(this.previewElement, 'lastBg');
-
-				// This workaround is to prevent flickering in some browsers (e.g. FF)
-				// We will put the previous background image behind the actual background image.
-				if (
-					lastBg &&
-					lastBg.pos === newBg.pos &&
-					lastBg.size === newBg.size &&
-					lastBg.repeat === newBg.repeat
-				) {
-					// If the last background image has the same properties as the new one,
-					// we can assume the new one will fully cover it
-					cssBackgrounds.push([
-						'url(\'' + lastBg.url + '\')',
-						lastBg.pos + '/' + lastBg.size,
-						lastBg.repeat
-					].join(' '));
-				}
-
-				// new background image
-				cssBackgrounds.push([
-					'url(\'' + newBg.url + '\')',
-					newBg.pos + '/' + newBg.size,
-					newBg.repeat
-				].join(' '));
-			}
-
-			// set background image(s)
-			var sty = {
-				'background': cssBackgrounds.join(', '),
-			};
-			jsc.setStyle(this.previewElement, sty, this.forceStyle);
-
-			// last background is the new one
-			jsc.setData(this.previewElement, 'lastBg', newBg);
-		};
-
-
 		this.processValueInput = function (str) {
 
 			if (!this.required && str.trim() === '') {
@@ -1984,6 +1936,54 @@ var jsc = {
 				redrawSld();
 				redrawASld();
 			}
+		};
+
+
+		this.setPreviewElementBg = function (url, pos, size, repeat) {
+
+			var newBg = !url ? null : {url: url, pos: pos, size: size, repeat: repeat};
+
+			var cssBackgrounds = [];
+
+			if (!newBg) {
+				cssBackgrounds.push('none');
+
+			} else {
+				var lastBg = jsc.getData(this.previewElement, 'lastBg');
+
+				// This workaround is to prevent flickering in some browsers (e.g. FF)
+				// We will put the previous background image behind the actual background image.
+				if (
+					lastBg &&
+					lastBg.pos === newBg.pos &&
+					lastBg.size === newBg.size &&
+					lastBg.repeat === newBg.repeat
+				) {
+					// If the last background image has the same properties as the new one,
+					// we can assume the new one will fully cover it
+					cssBackgrounds.push([
+						'url(\'' + lastBg.url + '\')',
+						lastBg.pos + '/' + lastBg.size,
+						lastBg.repeat
+					].join(' '));
+				}
+
+				// new background image
+				cssBackgrounds.push([
+					'url(\'' + newBg.url + '\')',
+					newBg.pos + '/' + newBg.size,
+					newBg.repeat
+				].join(' '));
+			}
+
+			// set background image(s)
+			var sty = {
+				'background': cssBackgrounds.join(', '),
+			};
+			jsc.setStyle(this.previewElement, sty, this.forceStyle);
+
+			// last background is the new one
+			jsc.setData(this.previewElement, 'lastBg', newBg);
 		};
 
 
@@ -2444,7 +2444,7 @@ var jsc = {
 				jsc._drawPosition(THIS, 0, 0, 'relative', false);
 			}
 
-			if (p.wrap.parentNode != THIS.container) {
+			if (p.wrap.parentNode !== THIS.container) {
 				THIS.container.appendChild(p.wrap);
 			}
 
