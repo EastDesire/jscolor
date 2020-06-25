@@ -2004,13 +2004,14 @@ var jsc = {
 
 			if (color) {
 				// CSS gradient for background color preview
-				backgrounds.push(
+				backgrounds.push([
 					jsc.genColorPreviewGradient(
 						color,
 						position,
 						width ? width - jsc.pub.previewSeparator.length : undefined
-					)
-				);
+					),
+					'padding-box', // to prevent "shifted background" issue in Safari
+				].join(' '));
 
 				// data URL of generated PNG image with a gray transparency chessboard
 				var preview = jsc.genColorPreviewCanvas(
@@ -2023,6 +2024,7 @@ var jsc = {
 					'url(\'' + preview.canvas.toDataURL() + '\')',
 					(position || 'left') + ' top/' + preview.width + 'px ' + preview.height + 'px',
 					width ? 'repeat-y' : 'repeat',
+					'padding-box',
 				].join(' '));
 			}
 
