@@ -479,15 +479,13 @@ var jsc = {
 	},
 
 
-	setStyle : function (elm, styles, important, tryVendorPrefix) {
+	setStyle : function (elm, styles, important) {
 		// using '' for standard priority (IE10 apparently doesn't like value undefined)
 		var priority = important ? 'important' : '';
 
 		for (var p in styles) {
 			if (styles.hasOwnProperty(p)) {
-				var value = styles[p];
-				var prop = tryVendorPrefix ? getStylePropWithPrefix(p, value) : p;
-				elm.style.setProperty(prop, value, priority);
+				elm.style.setProperty(p, styles[p], priority);
 			}
 		}
 	},
