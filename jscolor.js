@@ -492,34 +492,31 @@ var jsc = {
 
 
 	linearGradient : (function () {
-		var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-']; // TODO: test
-		var stdFunc = 'linear-gradient';
-		var useFunc = null;
 
-		return function () {
-			if (!useFunc) {
-				var helper = document.createElement('div');
+		function getFuncName () {
+			var stdName = 'linear-gradient';
+			var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-']; // TODO: test
+			var helper = document.createElement('div');
 
-				for (var i = 0; i < prefixes.length; i += 1) {
-					var tryFunc = prefixes[i] + stdFunc;
-					var tryVal = tryFunc + '(to right, rgba(0,0,0,0), rgba(0,0,0,0))';
+			for (var i = 0; i < prefixes.length; i += 1) {
+				var tryFunc = prefixes[i] + stdName;
+				var tryVal = tryFunc + '(to right, rgba(0,0,0,0), rgba(0,0,0,0))';
 
-					helper.style.background = tryVal;
-					if (helper.style.background) { // CSS background successfully set -> function name is supported
-						useFunc = tryFunc;
-						break;
-					}
-				}
-
-				if (!useFunc) {
-					useFunc = stdFunc; // fallback to standard 'linear-gradient' without vendor prefix
+				helper.style.background = tryVal;
+				if (helper.style.background) { // CSS background successfully set -> function name is supported
+					return tryFunc;
 				}
 			}
+			return stdName; // fallback to standard 'linear-gradient' without vendor prefix
+		}
 
-			return useFunc + '(' + arguments.join(', ') + ')';
+		var funcName = getFuncName();
+
+		return function () {
+			return funcName + '(' + arguments.join(', ') + ')';
 		};
-	})(),
 
+	})(),
 
 
 	// TODO: test
