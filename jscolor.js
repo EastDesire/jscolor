@@ -495,7 +495,7 @@ var jsc = {
 
 		function getFuncName () {
 			var stdName = 'linear-gradient';
-			var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-']; // TODO: test
+			var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-'];
 			var helper = document.createElement('div');
 
 			for (var i = 0; i < prefixes.length; i += 1) {
@@ -513,74 +513,10 @@ var jsc = {
 		var funcName = getFuncName();
 
 		return function () {
-			return funcName + '(' + arguments.join(', ') + ')';
+			return funcName + '(' + Array.prototype.join.call(arguments, ', ') + ')';
 		};
 
 	})(),
-
-
-	// TODO: test
-	/*
-	getRealCssFuncName : (function () {
-		var cache = {};
-
-		var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-']; // TODO: test
-		var testRules = {
-			'linear-gradient': ['background', '%slinear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,0))'],
-		};
-
-		return function (funcName, testValue) {
-			if (cache[funcName]) {
-				console.log('using cache'); // TODO
-				return cache[funcName];
-			}
-
-			if (!testRules[funcName]) { // no test rules for this CSS function
-				return funcName;
-			}
-
-			var helper = document.createElement('div');
-			for (var i = 0; i < prefixes.length; i += 1) {
-				var rules = testRules[funcName];
-				var prop = rules[0];
-				var val = rules[1].replace('%s', prefixes[i]);
-
-				helper.style[prop] = val;
-				if (helper.style[prop]) {
-					return (cache[funcName] = prefixes[i] + funcName);
-				}
-			}
-			return null; // no working property name detected
-		};
-	})(),
-
-
-	// TODO
-	setStyleCompat : (function () {
-		var helper = document.createElement('div');
-		var getSupportedProp = function (names) {
-			for (var i = 0; i < names.length; i += 1) {
-				if (names[i] in helper.style) {
-					return names[i];
-				}
-			}
-		};
-		var props = {
-			borderRadius: getSupportedProp(['borderRadius', 'MozBorderRadius', 'webkitBorderRadius']),
-			boxShadow: getSupportedProp(['boxShadow', 'MozBoxShadow', 'webkitBoxShadow'])
-		};
-		return function (elm, styles, important) {
-			// using '' for standard priority (IE10 apparently doesn't like value undefined)
-			var priority = important ? 'important' : '';
-
-			for (var prop in styles) {
-				if (styles.hasOwnProperty(prop)) {
-					elm.style.setProperty(prop, styles[prop], priority);
-				}
-			}
-		}
-	})(),
-	*/
 
 
 	setBorderRadius : function (elm, value) {
@@ -870,7 +806,6 @@ var jsc = {
 
 	// if position or width is not set => fill the entire element (0%-100%)
 	genColorPreviewGradient : function (color, position, width) {
-		// TODO: also try at least -webkit-linear-gradient alternative. See https://stackoverflow.com/questions/17134929/
 		var params = [];
 
 		if (position && width) {
@@ -889,7 +824,6 @@ var jsc = {
 			];
 		}
 
-		//var grad = 'linear-gradient(' + params.join(', ') + ')'; // TODO
 		return jsc.linearGradient.apply(this, params);
 	},
 
@@ -1439,8 +1373,6 @@ var jsc = {
 	//
 
 	pub : function (targetElement, opts) {
-		// TODO
-		//console.log(jsc.getStylePropWithPrefix('linear-gradient', ''))
 
 		var THIS = this;
 
