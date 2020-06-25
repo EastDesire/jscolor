@@ -479,16 +479,71 @@ var jsc = {
 	},
 
 
-	setStyle : function (elm, styles, important) {
+	setStyle : function (elm, styles, important, tryVendorPrefix) {
 		// using '' for standard priority (IE10 apparently doesn't like value undefined)
 		var priority = important ? 'important' : '';
 
-		for (var prop in styles) {
-			if (styles.hasOwnProperty(prop)) {
-				elm.style.setProperty(prop, styles[prop], priority);
+		for (var p in styles) {
+			if (styles.hasOwnProperty(p)) {
+				var value = styles[p];
+				var prop = tryVendorPrefix ? getStylePropWithPrefix(p, value) : p;
+				elm.style.setProperty(prop, value, priority);
 			}
 		}
 	},
+
+
+	// TODO: test
+	getStylePropWithPrefix : (function () {
+		var cachedProps = {};
+		var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-']; // TODO: test
+
+		return function (prop, testValue) {
+			if (cachedProps[prop]) {
+				console.log('using cache'); // TODO
+				return cachedProps[prop];
+			}
+
+			var helper = document.createElement('div');
+			for (var i = 0; i < prefixes.length; i += 1) {
+				var propWithPfx = prefixes[i] + prop;
+
+				helper.style[propWithPfx] + prop] = testValue;
+				if (helper.style[propWithPfx]) {
+					return (cachedProps[prop] = propWithPfx);
+				}
+			}
+		};
+	})(),
+
+
+	// TODO
+	/*
+	setStyleCompat : (function () {
+		var helper = document.createElement('div');
+		var getSupportedProp = function (names) {
+			for (var i = 0; i < names.length; i += 1) {
+				if (names[i] in helper.style) {
+					return names[i];
+				}
+			}
+		};
+		var props = {
+			borderRadius: getSupportedProp(['borderRadius', 'MozBorderRadius', 'webkitBorderRadius']),
+			boxShadow: getSupportedProp(['boxShadow', 'MozBoxShadow', 'webkitBoxShadow'])
+		};
+		return function (elm, styles, important) {
+			// using '' for standard priority (IE10 apparently doesn't like value undefined)
+			var priority = important ? 'important' : '';
+
+			for (var prop in styles) {
+				if (styles.hasOwnProperty(prop)) {
+					elm.style.setProperty(prop, styles[prop], priority);
+				}
+			}
+		}
+	})(),
+	*/
 
 
 	setBorderRadius : function (elm, value) {
