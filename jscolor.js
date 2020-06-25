@@ -493,32 +493,74 @@ var jsc = {
 	},
 
 
-	// TODO: test
-	getStylePropWithPrefix : (function () {
-		var cachedProps = {};
+	linearGradient : (function () {
 		var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-']; // TODO: test
+		var stdFunc = 'linear-gradient';
+		var useFunc = null;
 
-		return function (prop, testValue) {
-			if (cachedProps[prop]) {
+		return function () {
+			if (!useFunc) {
+				var helper = document.createElement('div');
+
+				for (var i = 0; i < prefixes.length; i += 1) {
+					var tryFunc = prefixes[i] + stdFunc;
+					var tryVal = tryFunc + '(to right, rgba(0,0,0,0), rgba(0,0,0,0))';
+
+					helper.style.background = tryVal;
+					if (helper.style.background) { // CSS background successfully set -> function name is supported
+						useFunc = tryFunc;
+						break;
+					}
+				}
+
+				if (!useFunc) {
+					useFunc = stdFunc; // fallback to standard 'linear-gradient' without vendor prefix
+				}
+			}
+
+			return useFunc + '(' + arguments.join(', ') + ')';
+		};
+	})(),
+
+
+
+	// TODO: test
+	/*
+	getRealCssFuncName : (function () {
+		var cache = {};
+
+		var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-']; // TODO: test
+		var testRules = {
+			'linear-gradient': ['background', '%slinear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,0))'],
+		};
+
+		return function (funcName, testValue) {
+			if (cache[funcName]) {
 				console.log('using cache'); // TODO
-				return cachedProps[prop];
+				return cache[funcName];
+			}
+
+			if (!testRules[funcName]) { // no test rules for this CSS function
+				return funcName;
 			}
 
 			var helper = document.createElement('div');
 			for (var i = 0; i < prefixes.length; i += 1) {
-				var propWithPfx = prefixes[i] + prop;
+				var rules = testRules[funcName];
+				var prop = rules[0];
+				var val = rules[1].replace('%s', prefixes[i]);
 
-				helper.style[propWithPfx] + prop] = testValue;
-				if (helper.style[propWithPfx]) {
-					return (cachedProps[prop] = propWithPfx);
+				helper.style[prop] = val;
+				if (helper.style[prop]) {
+					return (cache[funcName] = prefixes[i] + funcName);
 				}
 			}
+			return null; // no working property name detected
 		};
 	})(),
 
 
 	// TODO
-	/*
 	setStyleCompat : (function () {
 		var helper = document.createElement('div');
 		var getSupportedProp = function (names) {
@@ -1402,6 +1444,8 @@ var jsc = {
 	//
 
 	pub : function (targetElement, opts) {
+		// TODO
+		//console.log(jsc.getStylePropWithPrefix('linear-gradient', ''))
 
 		var THIS = this;
 
