@@ -2910,8 +2910,8 @@ jsc.pub.sliderInnerSpace = 3; // px
 
 // transparency chessboard
 jsc.pub.chessboardSize = 8; // px
-jsc.pub.chessboardColor1 = '#999999';
-jsc.pub.chessboardColor2 = '#CCCCCC';
+jsc.pub.chessboardColor1 = '#666666';
+jsc.pub.chessboardColor2 = '#999999';
 
 // preview separator
 jsc.pub.previewSeparator = ['rgba(255,255,255,.65)', 'rgba(128,128,128,.65)'];
