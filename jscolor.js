@@ -889,8 +889,8 @@ var jsc = {
 			];
 		}
 
-		var grad = 'linear-gradient(' + params.join(', ') + ')';
-		return grad;
+		//var grad = 'linear-gradient(' + params.join(', ') + ')'; // TODO
+		return jsc.linearGradient.apply(this, params);
 	},
 
 
