@@ -75,10 +75,11 @@ var jsc = {
 				(elms[i].className && (m = elms[i].className.match(matchClass))) // installation using className (DEPRECATED)
 			) {
 				var targetElm = elms[i];
-				var optsStr = null;
 
+				var optsStr = '';
 				if (dataOpts !== null) {
 					optsStr = dataOpts;
+
 				} else if (m) { // installation using className (DEPRECATED)
 					console.warn('Installation using class name is DEPRECATED. Use data-jscolor="" attribute instead.');
 					if (m[4]) {
@@ -86,26 +87,32 @@ var jsc = {
 					}
 				}
 
-				var opts = {};
-				if (optsStr) {
+				var opts = null;
+				if (optsStr.trim()) {
 					try {
 						opts = jsc.parseOptionsStr(optsStr);
-					} catch(e) {
+					} catch (e) {
 						console.warn(e + '\n' + optsStr);
 					}
 				}
+				console.log(opts); // TODO
 
-				new jsc.pub(targetElm, opts);
+				try {
+					new jsc.pub(targetElm, opts);
+				} catch (e) {
+					console.warn(e);
+				}
 			}
 		}
 	},
 
 
 	parseOptionsStr : function (str) {
-		var opts = {};
+		var opts = null;
 
 		try {
 			opts = JSON.parse(str);
+
 		} catch (eParse) {
 			if (!jsc.pub.looseJSON) {
 				throw new Error('Could not parse jscolor options as JSON: ' + eParse);
@@ -113,13 +120,13 @@ var jsc = {
 				// loose JSON syntax is enabled -> try to evaluate the options string as JavaScript object
 				try {
 					opts = (new Function ('var opts = (' + str + '); return typeof opts === "object" ? opts : {};'))();
-				} catch(eEval) {
+				} catch (eEval) {
 					throw new Error('Could not evaluate jscolor options: ' + eEval);
 				}
 			}
+		} finally {
+			return opts;
 		}
-
-		return opts;
 	},
 
 
@@ -383,6 +390,9 @@ var jsc = {
 
 
 	triggerInputEvent : function (el, eventName, bubbles, cancelable) {
+		if (!el) {
+			return;
+		}
 		if (jsc.isTextInput(el)) {
 			jsc.triggerEvent(el, eventName, bubbles, cancelable);
 		}
@@ -1016,7 +1026,7 @@ var jsc = {
 	// calls function specified in picker's property
 	triggerCallback : function (thisObj, prop) {
 		if (!thisObj[prop]) {
-			return;
+			return; // callback func not specified
 		}
 		var callback = null;
 
@@ -1024,7 +1034,7 @@ var jsc = {
 			// string with code
 			try {
 				callback = new Function (thisObj[prop]);
-			} catch(e) {
+			} catch (e) {
 				console.error(e);
 			}
 		} else {
@@ -1376,7 +1386,7 @@ var jsc = {
 
 		var THIS = this;
 
-		if (opts === undefined) {
+		if (!opts) {
 			opts = {};
 		}
 
@@ -1393,13 +1403,13 @@ var jsc = {
 		// General options
 		//
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
-		this.value = null; // INITIAL color value in any supported format. To change it later, use method fromString(), fromHSVA(), fromRGBA() or channel()
-		this.alpha = null; // INITIAL alpha value. To change it later, call method channel('A', <value>)
-		this.onChange = null; // called when color changes. Value can be either a function or a string with JS code.
-		this.onInput = null; // called repeatedly as the color is being changed, e.g. while dragging a slider. Value can be either a function or a string with JS code.
-		this.valueElement = null; // element that will be used to display and input the color value
-		this.alphaElement = null; // element that will be used to display and input the alpha (opacity) value
-		this.previewElement = null; // element that will preview the picked color using CSS background
+		this.value = undefined; // INITIAL color value in any supported format. To change it later, use method fromString(), fromHSVA(), fromRGBA() or channel()
+		this.alpha = undefined; // INITIAL alpha value. To change it later, call method channel('A', <value>)
+		this.onChange = undefined; // called when color changes. Value can be either a function or a string with JS code.
+		this.onInput = undefined; // called repeatedly as the color is being changed, e.g. while dragging a slider. Value can be either a function or a string with JS code.
+		this.valueElement = undefined; // element that will be used to display and input the color value
+		this.alphaElement = undefined; // element that will be used to display and input the alpha (opacity) value
+		this.previewElement = undefined; // element that will preview the picked color using CSS background
 		this.previewPosition = 'left'; // 'left' | 'right' - position of the color preview in previewElement
 		this.previewSize = 32; // (px) width of the color preview displayed in previewElement
 		this.previewPadding = 8; // (px) space between color preview and content of the previewElement
@@ -1439,7 +1449,7 @@ var jsc = {
 		this.pointerBorderColor = '#FFFFFF'; // CSS color
 		this.pointerThickness = 2; // px
 		this.zIndex = 1000;
-		this.container = null; // where to append the color picker (BODY element by default)
+		this.container = undefined; // where to append the color picker (BODY element by default)
 
 		// Experimental
 		//
@@ -1577,7 +1587,7 @@ var jsc = {
 				return success;
 			}
 
-			throw new Error('Invalid arguments passed');
+			throw new Error('Invalid arguments');
 		}
 
 
@@ -1749,11 +1759,7 @@ var jsc = {
 
 		// DEPRECATED. Use .fromHSVA() instead
 		//
-		// h: 0-360
-		// s: 0-100
-		// v: 0-100
-		//
-		this.fromHSV = function (h, s, v, flags) { // null = don't change
+		this.fromHSV = function (h, s, v, flags) {
 			console.warn('fromHSV() method is DEPRECATED. Using fromHSVA() instead.');
 			return this.fromHSVA(h, s, v, null, flags);
 		};
@@ -1761,11 +1767,7 @@ var jsc = {
 
 		// DEPRECATED. Use .fromRGBA() instead
 		//
-		// r: 0-255
-		// g: 0-255
-		// b: 0-255
-		//
-		this.fromRGB = function (r, g, b, flags) { // null = don't change
+		this.fromRGB = function (r, g, b, flags) {
 			console.warn('fromRGB() method is DEPRECATED. Using fromRGBA() instead.');
 			return this.fromRGBA(r, g, b, null, flags);
 		};
@@ -1967,23 +1969,21 @@ var jsc = {
 				}
 			}
 
-			if (!(flags & jsc.flags.leavePreview)) {
-				if (this.previewElement) {
+			if (!(flags & jsc.flags.leavePreview) && this.previewElement) {
+				var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
 
-					var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
-					if (
-						jsc.isTextInput(this.previewElement) || // text input
-						(jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement)) // button with text
-					) {
-						previewPos = this.previewPosition;
-					}
-
-					this.setPreviewElementBg(
-						this.toRGBAString(),
-						previewPos,
-						previewPos ? this.previewSize : null
-					);
+				if (
+					jsc.isTextInput(this.previewElement) || // text input
+					(jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement)) // button with text
+				) {
+					previewPos = this.previewPosition;
 				}
+
+				this.setPreviewElementBg(
+					this.toRGBAString(),
+					previewPos,
+					previewPos ? this.previewSize : null
+				);
 			}
 
 			if (isPickerOwner()) {
@@ -1994,9 +1994,17 @@ var jsc = {
 		};
 
 
+		// TODO
+		this.setPreviewElementPadding = function (left, right) {
+		};
+
+
 		// if position is not set => generate repeatable pattern
 		//
 		this.setPreviewElementBg = function (color, position, width) {
+			if (!this.previewElement) {
+				return;
+			}
 
 			var prevElmData = jsc.getData(this.previewElement);
 
@@ -2117,7 +2125,7 @@ var jsc = {
 				}
 			}
 
-			if (THIS[option] === undefined) {
+			if (!(option in THIS)) {
 				throw new Error('Unrecognized configuration option: ' + option);
 			}
 
@@ -2141,7 +2149,7 @@ var jsc = {
 				}
 			}
 
-			if (THIS[option] === undefined) {
+			if (!(option in THIS)) {
 				throw new Error('Unrecognized configuration option: ' + option);
 			}
 
@@ -2483,11 +2491,7 @@ var jsc = {
 			p.btn.style.color = THIS.buttonColor;
 			p.btn.style.font = '12px sans-serif';
 			p.btn.style.textAlign = 'center';
-			try {
-				p.btn.style.cursor = 'pointer';
-			} catch(eOldIE) {
-				p.btn.style.cursor = 'hand';
-			}
+			p.btn.style.cursor = 'pointer';
 			p.btn.onmousedown = function () {
 				THIS.hide();
 			};
@@ -2511,7 +2515,8 @@ var jsc = {
 
 			// The redrawPosition() method needs picker.owner to be set, that's why we call it here,
 			// after setting the owner
-			if (jsc.nodeName(THIS.container) === 'body') {
+			if (THIS.container === document.body) { // TODO: test
+				console.log('using BODY element'); // TODO: remove
 				jsc.redrawPosition();
 			} else {
 				jsc._drawPosition(THIS, 0, 0, 'relative', false);
@@ -2591,18 +2596,24 @@ var jsc = {
 
 
 		function onValueBlur () {
-			THIS.processValueInput(THIS.valueElement.value);
+			if (THIS.valueElement) {
+				THIS.processValueInput(THIS.valueElement.value);
+			}
 		}
 
 
 		function onAlphaBlur () {
-			THIS.processAlphaInput(THIS.alphaElement.value);
+			if (THIS.alphaElement) {
+				THIS.processAlphaInput(THIS.alphaElement.value);
+			}
 		}
 
 
 		function onValueKeyDown (ev) {
 			if (jsc.eventKey(ev) === 'Enter') {
-				THIS.processValueInput(THIS.valueElement.value);
+				if (THIS.valueElement) {
+					THIS.processValueInput(THIS.valueElement.value);
+				}
 				THIS.hide();
 			}
 		}
@@ -2610,7 +2621,9 @@ var jsc = {
 
 		function onAlphaKeyDown (ev) {
 			if (jsc.eventKey(ev) === 'Enter') {
-				THIS.processAlphaInput(THIS.alphaElement.value);
+				if (THIS.alphaElement) {
+					THIS.processAlphaInput(THIS.alphaElement.value);
+				}
 				THIS.hide();
 			}
 		}
@@ -2642,7 +2655,11 @@ var jsc = {
 			if (jsc.getData(ev, 'internal')) {
 				return; // skip if the event was internally triggered by jscolor
 			}
-			THIS.fromString(THIS.valueElement.value, jsc.flags.leaveValue);
+
+			if (THIS.valueElement) {
+				THIS.fromString(THIS.valueElement.value, jsc.flags.leaveValue);
+			}
+
 			jsc.triggerCallback(THIS, 'onInput');
 
 			// triggering valueElement's oninput
@@ -2654,7 +2671,11 @@ var jsc = {
 			if (jsc.getData(ev, 'internal')) {
 				return; // skip if the event was internally triggered by jscolor
 			}
-			THIS.fromHSVA(null, null, null, parseFloat(THIS.alphaElement.value), jsc.flags.leaveAlpha);
+
+			if (THIS.alphaElement) {
+				THIS.fromHSVA(null, null, null, parseFloat(THIS.alphaElement.value), jsc.flags.leaveAlpha);
+			}
+
 			jsc.triggerCallback(THIS, 'onInput');
 
 			// triggering valueElement's oninput (because changing alpha changes the entire color, e.g. with rgba format)
@@ -2675,10 +2696,12 @@ var jsc = {
 			if (typeof targetElement === 'string' && /^[a-zA-Z][\w:.-]*$/.test(targetElement)) {
 				// targetElement looks like valid ID
 				var possiblyId = targetElement;
-				throw new Error('jscolor 2.2 uses CSS selectors. If \'' + possiblyId + '\' is supposed to be an ID, please use \'#' + possiblyId + '\' or any valid CSS selector.');
+				throw new Error('If \'' + possiblyId + '\' is supposed to be an ID, please use \'#' + possiblyId + '\' or any valid CSS selector.');
 			}
+
 			throw new Error('Cannot instantiate color picker without a target element');
 		}
+
 		if (this.targetElement.jscolor !== undefined) {
 			throw new Error('Color picker already installed on this element');
 		}
@@ -2693,10 +2716,15 @@ var jsc = {
 
 
 		// Determine picker's container element
-		this.container = jsc.fetchElement(this.container);
+		if (this.container === undefined) {
+			this.container = document.body; // default container is BODY element
+
+		} else { // explicitly set to custom element
+			this.container = jsc.fetchElement(this.container);
+		}
 
 		if (!this.container) {
-			this.container = document.body;
+			throw new Error('Cannot instantiate color picker without a container element');
 		}
 
 
@@ -2731,33 +2759,39 @@ var jsc = {
 		}
 
 		// Determine the value element
-		if (this.valueElement !== null) {
-			this.valueElement = jsc.fetchElement(this.valueElement);
-		} else {
-			// valueElement is null
+		if (this.valueElement === undefined) {
 			if (jsc.isTextInput(this.targetElement)) {
 				// for text inputs, default valueElement is targetElement
 				this.valueElement = this.targetElement;
 			} else {
-				// leave it null
+				// leave it undefined
 			}
+
+		} else if (this.valueElement === null) { // explicitly set to null
+			// leave it null
+
+		} else { // explicitly set to custom element
+			this.valueElement = jsc.fetchElement(this.valueElement);
 		}
 
 		// Determine the alpha element
-		if (this.alphaElement !== null) {
+		if (this.alphaElement) {
 			this.alphaElement = jsc.fetchElement(this.alphaElement);
 		}
 
 		// Determine the preview element
-		if (this.previewElement !== null) {
+		if (this.previewElement === undefined) {
+			this.previewElement = this.targetElement; // default previewElement is targetElement
+
+		} else if (this.previewElement === null) { // explicitly set to null
+			// leave it null
+
+		} else { // explicitly set to custom element
 			this.previewElement = jsc.fetchElement(this.previewElement);
-		} else {
-			// previewElement is null -> default is targetElement
-			this.previewElement = this.targetElement;
 		}
 
 		// valueElement
-		if (jsc.isTextInput(this.valueElement)) {
+		if (this.valueElement && jsc.isTextInput(this.valueElement)) {
 
 			// If the value element has oninput event already set, we need to detach it and attach AFTER our listener.
 			// otherwise the picker instance would still contain the old color when accessed from the oninput handler.
@@ -2779,7 +2813,7 @@ var jsc = {
 		}
 
 		// alphaElement
-		if (jsc.isTextInput(this.alphaElement)) {
+		if (this.alphaElement && jsc.isTextInput(this.alphaElement)) {
 			jsc.attachEvent(this.alphaElement, 'blur', onAlphaBlur);
 			jsc.attachEvent(this.alphaElement, 'keydown', onAlphaKeyDown);
 			jsc.attachEvent(this.alphaElement, 'change', onAlphaChange);
@@ -2809,11 +2843,11 @@ var jsc = {
 		//
 		var initValue = 'FFFFFF';
 
-		if (this.value !== null) {
+		if (this.value !== undefined) {
 			initValue = this.value; // get initial color from the 'value' property
 		}
 		if (this.valueElement && this.valueElement.value !== undefined) {
-			if (this.value !== null) {
+			if (this.value !== undefined) {
 				this.valueElement.value = this.value; // sync valueElement's value with the 'value' property
 			} else {
 				initValue = this.valueElement.value; // get initial color from valueElement's value
@@ -2822,13 +2856,13 @@ var jsc = {
 
 		// determine initial alpha value
 		//
-		var initAlpha = null;
+		var initAlpha = undefined;
 
-		if (this.alpha !== null) {
+		if (this.alpha !== undefined) {
 			initAlpha = (''+this.alpha); // get initial alpha value from the 'alpha' property
 		}
 		if (this.alphaElement && this.alphaElement.value !== undefined) {
-			if (this.alpha !== null) {
+			if (this.alpha !== undefined) {
 				this.alphaElement.value = (''+this.alpha); // sync alphaElement's value with the 'alpha' property
 			} else {
 				initAlpha = this.alphaElement.value; // get initial color from alphaElement's value
@@ -2857,7 +2891,7 @@ var jsc = {
 		// Note: If the initial color value contains alpha value in it (e.g. in rgba format),
 		// this will overwrite it. So we should only process alpha input if there was any initial
 		// alpha explicitly set, otherwise we could needlessly lose initial value's alpha
-		if (initAlpha !== null) {
+		if (initAlpha !== undefined) {
 			this.processAlphaInput(initAlpha);
 		}
 
