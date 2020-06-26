@@ -2034,54 +2034,6 @@ var jsc = {
 		};
 
 
-		/*
-		// TODO
-		this.setPreviewElementPadding = function (left, right) {
-			var elm = this.previewElement;
-
-			// TODO
-			if ('no origPadding in data') {
-				// TODO: store element's orig padding to data using this.getPreviewElementOrigPadding
-			}
-
-			// TODO: get element's orig paddings from data
-			// TODO set previewElement's padding to calc(<orig_val>, (<number>px + 0 - 0))
-
-
-			// TODO: this way, it si probably not necessary to store element's original padding in the constructor
-		};
-
-
-		// TODO
-		this.getPreviewElementOrigPadding = function () {
-			var elm = this.previewElement;
-
-			var fallback = '8px';
-			var vals = {
-				left: '',
-				right: '',
-			};
-
-			for (var side in vals) {
-				if (vals.hasOwnProperty(side)) {
-					if ('elms padding-<side> is empty padding') {
-						// TODO: use the value
-
-					} else if ('elms padding-<side> is a simple int or float with optional unit') {
-						// TODO: use the value
-					} else if ('elms padding-<side> is in format calc(<simple_val>, (<number>px + 0 - 0))') {
-						// TODO: use the <simple_val> value
-					} else {
-						// use fallback
-					}
-				}
-			}
-
-			return vals;
-		};
-		*/
-
-
 		this.setPreviewElementBg = function (color) {
 			if (!this.previewElement) {
 				return;
