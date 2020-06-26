@@ -488,13 +488,28 @@ var jsc = {
 	},
 
 
-	setStyle : function (elm, styles, important) {
+	// if 'reversible' is true, setting a property to null will revert it to its original state
+	setStyle : function (elm, styles, important, reversible) {
 		// using '' for standard priority (IE10 apparently doesn't like value undefined)
 		var priority = important ? 'important' : '';
+		var origStyle = null;
 
 		for (var p in styles) {
 			if (styles.hasOwnProperty(p)) {
-				elm.style.setProperty(p, styles[p], priority);
+				var val;
+
+				if (!reversible) {
+					val = styles[p];
+				} else {
+					if (!origStyle) {
+						if (!jsc.getData(elm, 'origStyle')) {
+							jsc.setData(elm, 'origStyle', {})
+						}
+						origStyle = jsc.getData(elm, 'origStyle');
+					}
+				}
+
+				elm.style.setProperty(p, val, priority);
 			}
 		}
 	},
