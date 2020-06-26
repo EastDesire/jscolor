@@ -2964,6 +2964,7 @@ var jsc = {
 			this.alphaElement.setAttribute('autocomplete', 'off');
 		}
 
+		/*
 		// previewElement
 		if (this.previewElement) {
 			// TODO: remove?
@@ -2974,6 +2975,7 @@ var jsc = {
 				},
 			});
 		}
+		*/
 
 
 		// determine initial color value
