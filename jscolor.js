@@ -2070,8 +2070,8 @@ var jsc = {
 					),
 					position: 'left top',
 					size: 'auto',
-					repeat: 'no-repeat',
-					origin: 'padding-box', // to prevent "shifted background" issue in Safari
+					repeat: position ? 'repeat-y' : 'repeat',
+					origin: 'padding-box',
 				});
 
 				// data URL of generated PNG image with a gray transparency chessboard
@@ -2086,7 +2086,7 @@ var jsc = {
 					position: (position || 'left') + ' top',
 					size: preview.width + 'px ' + preview.height + 'px',
 					repeat: position ? 'repeat-y' : 'repeat',
-					origin: 'padding-box', // to prevent "shifted background" issue in Safari
+					origin: 'padding-box',
 				});
 			}
 
