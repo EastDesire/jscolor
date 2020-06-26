@@ -46,11 +46,13 @@ Documentation can be found at https://jscolor.com/docs/
 
 
 ## Website
+
 For more info on jscolor project, see [jscolor website](http://jscolor.com)
 
 
 
 ## Pull requests
 
-Please do not submit any pull requests (see CONTRIBUTING.md)
-Sorry for any inconvenience caused.
+I am unfortunately unable to merge any pull requests at the moment.
+
+Apologies to all contributors who already have submitted their pull requests.
