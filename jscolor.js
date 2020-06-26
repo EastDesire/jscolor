@@ -2074,8 +2074,8 @@ var jsc = {
 				return;
 			}
 
-			var position = null; // null | 'left' | 'right'
-			var width = null; // px | null = fill the entire element
+			var position = null; // color preview position:  null | 'left' | 'right'
+			var width = null; // color preview width:  px | null = fill the entire element
 			if (
 				jsc.isTextInput(this.previewElement) || // text input
 				(jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement)) // button with text
@@ -2125,15 +2125,6 @@ var jsc = {
 				});
 			}
 
-			/* TODO: remove
-			// original background color
-			backgrounds.push(
-				prevElmData.origStyle['background-color'] ||
-				prevElmData.origCompStyle['background-color'] ||
-				'none'
-			);
-			*/
-
 			var bg = {
 				image: [],
 				position: [],
@@ -2173,14 +2164,6 @@ var jsc = {
 				'background-origin': bg.origin.join(', '),
 			};
 			jsc.setStyle(this.previewElement, sty, this.forceStyle);
-
-			/* TODO
-			var sty = {
-				'padding-left': padding.left,
-				'padding-right': padding.right,
-			};
-			jsc.setStyle(this.previewElement, sty, this.forceStyle);
-			*/
 		};
 
 
@@ -3010,19 +2993,12 @@ var jsc = {
 
 		// previewElement
 		if (this.previewElement) {
-			var compStyle = jsc.getCompStyle(this.previewElement);
-
+			// TODO: remove?
 			jsc.setData(this.previewElement, {
 				origStyle: {
-					//'background-color': this.previewElement.style['background-color'], // TODO
 					'padding-left': this.previewElement.style['padding-left'],
 					'padding-right': this.previewElement.style['padding-right'],
 				},
-				/* TODO
-				origCompStyle: {
-					'background-color': compStyle['background-color'],
-				},
-				*/
 			});
 		}
 
