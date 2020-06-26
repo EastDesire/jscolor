@@ -488,6 +488,7 @@ var jsc = {
 	},
 
 
+	/*
 	// TODO: will the reversible flag be used?
 	// TODO: if 'reversible' flag is true, null value for property will mean the original value
 	setStyle : function (elm, styles, important, reversible) {
@@ -516,6 +517,7 @@ var jsc = {
 			}
 		}
 	},
+	*/
 
 
 	linearGradient : (function () {
@@ -2011,6 +2013,7 @@ var jsc = {
 		};
 
 
+		/*
 		// TODO
 		this.setPreviewElementPadding = function (left, right) {
 			var elm = this.previewElement;
@@ -2055,6 +2058,7 @@ var jsc = {
 
 			return vals;
 		};
+		*/
 
 
 		// if position is not set => generate repeatable pattern
