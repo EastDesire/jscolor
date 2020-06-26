@@ -60,7 +60,7 @@ var jsc = {
 
 		for (var i = 0; i < elms.length; i += 1) {
 
-			if (elms[i].jscolor !== undefined) {
+			if (elms[i].jscolor && elms[i].jscolor instanceof jsc.pub) {
 				continue; // jscolor already installed on this element
 			}
 
@@ -95,7 +95,6 @@ var jsc = {
 						console.warn(e + '\n' + optsStr);
 					}
 				}
-				console.log(opts); // TODO
 
 				try {
 					new jsc.pub(targetElm, opts);
@@ -969,7 +968,7 @@ var jsc = {
 	onDocumentMouseDown : function (e) {
 		var target = e.target || e.srcElement;
 
-		if (target.jscolor) {
+		if (target.jscolor && target.jscolor instanceof jsc.pub) {
 			if (target.jscolor.showOnClick) {
 				target.jscolor.show();
 			}
@@ -987,7 +986,7 @@ var jsc = {
 	onDocumentTouchStart : function (e) {
 		var target = e.target || e.srcElement;
 
-		if (target.jscolor) {
+		if (target.jscolor && target.jscolor instanceof jsc.pub) {
 			if (target.jscolor.showOnClick) {
 				target.jscolor.show();
 			}
@@ -2515,8 +2514,7 @@ var jsc = {
 
 			// The redrawPosition() method needs picker.owner to be set, that's why we call it here,
 			// after setting the owner
-			if (THIS.container === document.body) { // TODO: test
-				console.log('using BODY element'); // TODO: remove
+			if (THIS.container === document.body) {
 				jsc.redrawPosition();
 			} else {
 				jsc._drawPosition(THIS, 0, 0, 'relative', false);
@@ -2688,6 +2686,19 @@ var jsc = {
 		//
 
 
+		// Determine picker's container element
+		if (this.container === undefined) {
+			this.container = document.body; // default container is BODY element
+
+		} else { // explicitly set to custom element
+			this.container = jsc.fetchElement(this.container);
+		}
+
+		if (!this.container) {
+			throw new Error('Cannot instantiate color picker without a container element');
+		}
+
+
 		// Fetch the target element
 		this.targetElement = jsc.fetchElement(targetElement);
 
@@ -2702,7 +2713,7 @@ var jsc = {
 			throw new Error('Cannot instantiate color picker without a target element');
 		}
 
-		if (this.targetElement.jscolor !== undefined) {
+		if (this.targetElement.jscolor && this.targetElement.jscolor instanceof jsc.pub) {
 			throw new Error('Color picker already installed on this element');
 		}
 
@@ -2713,19 +2724,6 @@ var jsc = {
 
 		// register this instance
 		jsc.instances.push(this);
-
-
-		// Determine picker's container element
-		if (this.container === undefined) {
-			this.container = document.body; // default container is BODY element
-
-		} else { // explicitly set to custom element
-			this.container = jsc.fetchElement(this.container);
-		}
-
-		if (!this.container) {
-			throw new Error('Cannot instantiate color picker without a container element');
-		}
 
 
 		// if target is BUTTON
