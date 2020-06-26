@@ -267,7 +267,7 @@ var jsc = {
 	removeData : function () {
 		var obj = arguments[0];
 		if (!obj.hasOwnProperty(jsc.dataProp)) {
-			return true;
+			return true; // data object does not exist
 		}
 		for (var i = 1; i < arguments.length; i += 1) {
 			var prop = arguments[i];
@@ -277,13 +277,21 @@ var jsc = {
 	},
 
 
-	// if prop is not specified, a hashmap will be returned containing all data
-	getData : function (obj, prop) {
-		var data = obj.hasOwnProperty(jsc.dataProp) ? obj[jsc.dataProp] : {};
-		if (prop !== undefined) {
-			return data[prop];
+	getData : function (obj, prop, setDefault) {
+		if (!obj.hasOwnProperty(jsc.dataProp)) {
+			// data object does not exist
+			if (setDefault !== undefined) {
+				obj[jsc.dataProp] = {}; // create data object
+			} else {
+				return undefined; // no value to return
+			}
 		}
-		return data;
+		var data = obj[jsc.dataProp];
+
+		if (!data.hasOwnProperty(prop) && setDefault !== undefined) {
+			data[prop] = setDefault;
+		}
+		return data[prop];
 	},
 
 
@@ -488,63 +496,55 @@ var jsc = {
 	},
 
 
-	// if 'reversible' is true, setting a property to null will revert it to its original state
+	// Note:
+	//   Setting a property to NULL reverts it to the state before it was first set
+	//   with the 'reversible' flag enabled
+	//
 	setStyle : function (elm, styles, important, reversible) {
 		// using '' for standard priority (IE10 apparently doesn't like value undefined)
 		var priority = important ? 'important' : '';
 		var origStyle = null;
 
-		for (var p in styles) {
-			if (styles.hasOwnProperty(p)) {
-				var val;
+		for (var prop in styles) {
+			if (styles.hasOwnProperty(prop)) {
+				var setVal = null;
 
-				if (!reversible) {
-					val = styles[p];
-				} else {
+				if (styles[prop] === null) {
+					// reverting a property value
+
 					if (!origStyle) {
-						if (!jsc.getData(elm, 'origStyle')) {
-							jsc.setData(elm, 'origStyle', {})
-						}
+						// get the original style object, but dont't try to create it if it doesn't exist
 						origStyle = jsc.getData(elm, 'origStyle');
 					}
-				}
-
-				elm.style.setProperty(p, val, priority);
-			}
-		}
-	},
-
-
-	/*
-	// TODO: will the reversible flag be used?
-	// TODO: if 'reversible' flag is true, null value for property will mean the original value
-	setStyle : function (elm, styles, important, reversible) {
-		// using '' for standard priority (IE10 apparently doesn't like value undefined)
-		var priority = important ? 'important' : '';
-
-		if (reversible && 'elm has no origStyle data') { // TODO
-			// TODO: create origStyle data on elm
-		}
-
-		for (var p in styles) {
-			if (styles.hasOwnProperty(p)) {
-				var val;
-
-				if (!reversible) {
-					val = styles[p];
-				} else {
-					// reversible
-					if ('prop is not in origStyle data') { // TODO
-						// TODO: store element's style[prop] in origStyle data
+					if (origStyle && origStyle.hasOwnProperty(prop)) {
+						// we have property's original value -> use it
+						console.log('RESTORING original property value: %s = %s', prop, origStyle[prop]); // TODO
+						setVal = origStyle[prop];
 					}
-					val = styles[p] !== null ? styles[p] : 'use prop from origStyle'; // TODO
+
+				} else {
+					// setting a property value
+
+					if (reversible) {
+						if (!origStyle) {
+							// get the original style object and if it doesn't exist, create it
+							origStyle = jsc.getData(elm, 'origStyle', {});
+						}
+						if (!origStyle.hasOwnProperty(prop)) {
+							// original property value not yet stored -> store it
+							console.log('storing original property value: %s = %s', prop, elm.style[prop]); // TODO
+							origStyle[prop] = elm.style[prop];
+						}
+					}
+					setVal = styles[prop];
 				}
 
-				elm.style.setProperty(p, val, priority);
+				if (setVal !== null) {
+					elm.style.setProperty(prop, setVal, priority);
+				}
 			}
 		}
 	},
-	*/
 
 
 	linearGradient : (function () {
@@ -2158,6 +2158,7 @@ var jsc = {
 			// left/right padding to make space for color preview, if displayed
 			//
 			// TODO: use reversible parameter of setStyle
+			/*
 			var origStyle = jsc.getData(this.previewElement, 'origStyle');
 			var padding = {
 				left: origStyle['padding-left'],
@@ -2167,11 +2168,13 @@ var jsc = {
 			if (position) {
 				padding[position] = (this.previewSize + this.previewPadding) + 'px';
 			}
+			*/
 
 			// set previewElement's style
 			var sty = {
-				'padding-left': padding.left,
-				'padding-right': padding.right,
+				// TODO
+				//'padding-left': padding.left,
+				//'padding-right': padding.right,
 				'background-image': bg.image.join(', '),
 				'background-position': bg.position.join(', '),
 				'background-size': bg.size.join(', '),
@@ -2179,6 +2182,32 @@ var jsc = {
 				'background-origin': bg.origin.join(', '),
 			};
 			jsc.setStyle(this.previewElement, sty, this.forceStyle);
+
+
+
+			/*
+			var origStyle = jsc.getData(this.previewElement, 'origStyle');
+			var padding = {
+				left: origStyle['padding-left'],
+				right: origStyle['padding-right'],
+			};
+			*/
+
+			var padding = {
+				left: null,
+				right: null,
+			};
+
+			if (position) {
+				padding[position] = (this.previewSize + this.previewPadding) + 'px';
+			}
+
+			// TODO
+			var sty = {
+				'padding-left': padding.left,
+				'padding-right': padding.right,
+			};
+			jsc.setStyle(this.previewElement, sty, this.forceStyle, true);
 		};
 
 
