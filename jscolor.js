@@ -518,7 +518,6 @@ var jsc = {
 					}
 					if (origStyle && origStyle.hasOwnProperty(prop)) {
 						// we have property's original value -> use it
-						console.log('RESTORING original property value: %s = %s', prop, origStyle[prop]); // TODO
 						setVal = origStyle[prop];
 					}
 
@@ -532,7 +531,6 @@ var jsc = {
 						}
 						if (!origStyle.hasOwnProperty(prop)) {
 							// original property value not yet stored -> store it
-							console.log('storing original property value: %s = %s', prop, elm.style[prop]); // TODO
 							origStyle[prop] = elm.style[prop];
 						}
 					}
@@ -2155,26 +2153,8 @@ var jsc = {
 				bg.origin.push(backgrounds[i].origin);
 			}
 
-			// left/right padding to make space for color preview, if displayed
-			//
-			// TODO: use reversible parameter of setStyle
-			/*
-			var origStyle = jsc.getData(this.previewElement, 'origStyle');
-			var padding = {
-				left: origStyle['padding-left'],
-				right: origStyle['padding-right'],
-			};
-
-			if (position) {
-				padding[position] = (this.previewSize + this.previewPadding) + 'px';
-			}
-			*/
-
-			// set previewElement's style
+			// set previewElement's background-images
 			var sty = {
-				// TODO
-				//'padding-left': padding.left,
-				//'padding-right': padding.right,
 				'background-image': bg.image.join(', '),
 				'background-position': bg.position.join(', '),
 				'background-size': bg.size.join(', '),
@@ -2184,25 +2164,15 @@ var jsc = {
 			jsc.setStyle(this.previewElement, sty, this.forceStyle);
 
 
-
-			/*
-			var origStyle = jsc.getData(this.previewElement, 'origStyle');
-			var padding = {
-				left: origStyle['padding-left'],
-				right: origStyle['padding-right'],
-			};
-			*/
-
+			// set/restore previewElement's padding
 			var padding = {
 				left: null,
 				right: null,
 			};
-
 			if (position) {
 				padding[position] = (this.previewSize + this.previewPadding) + 'px';
 			}
 
-			// TODO
 			var sty = {
 				'padding-left': padding.left,
 				'padding-right': padding.right,
@@ -2963,20 +2933,6 @@ var jsc = {
 
 			this.alphaElement.setAttribute('autocomplete', 'off');
 		}
-
-		/*
-		// previewElement
-		if (this.previewElement) {
-			// TODO: remove?
-			jsc.setData(this.previewElement, {
-				origStyle: {
-					'padding-left': this.previewElement.style['padding-left'],
-					'padding-right': this.previewElement.style['padding-right'],
-				},
-			});
-		}
-		*/
-
 
 		// determine initial color value
 		//
