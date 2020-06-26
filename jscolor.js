@@ -488,6 +488,18 @@ var jsc = {
 	},
 
 
+	setStyle : function (elm, styles, important) {
+		// using '' for standard priority (IE10 apparently doesn't like value undefined)
+		var priority = important ? 'important' : '';
+
+		for (var p in styles) {
+			if (styles.hasOwnProperty(p)) {
+				elm.style.setProperty(p, styles[p], priority);
+			}
+		}
+	},
+
+
 	/*
 	// TODO: will the reversible flag be used?
 	// TODO: if 'reversible' flag is true, null value for property will mean the original value
@@ -774,7 +786,7 @@ var jsc = {
 		var sqColor1 = jsc.pub.chessboardColor1;
 		var sqColor2 = jsc.pub.chessboardColor2;
 
-		var cWidth = specWidth !== undefined ? specWidth : sqSize * 2;
+		var cWidth = specWidth ? specWidth : sqSize * 2;
 		var cHeight = sqSize * 2;
 
 		var canvas = document.createElement('canvas');
@@ -1998,11 +2010,7 @@ var jsc = {
 					previewPos = this.previewPosition;
 				}
 
-				this.setPreviewElementBg(
-					this.toRGBAString(),
-					previewPos,
-					previewPos ? this.previewSize : null
-				);
+				this.setPreviewElementBg(this.toRGBAString());
 			}
 
 			if (isPickerOwner()) {
@@ -2061,6 +2069,122 @@ var jsc = {
 		*/
 
 
+		this.setPreviewElementBg = function (color) {
+			if (!this.previewElement) {
+				return;
+			}
+
+			var position = null; // null | 'left' | 'right'
+			var width = null; // px | null = fill the entire element
+			if (
+				jsc.isTextInput(this.previewElement) || // text input
+				(jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement)) // button with text
+			) {
+				position = this.previewPosition;
+				width = this.previewSize;
+			}
+
+			var backgrounds = [];
+
+			if (!color) {
+				// there is no color preview to display -> let's remove any previous background image
+				backgrounds.push({
+					image: 'none',
+					position: 'left top',
+					size: 'auto',
+					repeat: 'no-repeat',
+					origin: 'padding-box',
+				});
+			} else {
+				// CSS gradient for background color preview
+				backgrounds.push({
+					image: jsc.genColorPreviewGradient(
+						color,
+						position,
+						width ? width - jsc.pub.previewSeparator.length : null
+					),
+					position: 'left top',
+					size: 'auto',
+					repeat: 'no-repeat',
+					origin: 'padding-box', // to prevent "shifted background" issue in Safari
+				});
+
+				// data URL of generated PNG image with a gray transparency chessboard
+				var preview = jsc.genColorPreviewCanvas(
+					'rgba(0,0,0,0)',
+					position ? {'left':'right', 'right':'left'}[position] : null,
+					width,
+					true
+				);
+				backgrounds.push({
+					image: 'url(\'' + preview.canvas.toDataURL() + '\')',
+					position: (position || 'left') + ' top',
+					size: preview.width + 'px ' + preview.height + 'px',
+					repeat: position ? 'repeat-y' : 'repeat',
+					origin: 'padding-box', // to prevent "shifted background" issue in Safari
+				});
+			}
+
+			/* TODO: remove
+			// original background color
+			backgrounds.push(
+				prevElmData.origStyle['background-color'] ||
+				prevElmData.origCompStyle['background-color'] ||
+				'none'
+			);
+			*/
+
+			var bg = {
+				image: [],
+				position: [],
+				size: [],
+				repeat: [],
+				origin: [],
+			};
+			for (var i = 0; i < backgrounds.length; i += 1) {
+				bg.image.push(backgrounds[i].image);
+				bg.position.push(backgrounds[i].position);
+				bg.size.push(backgrounds[i].size);
+				bg.repeat.push(backgrounds[i].repeat);
+				bg.origin.push(backgrounds[i].origin);
+			}
+
+			// left/right padding to make space for color preview, if displayed
+			//
+			// TODO: use reversible parameter of setStyle
+			var origStyle = jsc.getData(this.previewElement, 'origStyle');
+			var padding = {
+				left: origStyle['padding-left'],
+				right: origStyle['padding-right'],
+			};
+
+			if (position) {
+				padding[position] = (this.previewSize + this.previewPadding) + 'px';
+			}
+
+			// set previewElement's style
+			var sty = {
+				'padding-left': padding.left,
+				'padding-right': padding.right,
+				'background-image': bg.image.join(', '),
+				'background-position': bg.position.join(', '),
+				'background-size': bg.size.join(', '),
+				'background-repeat': bg.repeat.join(', '),
+				'background-origin': bg.origin.join(', '),
+			};
+			jsc.setStyle(this.previewElement, sty, this.forceStyle);
+
+			/* TODO
+			var sty = {
+				'padding-left': padding.left,
+				'padding-right': padding.right,
+			};
+			jsc.setStyle(this.previewElement, sty, this.forceStyle);
+			*/
+		};
+
+
+		/* TODO
 		// if position is not set => generate repeatable pattern
 		//
 		this.setPreviewElementBg = function (color, position, width) {
@@ -2128,6 +2252,7 @@ var jsc = {
 			};
 			jsc.setStyle(this.previewElement, sty, this.forceStyle);
 		};
+		*/
 
 
 		this._processParentElementsInDOM = function () {
@@ -2889,13 +3014,15 @@ var jsc = {
 
 			jsc.setData(this.previewElement, {
 				origStyle: {
-					'background-color': this.previewElement.style['background-color'],
+					//'background-color': this.previewElement.style['background-color'], // TODO
 					'padding-left': this.previewElement.style['padding-left'],
 					'padding-right': this.previewElement.style['padding-right'],
 				},
+				/* TODO
 				origCompStyle: {
 					'background-color': compStyle['background-color'],
 				},
+				*/
 			});
 		}
 
