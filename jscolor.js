@@ -20,8 +20,15 @@ window.jscolor = (function () { // BEGIN window.jscolor
 var jsc = {
 
 
+	initialized : false,
+
+	instances : [], // created instances of jscolor
+
+	triggerQueue : [], // events waiting to be triggered after init
+
+
 	register : function () {
-		jsc.attachDOMReadyEvent(jsc.jscolor.init);
+		jsc.attachDOMReadyEvent(jsc.init);
 		jsc.attachEvent(document, 'mousedown', jsc.onDocumentMouseDown);
 		jsc.attachEvent(document, 'touchstart', jsc.onDocumentTouchStart);
 		jsc.attachEvent(document, 'keyup', jsc.onDocumentKeyUp);
@@ -29,48 +36,180 @@ var jsc = {
 	},
 
 
-	tryInstallOnElements : function (elms, className) {
-		var matchClass = new RegExp('(^|\\s)(' + className + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
+	init : function () {
+		if (jsc.initialized) {
+			return;
+		}
+
+		jsc.pub.install();
+		jsc.initialized = true;
+
+		// trigger events waiting in the queue
+		while (jsc.triggerQueue.length) {
+			var ev = jsc.triggerQueue.shift();
+			jsc.triggerGlobal(ev);
+		}
+	},
+
+
+	installBySelector : function (selector) {
+		var elms = document.querySelectorAll(selector);
+
+		// for backward compatibility with DEPRECATED installation/configuration using className
+		var matchClass = new RegExp('(^|\\s)(' + jsc.pub.lookupClass + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
 
 		for (var i = 0; i < elms.length; i += 1) {
-			if (elms[i].type !== undefined && elms[i].type.toLowerCase() == 'color') {
-				if (jsc.isColorAttrSupported) {
-					// skip inputs of type 'color' if supported by the browser
-					continue;
-				}
+
+			if (elms[i].jscolor && elms[i].jscolor instanceof jsc.pub) {
+				continue; // jscolor already installed on this element
 			}
 
-			if (elms[i].jscolor) {
-				// jscolor is already installed on this element
-				continue;
+			if (elms[i].type !== undefined && elms[i].type.toLowerCase() == 'color' && jsc.isColorAttrSupported) {
+				continue; // skips inputs of type 'color' if supported by the browser
 			}
 
-			var m, dataOpts;
+			var dataOpts, m;
 
 			if (
 				(dataOpts = jsc.getDataAttr(elms[i], 'jscolor')) !== null ||
-				(elms[i].className && (m = elms[i].className.match(matchClass)))
+				(elms[i].className && (m = elms[i].className.match(matchClass))) // installation using className (DEPRECATED)
 			) {
 				var targetElm = elms[i];
-				var optsStr = null;
 
+				var optsStr = '';
 				if (dataOpts !== null) {
 					optsStr = dataOpts;
-				} else if (m && m[4]) {
-					optsStr = m[4];
-				}
 
-				var opts = {};
-				if (optsStr) {
-					try {
-						opts = (new Function ('return (' + optsStr + ')'))();
-					} catch(eParseError) {
-						jsc.warn('Error parsing jscolor options: ' + eParseError + ':\n' + optsStr);
+				} else if (m) { // installation using className (DEPRECATED)
+					console.warn('Installation using class name is DEPRECATED. Use data-jscolor="" attribute instead.');
+					if (m[4]) {
+						optsStr = m[4];
 					}
 				}
-				targetElm.jscolor = new jsc.jscolor(targetElm, opts);
+
+				var opts = null;
+				if (optsStr.trim()) {
+					try {
+						opts = jsc.parseOptionsStr(optsStr);
+					} catch (e) {
+						console.warn(e + '\n' + optsStr);
+					}
+				}
+
+				try {
+					new jsc.pub(targetElm, opts);
+				} catch (e) {
+					console.warn(e);
+				}
 			}
 		}
+	},
+
+
+	parseOptionsStr : function (str) {
+		var opts = null;
+
+		try {
+			opts = JSON.parse(str);
+
+		} catch (eParse) {
+			if (!jsc.pub.looseJSON) {
+				throw new Error('Could not parse jscolor options as JSON: ' + eParse);
+			} else {
+				// loose JSON syntax is enabled -> try to evaluate the options string as JavaScript object
+				try {
+					opts = (new Function ('var opts = (' + str + '); return typeof opts === "object" ? opts : {};'))();
+				} catch (eEval) {
+					throw new Error('Could not evaluate jscolor options: ' + eEval);
+				}
+			}
+		} finally {
+			return opts;
+		}
+	},
+
+
+	getInstances : function () {
+		var inst = [];
+		for (var i = 0; i < jsc.instances.length; i += 1) {
+			// if the targetElement still exists, the instance is considered "alive"
+			if (jsc.instances[i] && jsc.instances[i].targetElement) {
+				inst.push(jsc.instances[i]);
+			}
+		}
+		return inst;
+	},
+
+
+	fetchElement : function (elementOrSelector) {
+		if (!elementOrSelector) {
+			return null;
+		}
+
+		if (typeof elementOrSelector === 'string') {
+			// query selector
+			var sel = elementOrSelector;
+			var el = null;
+			try {
+				el = document.querySelector(sel);
+			} catch (e) {
+				console.warn(e);
+				return null;
+			}
+			if (!el) {
+				console.warn('No element matches the selector: %s', sel);
+			}
+			return el;
+		}
+
+		if (typeof elementOrSelector === 'object' && elementOrSelector instanceof HTMLElement) {
+			// HTML element
+			return elementOrSelector;
+		}
+
+		console.warn('Invalid element of type %s: %s', typeof elementOrSelector, elementOrSelector);
+		return null;
+	},
+
+
+	nodeName : function (node) {
+		if (node && node.nodeName) {
+			return node.nodeName.toLowerCase();
+		}
+		return false;
+	},
+
+
+	removeChildren : function (node) {
+		while (node.firstChild) {
+			node.removeChild(node.firstChild);
+		}
+	},
+
+
+	isTextInput : function (el) {
+		return el && jsc.nodeName(el) === 'input' && el.type.toLowerCase() === 'text';
+	},
+
+
+	isButton : function (el) {
+		if (!el) {
+			return false;
+		}
+		var n = jsc.nodeName(el);
+		return (
+			(n === 'button') ||
+			(n === 'input' && ['button', 'submit', 'reset'].indexOf(el.type.toLowerCase()) > -1)
+		);
+	},
+
+
+	isButtonEmpty : function (el) {
+		switch (jsc.nodeName(el)) {
+			case 'input': return (!el.value || el.value.trim() === '');
+			case 'button': return (el.textContent.trim() === '');
+		}
+		return null; // could not determine element's text
 	},
 
 
@@ -86,47 +225,90 @@ var jsc = {
 	})(),
 
 
-	isCanvasSupported : (function () {
-		var elm = document.createElement('canvas');
-		return !!(elm.getContext && elm.getContext('2d'));
-	})(),
+	dataProp : '_data_jscolor',
 
 
-	fetchElement : function (mixed) {
-		return typeof mixed === 'string' ? document.getElementById(mixed) : mixed;
+	// usage:
+	//   setData(obj, prop, value)
+	//   setData(obj, {prop:value, ...})
+	//
+	setData : function () {
+		var obj = arguments[0];
+
+		if (arguments.length === 3) {
+			// setting a single property
+			var data = obj.hasOwnProperty(jsc.dataProp) ? obj[jsc.dataProp] : (obj[jsc.dataProp] = {});
+			var prop = arguments[1];
+			var value = arguments[2];
+
+			data[prop] = value;
+			return true;
+
+		} else if (arguments.length === 2 && typeof arguments[1] === 'object') {
+			// setting multiple properties
+			var data = obj.hasOwnProperty(jsc.dataProp) ? obj[jsc.dataProp] : (obj[jsc.dataProp] = {});
+			var map = arguments[1];
+
+			for (var prop in map) {
+				if (map.hasOwnProperty(prop)) {
+					data[prop] = map[prop];
+				}
+			}
+			return true;
+		}
+
+		throw new Error('Invalid arguments');
 	},
 
 
-	isElementType : function (elm, type) {
-		return elm.nodeName.toLowerCase() === type.toLowerCase();
+	// usage:
+	//   removeData(obj, prop, [prop...])
+	//
+	removeData : function () {
+		var obj = arguments[0];
+		if (!obj.hasOwnProperty(jsc.dataProp)) {
+			return true; // data object does not exist
+		}
+		for (var i = 1; i < arguments.length; i += 1) {
+			var prop = arguments[i];
+			delete obj[jsc.dataProp][prop];
+		}
+		return true;
+	},
+
+
+	getData : function (obj, prop, setDefault) {
+		if (!obj.hasOwnProperty(jsc.dataProp)) {
+			// data object does not exist
+			if (setDefault !== undefined) {
+				obj[jsc.dataProp] = {}; // create data object
+			} else {
+				return undefined; // no value to return
+			}
+		}
+		var data = obj[jsc.dataProp];
+
+		if (!data.hasOwnProperty(prop) && setDefault !== undefined) {
+			data[prop] = setDefault;
+		}
+		return data[prop];
 	},
 
 
 	getDataAttr : function (el, name) {
 		var attrName = 'data-' + name;
 		var attrValue = el.getAttribute(attrName);
-		if (attrValue !== null) {
-			return attrValue;
-		}
-		return null;
+		return attrValue;
 	},
 
 
 	attachEvent : function (el, evnt, func) {
-		if (el.addEventListener) {
-			el.addEventListener(evnt, func, false);
-		} else if (el.attachEvent) {
-			el.attachEvent('on' + evnt, func);
-		}
+		el.addEventListener(evnt, func, false);
 	},
 
 
 	detachEvent : function (el, evnt, func) {
-		if (el.removeEventListener) {
-			el.removeEventListener(evnt, func, false);
-		} else if (el.detachEvent) {
-			el.detachEvent('on' + evnt, func);
-		}
+		el.removeEventListener(evnt, func, false);
 	},
 
 
@@ -154,57 +336,8 @@ var jsc = {
 
 
 	attachDOMReadyEvent : function (func) {
-		var fired = false;
-		var fireOnce = function () {
-			if (!fired) {
-				fired = true;
-				func();
-			}
-		};
-
-		if (document.readyState === 'complete') {
-			setTimeout(fireOnce, 1); // async
-			return;
-		}
-
 		if (document.addEventListener) {
-			document.addEventListener('DOMContentLoaded', fireOnce, false);
-
-			// Fallback
-			window.addEventListener('load', fireOnce, false);
-
-		} else if (document.attachEvent) {
-			// IE
-			document.attachEvent('onreadystatechange', function () {
-				if (document.readyState === 'complete') {
-					document.detachEvent('onreadystatechange', arguments.callee);
-					fireOnce();
-				}
-			})
-
-			// Fallback
-			window.attachEvent('onload', fireOnce);
-
-			// IE7/8
-			if (document.documentElement.doScroll && window == window.top) {
-				var tryScroll = function () {
-					if (!document.body) { return; }
-					try {
-						document.documentElement.doScroll('left');
-						fireOnce();
-					} catch (e) {
-						setTimeout(tryScroll, 1);
-					}
-				};
-				tryScroll();
-			}
-		}
-	},
-
-
-	warn : function (msg) {
-		if (window.console && window.console.warn) {
-			window.console.warn(msg);
+			document.addEventListener('DOMContentLoaded', func, false);
 		}
 	},
 
@@ -233,25 +366,66 @@ var jsc = {
 	},
 
 
-	fireEvent : function (el, evnt) {
+	triggerEvent : function (el, eventName, bubbles, cancelable) {
 		if (!el) {
 			return;
 		}
-		if (document.createEvent) {
-			var ev = document.createEvent('HTMLEvents');
-			ev.initEvent(evnt, true, true);
-			el.dispatchEvent(ev);
-		} else if (document.createEventObject) {
-			var ev = document.createEventObject();
-			el.fireEvent('on' + evnt, ev);
-		} else if (el['on' + evnt]) { // alternatively use the traditional event model
-			el['on' + evnt]();
+
+		var ev = null;
+
+		if (typeof Event === 'function') {
+			ev = new Event(eventName, {
+				bubbles: bubbles,
+				cancelable: cancelable
+			});
+		} else {
+			// IE
+			ev = document.createEvent('Event');
+			ev.initEvent(eventName, bubbles, cancelable);
+		}
+
+		if (!ev) {
+			return false;
+		}
+
+		// so that we know that the event was triggered internally
+		jsc.setData(ev, 'internal', true);
+
+		el.dispatchEvent(ev);
+		return true;
+	},
+
+
+	triggerInputEvent : function (el, eventName, bubbles, cancelable) {
+		if (!el) {
+			return;
+		}
+		if (jsc.isTextInput(el)) {
+			jsc.triggerEvent(el, eventName, bubbles, cancelable);
 		}
 	},
 
 
-	classNameToList : function (className) {
-		return className.replace(/^\s+|\s+$/g, '').split(/\s+/);
+	eventKey : function (ev) {
+		var keys = {
+			9: 'Tab',
+			13: 'Enter',
+			27: 'Escape',
+		};
+		if (typeof ev.code === 'string') {
+			return ev.code;
+		} else if (ev.keyCode !== undefined && keys.hasOwnProperty(ev.keyCode)) {
+			return keys[ev.keyCode];
+		}
+		return null;
+	},
+
+
+	strList : function (str) {
+		if (!str) {
+			return [];
+		}
+		return str.replace(/^\s+|\s+$/g, '').split(/\s+/);
 	},
 
 
@@ -260,29 +434,49 @@ var jsc = {
 		if (!className) {
 			return false;
 		}
+		if (elm.classList !== undefined) {
+			return elm.classList.contains(className);
+		}
+		// polyfill
 		return -1 != (' ' + elm.className.replace(/\s+/g, ' ') + ' ').indexOf(' ' + className + ' ');
 	},
 
 
 	// The className parameter (str) can contain multiple class names separated by whitespace
-	setClass : function (elm, className) {
-		var classList = jsc.classNameToList(className);
-		for (var i = 0; i < classList.length; i += 1) {
-			if (!jsc.hasClass(elm, classList[i])) {
-				elm.className += (elm.className ? ' ' : '') + classList[i];
+	addClass : function (elm, className) {
+		var classNames = jsc.strList(className);
+
+		if (elm.classList !== undefined) {
+			for (var i = 0; i < classNames.length; i += 1) {
+				elm.classList.add(classNames[i]);
+			}
+			return;
+		}
+		// polyfill
+		for (var i = 0; i < classNames.length; i += 1) {
+			if (!jsc.hasClass(elm, classNames[i])) {
+				elm.className += (elm.className ? ' ' : '') + classNames[i];
 			}
 		}
 	},
 
 
 	// The className parameter (str) can contain multiple class names separated by whitespace
-	unsetClass : function (elm, className) {
-		var classList = jsc.classNameToList(className);
-		for (var i = 0; i < classList.length; i += 1) {
+	removeClass : function (elm, className) {
+		var classNames = jsc.strList(className);
+
+		if (elm.classList !== undefined) {
+			for (var i = 0; i < classNames.length; i += 1) {
+				elm.classList.remove(classNames[i]);
+			}
+			return;
+		}
+		// polyfill
+		for (var i = 0; i < classNames.length; i += 1) {
 			var repl = new RegExp(
-				'^\\s*' + classList[i] + '\\s*|' +
-				'\\s*' + classList[i] + '\\s*$|' +
-				'\\s+' + classList[i] + '(\\s+)',
+				'^\\s*' + classNames[i] + '\\s*|' +
+				'\\s*' + classNames[i] + '\\s*$|' +
+				'\\s+' + classNames[i] + '(\\s+)',
 				'g'
 			);
 			elm.className = elm.className.replace(repl, '$1');
@@ -290,46 +484,102 @@ var jsc = {
 	},
 
 
-	getStyle : function (elm) {
-		return window.getComputedStyle ? window.getComputedStyle(elm) : elm.currentStyle;
+	getCompStyle : function (elm) {
+		var compStyle = window.getComputedStyle ? window.getComputedStyle(elm) : elm.currentStyle;
+
+		// Note: In Firefox, getComputedStyle returns null in a hidden iframe,
+		// that's why we need to check if the returned value is non-empty
+		if (!compStyle) {
+			return {};
+		}
+		return compStyle;
 	},
 
 
-	setStyle : (function () {
-		var helper = document.createElement('div');
-		var getSupportedProp = function (names) {
-			for (var i = 0; i < names.length; i += 1) {
-				if (names[i] in helper.style) {
-					return names[i];
+	// Note:
+	//   Setting a property to NULL reverts it to the state before it was first set
+	//   with the 'reversible' flag enabled
+	//
+	setStyle : function (elm, styles, important, reversible) {
+		// using '' for standard priority (IE10 apparently doesn't like value undefined)
+		var priority = important ? 'important' : '';
+		var origStyle = null;
+
+		for (var prop in styles) {
+			if (styles.hasOwnProperty(prop)) {
+				var setVal = null;
+
+				if (styles[prop] === null) {
+					// reverting a property value
+
+					if (!origStyle) {
+						// get the original style object, but dont't try to create it if it doesn't exist
+						origStyle = jsc.getData(elm, 'origStyle');
+					}
+					if (origStyle && origStyle.hasOwnProperty(prop)) {
+						// we have property's original value -> use it
+						setVal = origStyle[prop];
+					}
+
+				} else {
+					// setting a property value
+
+					if (reversible) {
+						if (!origStyle) {
+							// get the original style object and if it doesn't exist, create it
+							origStyle = jsc.getData(elm, 'origStyle', {});
+						}
+						if (!origStyle.hasOwnProperty(prop)) {
+							// original property value not yet stored -> store it
+							origStyle[prop] = elm.style[prop];
+						}
+					}
+					setVal = styles[prop];
+				}
+
+				if (setVal !== null) {
+					elm.style.setProperty(prop, setVal, priority);
 				}
 			}
-		};
-		var props = {
-			borderRadius: getSupportedProp(['borderRadius', 'MozBorderRadius', 'webkitBorderRadius']),
-			boxShadow: getSupportedProp(['boxShadow', 'MozBoxShadow', 'webkitBoxShadow'])
-		};
-		return function (elm, prop, value) {
-			switch (prop.toLowerCase()) {
-			case 'opacity':
-				var alphaOpacity = Math.round(parseFloat(value) * 100);
-				elm.style.opacity = value;
-				elm.style.filter = 'alpha(opacity=' + alphaOpacity + ')';
-				break;
-			default:
-				elm.style[props[prop]] = value;
-				break;
+		}
+	},
+
+
+	linearGradient : (function () {
+
+		function getFuncName () {
+			var stdName = 'linear-gradient';
+			var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-'];
+			var helper = document.createElement('div');
+
+			for (var i = 0; i < prefixes.length; i += 1) {
+				var tryFunc = prefixes[i] + stdName;
+				var tryVal = tryFunc + '(to right, rgba(0,0,0,0), rgba(0,0,0,0))';
+
+				helper.style.background = tryVal;
+				if (helper.style.background) { // CSS background successfully set -> function name is supported
+					return tryFunc;
+				}
 			}
+			return stdName; // fallback to standard 'linear-gradient' without vendor prefix
+		}
+
+		var funcName = getFuncName();
+
+		return function () {
+			return funcName + '(' + Array.prototype.join.call(arguments, ', ') + ')';
 		};
+
 	})(),
 
 
 	setBorderRadius : function (elm, value) {
-		jsc.setStyle(elm, 'borderRadius', value || '0');
+		jsc.setStyle(elm, {'border-radius' : value || '0'});
 	},
 
 
 	setBoxShadow : function (elm, value) {
-		jsc.setStyle(elm, 'boxShadow', value || 'none');
+		jsc.setStyle(elm, {'box-shadow': value || 'none'});
 	},
 
 
@@ -354,7 +604,6 @@ var jsc = {
 
 	// get pointer's X/Y coordinates relative to viewport
 	getAbsPointerPos : function (e) {
-		if (!e) { e = window.event; }
 		var x = 0, y = 0;
 		if (typeof e.changedTouches !== 'undefined' && e.changedTouches.length) {
 			// touch devices
@@ -370,7 +619,6 @@ var jsc = {
 
 	// get pointer's X/Y coordinates relative to target element
 	getRelPointerPos : function (e) {
-		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 		var targetRect = target.getBoundingClientRect();
 
@@ -410,12 +658,227 @@ var jsc = {
 	},
 
 
-	setOption : function (option, value) {
-		if (typeof this[option] === 'undefined') {
-			jsc.warn('Unrecognized option \'' + option + '\'');
-			return false;
+	// r: 0-255
+	// g: 0-255
+	// b: 0-255
+	//
+	// returns: [ 0-360, 0-100, 0-100 ]
+	//
+	RGB_HSV : function (r, g, b) {
+		r /= 255;
+		g /= 255;
+		b /= 255;
+		var n = Math.min(Math.min(r,g),b);
+		var v = Math.max(Math.max(r,g),b);
+		var m = v - n;
+		if (m === 0) { return [ null, 0, 100 * v ]; }
+		var h = r===n ? 3+(b-g)/m : (g===n ? 5+(r-b)/m : 1+(g-r)/m);
+		return [
+			60 * (h===6?0:h),
+			100 * (m/v),
+			100 * v
+		];
+	},
+
+
+	// h: 0-360
+	// s: 0-100
+	// v: 0-100
+	//
+	// returns: [ 0-255, 0-255, 0-255 ]
+	//
+	HSV_RGB : function (h, s, v) {
+		var u = 255 * (v / 100);
+
+		if (h === null) {
+			return [ u, u, u ];
 		}
-		this[option] = value;
+
+		h /= 60;
+		s /= 100;
+
+		var i = Math.floor(h);
+		var f = i%2 ? h-i : 1-(h-i);
+		var m = u * (1 - s);
+		var n = u * (1 - s * f);
+		switch (i) {
+			case 6:
+			case 0: return [u,n,m];
+			case 1: return [n,u,m];
+			case 2: return [m,u,n];
+			case 3: return [m,n,u];
+			case 4: return [n,m,u];
+			case 5: return [u,m,n];
+		}
+	},
+
+
+	parseColorString : function (str) {
+		var ret = {
+			rgba: null,
+			format: null // 'hex' | 'rgb' | 'rgba'
+		};
+
+		var m;
+		if (m = str.match(/^\W*([0-9A-F]{3}([0-9A-F]{3})?)\W*$/i)) {
+			// HEX notation
+
+			ret.format = 'hex';
+
+			if (m[1].length === 6) {
+				// 6-char notation
+				ret.rgba = [
+					parseInt(m[1].substr(0,2),16),
+					parseInt(m[1].substr(2,2),16),
+					parseInt(m[1].substr(4,2),16),
+					null
+				];
+			} else {
+				// 3-char notation
+				ret.rgba = [
+					parseInt(m[1].charAt(0) + m[1].charAt(0),16),
+					parseInt(m[1].charAt(1) + m[1].charAt(1),16),
+					parseInt(m[1].charAt(2) + m[1].charAt(2),16),
+					null
+				];
+			}
+			return ret;
+
+		} else if (m = str.match(/^\W*rgba?\(([^)]*)\)\W*$/i)) {
+			// rgb(...) or rgba(...) notation
+
+			var params = m[1].split(',');
+			var re = /^\s*(\d+|\d*\.\d+)\s*$/;
+			var mR, mG, mB, mA;
+			if (
+				params.length >= 3 &&
+				(mR = params[0].match(re)) &&
+				(mG = params[1].match(re)) &&
+				(mB = params[2].match(re))
+			) {
+				ret.format = 'rgb';
+				ret.rgba = [
+					parseFloat(mR[1]) || 0,
+					parseFloat(mG[1]) || 0,
+					parseFloat(mB[1]) || 0,
+					null
+				];
+
+				if (
+					params.length >= 4 &&
+					(mA = params[3].match(re))
+				) {
+					ret.format = 'rgba';
+					ret.rgba[3] = parseFloat(mA[1]) || 0;
+				}
+				return ret;
+			}
+		}
+
+		return false;
+	},
+
+
+	// Canvas scaling for retina displays
+	//
+	// adapted from https://www.html5rocks.com/en/tutorials/canvas/hidpi/
+	//
+	scaleCanvasForHighDPR : function (canvas) {
+		var dpr = window.devicePixelRatio || 1;
+		canvas.width *= dpr;
+		canvas.height *= dpr;
+		var ctx = canvas.getContext('2d');
+		ctx.scale(dpr, dpr);
+	},
+
+
+	genColorPreviewCanvas : function (color, separatorPos, specWidth, scaleForHighDPR) {
+
+		var sepW = Math.round(jsc.pub.previewSeparator.length);
+		var sqSize = jsc.pub.chessboardSize;
+		var sqColor1 = jsc.pub.chessboardColor1;
+		var sqColor2 = jsc.pub.chessboardColor2;
+
+		var cWidth = specWidth ? specWidth : sqSize * 2;
+		var cHeight = sqSize * 2;
+
+		var canvas = document.createElement('canvas');
+		var ctx = canvas.getContext('2d');
+
+		canvas.width = cWidth;
+		canvas.height = cHeight;
+		if (scaleForHighDPR) {
+			jsc.scaleCanvasForHighDPR(canvas);
+		}
+
+		// transparency chessboard - background
+		ctx.fillStyle = sqColor1;
+		ctx.fillRect(0, 0, cWidth, cHeight);
+
+		// transparency chessboard - squares
+		ctx.fillStyle = sqColor2;
+		for (var x = 0; x < cWidth; x += sqSize * 2) {
+			ctx.fillRect(x, 0, sqSize, sqSize);
+			ctx.fillRect(x + sqSize, sqSize, sqSize, sqSize);
+		}
+
+		if (color) {
+			// actual color in foreground
+			ctx.fillStyle = color;
+			ctx.fillRect(0, 0, cWidth, cHeight);
+		}
+
+		var start = null;
+		switch (separatorPos) {
+			case 'left':
+				start = 0;
+				ctx.clearRect(0, 0, sepW/2, cHeight);
+				break;
+			case 'right':
+				start = cWidth - sepW;
+				ctx.clearRect(cWidth - (sepW/2), 0, sepW/2, cHeight);
+				break;
+		}
+		if (start !== null) {
+			ctx.lineWidth = 1;
+			for (var i = 0; i < jsc.pub.previewSeparator.length; i += 1) {
+				ctx.beginPath();
+				ctx.strokeStyle = jsc.pub.previewSeparator[i];
+				ctx.moveTo(0.5 + start + i, 0);
+				ctx.lineTo(0.5 + start + i, cHeight);
+				ctx.stroke();
+			}
+		}
+
+		return {
+			canvas: canvas,
+			width: cWidth,
+			height: cHeight,
+		};
+	},
+
+
+	// if position or width is not set => fill the entire element (0%-100%)
+	genColorPreviewGradient : function (color, position, width) {
+		var params = [];
+
+		if (position && width) {
+			params = [
+				'to ' + {'left':'right', 'right':'left'}[position],
+				color + ' 0%',
+				color + ' ' + width + 'px',
+				'rgba(0,0,0,0) ' + (width + 1) + 'px',
+				'rgba(0,0,0,0) 100%',
+			];
+		} else {
+			params = [
+				'to right',
+				color + ' 0%',
+				color + ' 100%',
+			];
+		}
+
+		return jsc.linearGradient.apply(this, params);
 	},
 
 
@@ -493,13 +956,20 @@ var jsc = {
 
 
 	getPickerDims : function (thisObj) {
-		var displaySlider = !!jsc.getSliderComponent(thisObj);
 		var dims = [
-			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.width +
-				(displaySlider ? 2 * thisObj.insetWidth + jsc.getPadToSliderPadding(thisObj) + thisObj.sliderSize : 0),
-			2 * thisObj.insetWidth + 2 * thisObj.padding + thisObj.height +
-				(thisObj.closable ? 2 * thisObj.insetWidth + thisObj.padding + thisObj.buttonHeight : 0)
+			2 * thisObj.controlBorderWidth + 2 * thisObj.padding + thisObj.width,
+			2 * thisObj.controlBorderWidth + 2 * thisObj.padding + thisObj.height
 		];
+		var sliderSpace = 2 * thisObj.controlBorderWidth + 2 * jsc.getControlPadding(thisObj) + thisObj.sliderSize;
+		if (jsc.getSliderChannel(thisObj)) {
+			dims[0] += sliderSpace;
+		}
+		if (thisObj.isAlphaEnabled()) {
+			dims[0] += sliderSpace;
+		}
+		if (thisObj.closeButton) {
+			dims[1] += 2 * thisObj.controlBorderWidth + thisObj.padding + thisObj.buttonHeight;
+		}
 		return dims;
 	},
 
@@ -513,12 +983,15 @@ var jsc = {
 	},
 
 
-	getPadToSliderPadding : function (thisObj) {
-		return Math.max(thisObj.padding, 1.5 * (2 * thisObj.pointerBorderWidth + thisObj.pointerThickness));
+	getControlPadding : function (thisObj) {
+		return Math.max(
+			thisObj.padding / 2,
+			(2 * thisObj.pointerBorderWidth + thisObj.pointerThickness) - thisObj.controlBorderWidth
+		);
 	},
 
 
-	getPadYComponent : function (thisObj) {
+	getPadYChannel : function (thisObj) {
 		switch (thisObj.mode.charAt(1).toLowerCase()) {
 			case 'v': return 'v'; break;
 		}
@@ -526,7 +999,7 @@ var jsc = {
 	},
 
 
-	getSliderComponent : function (thisObj) {
+	getSliderChannel : function (thisObj) {
 		if (thisObj.mode.length > 2) {
 			switch (thisObj.mode.charAt(2).toLowerCase()) {
 				case 's': return 's'; break;
@@ -538,12 +1011,11 @@ var jsc = {
 
 
 	onDocumentMouseDown : function (e) {
-		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 
-		if (target._jscLinkedInstance) {
-			if (target._jscLinkedInstance.showOnClick) {
-				target._jscLinkedInstance.show();
+		if (target.jscolor && target.jscolor instanceof jsc.pub) {
+			if (target.jscolor.showOnClick) {
+				target.jscolor.show();
 			}
 		} else if (target._jscControlName) {
 			jsc.onControlPointerStart(e, target, target._jscControlName, 'mouse');
@@ -557,12 +1029,11 @@ var jsc = {
 
 
 	onDocumentTouchStart : function (e) {
-		if (!e) { e = window.event; }
 		var target = e.target || e.srcElement;
 
-		if (target._jscLinkedInstance) {
-			if (target._jscLinkedInstance.showOnClick) {
-				target._jscLinkedInstance.show();
+		if (target.jscolor && target.jscolor instanceof jsc.pub) {
+			if (target.jscolor.showOnClick) {
+				target.jscolor.show();
 			}
 		} else if (target._jscControlName) {
 			jsc.onControlPointerStart(e, target, target._jscControlName, 'touch');
@@ -575,12 +1046,7 @@ var jsc = {
 
 
 	onDocumentKeyUp : function (e) {
-		if (!e) { e = window.event; }
-
-		if (
-			(e.code && e.code === 'Enter' || e.keyCode === 13) ||
-			(e.code && e.code === 'Escape' || e.keyCode === 27)
-		) {
+		if (['Tab', 'Escape'].indexOf(jsc.eventKey(e)) !== -1) {
 			if (jsc.picker && jsc.picker.owner) {
 				jsc.picker.owner.hide();
 			}
@@ -597,6 +1063,41 @@ var jsc = {
 		// hide the picker when one of the parent elements is scrolled
 		if (jsc.picker && jsc.picker.owner) {
 			jsc.picker.owner.hide();
+		}
+	},
+
+
+	// calls function specified in picker's property
+	triggerCallback : function (thisObj, prop) {
+		if (!thisObj[prop]) {
+			return; // callback func not specified
+		}
+		var callback = null;
+
+		if (typeof thisObj[prop] === 'string') {
+			// string with code
+			try {
+				callback = new Function (thisObj[prop]);
+			} catch (e) {
+				console.error(e);
+			}
+		} else {
+			// function
+			callback = thisObj[prop];
+		}
+
+		if (callback) {
+			callback.call(thisObj);
+		}
+	},
+
+
+	// Triggers a color change related event(s) on all picker instances.
+	// It is possible to specify multiple events separated with a space.
+	triggerGlobal : function (eventNames) {
+		var inst = jsc.getInstances();
+		for (var i = 0; i < inst.length; i += 1) {
+			inst[i].trigger(eventNames);
 		}
 	},
 
@@ -645,10 +1146,9 @@ var jsc = {
 
 		switch (controlName) {
 		case 'pad':
-			// if the slider is at the bottom, move it up
-			switch (jsc.getSliderComponent(thisObj)) {
-			case 's': if (thisObj.hsv[1] === 0) { thisObj.fromHSV(null, 100, null); }; break;
-			case 'v': if (thisObj.hsv[2] === 0) { thisObj.fromHSV(null, null, 100); }; break;
+			// if the value slider is at the bottom, move it up
+			if (jsc.getSliderChannel(thisObj) === 'v' && thisObj.channels.v === 0) {
+				thisObj.fromHSVA(null, null, 100, null);
 			}
 			jsc.setPad(thisObj, e, 0, 0);
 			break;
@@ -656,9 +1156,12 @@ var jsc = {
 		case 'sld':
 			jsc.setSld(thisObj, e, 0);
 			break;
-		}
 
-		jsc.dispatchFineChange(thisObj);
+		case 'asld':
+			jsc.setASld(thisObj, e, 0);
+			break;
+		}
+		thisObj.trigger('input');
 	},
 
 
@@ -667,17 +1170,18 @@ var jsc = {
 			var thisObj = target._jscInstance;
 			switch (controlName) {
 			case 'pad':
-				if (!e) { e = window.event; }
 				jsc.setPad(thisObj, e, offset[0], offset[1]);
-				jsc.dispatchFineChange(thisObj);
 				break;
 
 			case 'sld':
-				if (!e) { e = window.event; }
 				jsc.setSld(thisObj, e, offset[1]);
-				jsc.dispatchFineChange(thisObj);
+				break;
+
+			case 'asld':
+				jsc.setASld(thisObj, e, offset[1]);
 				break;
 			}
+			thisObj.trigger('input');
 		}
 	},
 
@@ -687,86 +1191,49 @@ var jsc = {
 			var thisObj = target._jscInstance;
 			jsc.detachGroupEvents('drag');
 			jsc.releaseTarget();
-			// Always dispatch changes after detaching outstanding mouse handlers,
-			// in case some user interaction will occur in user's onchange callback
-			// that would intrude with current mouse events
-			jsc.dispatchChange(thisObj);
+
+			// Always trigger changes AFTER detaching outstanding mouse handlers,
+			// in case some color change occured in user-defined onchange/oninput handler
+			// would intrude into current mouse events
+			thisObj.trigger('input');
+			thisObj.trigger('change');
 		};
-	},
-
-
-	dispatchChange : function (thisObj) {
-		if (thisObj.valueElement) {
-			if (jsc.isElementType(thisObj.valueElement, 'input')) {
-				jsc.fireEvent(thisObj.valueElement, 'change');
-			}
-		}
-	},
-
-
-	dispatchFineChange : function (thisObj) {
-		if (thisObj.onFineChange) {
-			var callback;
-			if (typeof thisObj.onFineChange === 'string') {
-				callback = new Function (thisObj.onFineChange);
-			} else {
-				callback = thisObj.onFineChange;
-			}
-			callback.call(thisObj);
-		}
 	},
 
 
 	setPad : function (thisObj, e, ofsX, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var x = ofsX + pointerAbs.x - jsc._pointerOrigin.x - thisObj.padding - thisObj.insetWidth;
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
+		var x = ofsX + pointerAbs.x - jsc._pointerOrigin.x - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
 
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		switch (jsc.getPadYComponent(thisObj)) {
-		case 's': thisObj.fromHSV(xVal, yVal, null, jsc.leaveSld); break;
-		case 'v': thisObj.fromHSV(xVal, null, yVal, jsc.leaveSld); break;
+		switch (jsc.getPadYChannel(thisObj)) {
+		case 's': thisObj.fromHSVA(xVal, yVal, null, null); break;
+		case 'v': thisObj.fromHSVA(xVal, null, yVal, null); break;
 		}
 	},
 
 
 	setSld : function (thisObj, e, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.insetWidth;
-
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
-		switch (jsc.getSliderComponent(thisObj)) {
-		case 's': thisObj.fromHSV(null, yVal, null, jsc.leavePad); break;
-		case 'v': thisObj.fromHSV(null, null, yVal, jsc.leavePad); break;
+		switch (jsc.getSliderChannel(thisObj)) {
+		case 's': thisObj.fromHSVA(null, yVal, null, null); break;
+		case 'v': thisObj.fromHSVA(null, null, yVal, null); break;
 		}
 	},
 
 
-	_vmlNS : 'jsc_vml_',
-	_vmlCSS : 'jsc_vml_css_',
-	_vmlReady : false,
+	setASld : function (thisObj, e, ofsY) {
+		var pointerAbs = jsc.getAbsPointerPos(e);
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
+		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
 
-
-	initVML : function () {
-		if (!jsc._vmlReady) {
-			// init VML namespace
-			var doc = document;
-			if (!doc.namespaces[jsc._vmlNS]) {
-				doc.namespaces.add(jsc._vmlNS, 'urn:schemas-microsoft-com:vml');
-			}
-			if (!doc.styleSheets[jsc._vmlCSS]) {
-				var tags = ['shape', 'shapetype', 'group', 'background', 'path', 'formulas', 'handles', 'fill', 'stroke', 'shadow', 'textbox', 'textpath', 'imagedata', 'line', 'polyline', 'curve', 'rect', 'roundrect', 'oval', 'arc', 'image'];
-				var ss = doc.createStyleSheet();
-				ss.owningElement.id = jsc._vmlCSS;
-				for (var i = 0; i < tags.length; i += 1) {
-					ss.addRule(jsc._vmlNS + '\\:' + tags[i], 'behavior:url(#default#VML);');
-				}
-			}
-			jsc._vmlReady = true;
-		}
+		thisObj.fromHSVA(null, null, null, yVal);
 	},
 
 
@@ -777,114 +1244,44 @@ var jsc = {
 			draw: null
 		};
 
-		if (jsc.isCanvasSupported) {
-			// Canvas implementation for modern browsers
+		var canvas = document.createElement('canvas');
+		var ctx = canvas.getContext('2d');
 
-			var canvas = document.createElement('canvas');
-			var ctx = canvas.getContext('2d');
+		var drawFunc = function (width, height, type) {
+			canvas.width = width;
+			canvas.height = height;
 
-			var drawFunc = function (width, height, type) {
-				canvas.width = width;
-				canvas.height = height;
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-				ctx.clearRect(0, 0, canvas.width, canvas.height);
+			var hGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+			hGrad.addColorStop(0 / 6, '#F00');
+			hGrad.addColorStop(1 / 6, '#FF0');
+			hGrad.addColorStop(2 / 6, '#0F0');
+			hGrad.addColorStop(3 / 6, '#0FF');
+			hGrad.addColorStop(4 / 6, '#00F');
+			hGrad.addColorStop(5 / 6, '#F0F');
+			hGrad.addColorStop(6 / 6, '#F00');
 
-				var hGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
-				hGrad.addColorStop(0 / 6, '#F00');
-				hGrad.addColorStop(1 / 6, '#FF0');
-				hGrad.addColorStop(2 / 6, '#0F0');
-				hGrad.addColorStop(3 / 6, '#0FF');
-				hGrad.addColorStop(4 / 6, '#00F');
-				hGrad.addColorStop(5 / 6, '#F0F');
-				hGrad.addColorStop(6 / 6, '#F00');
+			ctx.fillStyle = hGrad;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-				ctx.fillStyle = hGrad;
-				ctx.fillRect(0, 0, canvas.width, canvas.height);
+			var vGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+			switch (type.toLowerCase()) {
+			case 's':
+				vGrad.addColorStop(0, 'rgba(255,255,255,0)');
+				vGrad.addColorStop(1, 'rgba(255,255,255,1)');
+				break;
+			case 'v':
+				vGrad.addColorStop(0, 'rgba(0,0,0,0)');
+				vGrad.addColorStop(1, 'rgba(0,0,0,1)');
+				break;
+			}
+			ctx.fillStyle = vGrad;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+		};
 
-				var vGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-				switch (type.toLowerCase()) {
-				case 's':
-					vGrad.addColorStop(0, 'rgba(255,255,255,0)');
-					vGrad.addColorStop(1, 'rgba(255,255,255,1)');
-					break;
-				case 'v':
-					vGrad.addColorStop(0, 'rgba(0,0,0,0)');
-					vGrad.addColorStop(1, 'rgba(0,0,0,1)');
-					break;
-				}
-				ctx.fillStyle = vGrad;
-				ctx.fillRect(0, 0, canvas.width, canvas.height);
-			};
-
-			paletteObj.elm = canvas;
-			paletteObj.draw = drawFunc;
-
-		} else {
-			// VML fallback for IE 7 and 8
-
-			jsc.initVML();
-
-			var vmlContainer = document.createElement('div');
-			vmlContainer.style.position = 'relative';
-			vmlContainer.style.overflow = 'hidden';
-
-			var hGrad = document.createElement(jsc._vmlNS + ':fill');
-			hGrad.type = 'gradient';
-			hGrad.method = 'linear';
-			hGrad.angle = '90';
-			hGrad.colors = '16.67% #F0F, 33.33% #00F, 50% #0FF, 66.67% #0F0, 83.33% #FF0'
-
-			var hRect = document.createElement(jsc._vmlNS + ':rect');
-			hRect.style.position = 'absolute';
-			hRect.style.left = -1 + 'px';
-			hRect.style.top = -1 + 'px';
-			hRect.stroked = false;
-			hRect.appendChild(hGrad);
-			vmlContainer.appendChild(hRect);
-
-			var vGrad = document.createElement(jsc._vmlNS + ':fill');
-			vGrad.type = 'gradient';
-			vGrad.method = 'linear';
-			vGrad.angle = '180';
-			vGrad.opacity = '0';
-
-			var vRect = document.createElement(jsc._vmlNS + ':rect');
-			vRect.style.position = 'absolute';
-			vRect.style.left = -1 + 'px';
-			vRect.style.top = -1 + 'px';
-			vRect.stroked = false;
-			vRect.appendChild(vGrad);
-			vmlContainer.appendChild(vRect);
-
-			var drawFunc = function (width, height, type) {
-				vmlContainer.style.width = width + 'px';
-				vmlContainer.style.height = height + 'px';
-
-				hRect.style.width =
-				vRect.style.width =
-					(width + 1) + 'px';
-				hRect.style.height =
-				vRect.style.height =
-					(height + 1) + 'px';
-
-				// Colors must be specified during every redraw, otherwise IE won't display
-				// a full gradient during a subsequential redraw
-				hGrad.color = '#F00';
-				hGrad.color2 = '#F00';
-
-				switch (type.toLowerCase()) {
-				case 's':
-					vGrad.color = vGrad.color2 = '#FFF';
-					break;
-				case 'v':
-					vGrad.color = vGrad.color2 = '#000';
-					break;
-				}
-			};
-			
-			paletteObj.elm = vmlContainer;
-			paletteObj.draw = drawFunc;
-		}
+		paletteObj.elm = canvas;
+		paletteObj.draw = drawFunc;
 
 		return paletteObj;
 	},
@@ -897,74 +1294,74 @@ var jsc = {
 			draw: null
 		};
 
-		if (jsc.isCanvasSupported) {
-			// Canvas implementation for modern browsers
+		var canvas = document.createElement('canvas');
+		var ctx = canvas.getContext('2d');
 
-			var canvas = document.createElement('canvas');
-			var ctx = canvas.getContext('2d');
+		var drawFunc = function (width, height, color1, color2) {
+			canvas.width = width;
+			canvas.height = height;
 
-			var drawFunc = function (width, height, color1, color2) {
-				canvas.width = width;
-				canvas.height = height;
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-				ctx.clearRect(0, 0, canvas.width, canvas.height);
+			var grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+			grad.addColorStop(0, color1);
+			grad.addColorStop(1, color2);
 
-				var grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-				grad.addColorStop(0, color1);
-				grad.addColorStop(1, color2);
+			ctx.fillStyle = grad;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+		};
 
-				ctx.fillStyle = grad;
-				ctx.fillRect(0, 0, canvas.width, canvas.height);
-			};
-
-			sliderObj.elm = canvas;
-			sliderObj.draw = drawFunc;
-
-		} else {
-			// VML fallback for IE 7 and 8
-
-			jsc.initVML();
-
-			var vmlContainer = document.createElement('div');
-			vmlContainer.style.position = 'relative';
-			vmlContainer.style.overflow = 'hidden';
-
-			var grad = document.createElement(jsc._vmlNS + ':fill');
-			grad.type = 'gradient';
-			grad.method = 'linear';
-			grad.angle = '180';
-
-			var rect = document.createElement(jsc._vmlNS + ':rect');
-			rect.style.position = 'absolute';
-			rect.style.left = -1 + 'px';
-			rect.style.top = -1 + 'px';
-			rect.stroked = false;
-			rect.appendChild(grad);
-			vmlContainer.appendChild(rect);
-
-			var drawFunc = function (width, height, color1, color2) {
-				vmlContainer.style.width = width + 'px';
-				vmlContainer.style.height = height + 'px';
-
-				rect.style.width = (width + 1) + 'px';
-				rect.style.height = (height + 1) + 'px';
-
-				grad.color = color1;
-				grad.color2 = color2;
-			};
-			
-			sliderObj.elm = vmlContainer;
-			sliderObj.draw = drawFunc;
-		}
+		sliderObj.elm = canvas;
+		sliderObj.draw = drawFunc;
 
 		return sliderObj;
 	},
 
 
-	leaveValue : 1<<0,
-	leaveStyle : 1<<1,
-	leavePad : 1<<2,
-	leaveSld : 1<<3,
+	createASliderGradient : function () {
+
+		var sliderObj = {
+			elm: null,
+			draw: null
+		};
+
+		var canvas = document.createElement('canvas');
+		var ctx = canvas.getContext('2d');
+
+		var drawFunc = function (width, height, color) {
+			canvas.width = width;
+			canvas.height = height;
+
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+			var sqSize = canvas.width / 2;
+			var sqColor1 = jsc.pub.chessboardColor1;
+			var sqColor2 = jsc.pub.chessboardColor2;
+
+			// dark gray background
+			ctx.fillStyle = sqColor1;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+			for (var y = 0; y < canvas.height; y += sqSize * 2) {
+				// light gray squares
+				ctx.fillStyle = sqColor2;
+				ctx.fillRect(0, y, sqSize, sqSize);
+				ctx.fillRect(sqSize, y + sqSize, sqSize, sqSize);
+			}
+
+			var grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+			grad.addColorStop(0, color);
+			grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+			ctx.fillStyle = grad;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+		};
+
+		sliderObj.elm = canvas;
+		sliderObj.draw = drawFunc;
+
+		return sliderObj;
+	},
 
 
 	BoxShadow : (function () {
@@ -995,48 +1392,89 @@ var jsc = {
 	})(),
 
 
+	flags : {
+		leaveValue : 1 << 0,
+		leaveAlpha : 1 << 1,
+		leavePreview : 1 << 2,
+	},
+
+
+	enumOpts : {
+		format: ['auto', 'any', 'hex', 'rgb', 'rgba'],
+		previewPosition: ['left', 'right'],
+		mode: ['hsv', 'hvs', 'hs', 'hv'],
+		position: ['left', 'right', 'top', 'bottom'],
+		alphaChannel: ['auto', true, false],
+	},
+
+
+	deprecatedOpts : {
+		// <old_option>: <new_option>  (<new_option> can be null)
+		'styleElement': 'previewElement',
+		'onFineChange': 'onInput',
+		'overwriteImportant': 'forceStyle',
+		'closable': 'closeButton',
+		'insetWidth': 'controlBorderWidth',
+		'insetColor': 'controlBorderColor',
+	},
+
+
 	//
 	// Usage:
-	// var myColor = new jscolor(<targetElement> [, <options>])
+	// var myPicker = new JSColor(<targetElement> [, <options>])
 	//
-	// (you can use both 'new jscolor' and 'new JSColor')
+	// (constructor is accessible via both 'jscolor' and 'JSColor' name)
 	//
 
-	jscolor : function (targetElement, opts) {
+	pub : function (targetElement, opts) {
+
+		var THIS = this;
+
+		if (!opts) {
+			opts = {};
+		}
+
+		this.channels = {
+			r: 255, // red [0-255]
+			g: 255, // green [0-255]
+			b: 255, // blue [0-255]
+			h: 0, // hue [0-360]
+			s: 0, // saturation [0-100]
+			v: 100, // value (brightness) [0-100]
+			a: 1.0, // alpha (opacity) [0.0 - 1.0]
+		};
 
 		// General options
 		//
-		this.value = null; // initial HEX color. To change it later, use methods fromString(), fromHSV() and fromRGB()
-		this.valueElement = targetElement; // element that will be used to display and input the color code
-		this.styleElement = targetElement; // element that will preview the picked color using CSS backgroundColor
-		this.required = true; // whether the associated text <input> can be left empty
-		this.refine = true; // whether to refine the entered color code (e.g. uppercase it and remove whitespace)
-		this.hash = false; // whether to prefix the HEX color code with # symbol
-		this.uppercase = true; // whether to show the color code in upper case
-		this.onFineChange = null; // called instantly every time the color changes (value can be either a function or a string with javascript code)
-		this.activeClass = 'jscolor-active'; // class to be set to the target element when a picker window is open on it
-		this.overwriteImportant = false; // whether to overwrite colors of styleElement using !important
-		this.minS = 0; // min allowed saturation (0 - 100)
-		this.maxS = 100; // max allowed saturation (0 - 100)
-		this.minV = 0; // min allowed value (brightness) (0 - 100)
-		this.maxV = 100; // max allowed value (brightness) (0 - 100)
-
-		// Accessing the picked color
-		//
-		this.hsv = [0, 0, 100]; // read-only  [0-360, 0-100, 0-100]
-		this.rgb = [255, 255, 255]; // read-only  [0-255, 0-255, 0-255]
+		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
+		this.value = undefined; // INITIAL color value in any supported format. To change it later, use method fromString(), fromHSVA(), fromRGBA() or channel()
+		this.alpha = undefined; // INITIAL alpha value. To change it later, call method channel('A', <value>)
+		this.onChange = undefined; // called when color changes. Value can be either a function or a string with JS code.
+		this.onInput = undefined; // called repeatedly as the color is being changed, e.g. while dragging a slider. Value can be either a function or a string with JS code.
+		this.valueElement = undefined; // element that will be used to display and input the color value
+		this.alphaElement = undefined; // element that will be used to display and input the alpha (opacity) value
+		this.previewElement = undefined; // element that will preview the picked color using CSS background
+		this.previewPosition = 'left'; // 'left' | 'right' - position of the color preview in previewElement
+		this.previewSize = 32; // (px) width of the color preview displayed in previewElement
+		this.previewPadding = 8; // (px) space between color preview and content of the previewElement
+		this.required = true; // whether the associated text input must always contain a color value. If false, the input can be left empty.
+		this.refine = true; // whether to auto-format the entered color code (e.g. remove whitespace)
+		this.hash = false; // whether to prefix the HEX color code with # symbol (only applicable for HEX format)
+		this.uppercase = true; // whether to show the HEX color code in upper case (only applicable for HEX format)
+		this.forceStyle = true; // whether to overwrite CSS style of the previewElement using !important flag
 
 		// Color Picker options
 		//
 		this.width = 181; // width of color palette (in px)
 		this.height = 101; // height of color palette (in px)
-		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
-		this.mode = 'HSV'; // HSV | HVS | HS | HV - layout of the color picker controls
-		this.position = 'bottom'; // left | right | top | bottom - position relative to the target element
+		this.mode = 'HSV'; // 'HSV' | 'HVS' | 'HS' | 'HV' - layout of the color picker controls
+		this.alphaChannel = 'auto'; // 'auto' | true | false - if alpha channel is enabled, the alpha slider will be visible. If 'auto', it will be determined according to color format
+		this.position = 'bottom'; // 'left' | 'right' | 'top' | 'bottom' - position relative to the target element
 		this.smartPosition = true; // automatically change picker position when there is not enough space for it
+		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
-		this.closable = false; // whether to display the Close button
+		this.closeButton = false; // whether to display the Close button
 		this.closeText = 'Close';
 		this.buttonColor = '#000000'; // CSS color
 		this.buttonHeight = 18; // px
@@ -1045,25 +1483,38 @@ var jsc = {
 		this.borderWidth = 1; // px
 		this.borderColor = '#BBBBBB'; // CSS color
 		this.borderRadius = 8; // px
-		this.insetWidth = 1; // px
-		this.insetColor = '#BBBBBB'; // CSS color
-		this.shadow = true; // whether to display shadow
+		this.controlBorderWidth = 1; // px
+		this.controlBorderColor = '#BBBBBB'; // CSS color
+		this.shadow = true; // whether to display a shadow
 		this.shadowBlur = 15; // px
 		this.shadowColor = 'rgba(0,0,0,0.2)'; // CSS color
 		this.pointerColor = '#4C4C4C'; // px
-		this.pointerBorderColor = '#FFFFFF'; // CSS color
 		this.pointerBorderWidth = 1; // px
+		this.pointerBorderColor = '#FFFFFF'; // CSS color
 		this.pointerThickness = 2; // px
 		this.zIndex = 1000;
-		this.container = null; // where to append the color picker (BODY element by default)
+		this.container = undefined; // where to append the color picker (BODY element by default)
+
+		// Experimental
+		//
+		this.minS = 0; // min allowed saturation (0 - 100)
+		this.maxS = 100; // max allowed saturation (0 - 100)
+		this.minV = 0; // min allowed value (brightness) (0 - 100)
+		this.maxV = 100; // max allowed value (brightness) (0 - 100)
+		this.minA = 0.0; // min allowed alpha (opacity) (0.0 - 1.0)
+		this.maxA = 1.0; // max allowed alpha (opacity) (0.0 - 1.0)
 
 
-		// let's process the DEPRECATED jscolor.options property (this will be later removed)
-		if (jsc.jscolor.options) {
+		// let's process the DEPRECATED 'options' property (this will be later removed)
+		if (jsc.pub.options) {
 			// let's set custom default options, if specified
-			for (var opt in jsc.jscolor.options) {
-				if (jsc.jscolor.options.hasOwnProperty(opt)) {
-					jsc.setOption.call(this, opt, jsc.jscolor.options[opt]);
+			for (var opt in jsc.pub.options) {
+				if (jsc.pub.options.hasOwnProperty(opt)) {
+					try {
+						setOption(opt, jsc.pub.options[opt]);
+					} catch (e) {
+						console.warn(e);
+					}
 				}
 			}
 		}
@@ -1077,9 +1528,9 @@ var jsc = {
 			if (typeof opts.preset === 'string') {
 				presetsArr = opts.preset.split(/\s+/);
 			} else if (Array.isArray(opts.preset)) {
-				presetsArr = opts.preset.slice(); // to clone
+				presetsArr = opts.preset.slice(); // slice() to clone
 			} else {
-				jsc.warn('Unrecognized preset value');
+				console.warn('Unrecognized preset value');
 			}
 		}
 
@@ -1087,33 +1538,385 @@ var jsc = {
 		presetsArr.push('default');
 
 		// let's apply the presets in reverse order, so that should there be any overlapping options,
-		// then the formerly listed preset overrides the latter
+		// the formerly listed preset will override the latter
 		for (var i = presetsArr.length - 1; i >= 0; i -= 1) {
 			var pres = presetsArr[i];
 			if (!pres) {
 				continue; // preset is empty string
 			}
-			if (!jsc.jscolor.presets.hasOwnProperty(pres)) {
-				jsc.warn('Unknown preset \'' + pres + '\'');
+			if (!jsc.pub.presets.hasOwnProperty(pres)) {
+				console.warn('Unknown preset: %s', pres);
 				continue;
 			}
-			for (var opt in jsc.jscolor.presets[pres]) {
-				if (jsc.jscolor.presets[pres].hasOwnProperty(opt)) {
-					jsc.setOption.call(this, opt, jsc.jscolor.presets[pres][opt]);
+			for (var opt in jsc.pub.presets[pres]) {
+				if (jsc.pub.presets[pres].hasOwnProperty(opt)) {
+					try {
+						setOption(opt, jsc.pub.presets[pres][opt]);
+					} catch (e) {
+						console.warn(e);
+					}
 				}
 			}
 		}
 
 
 		// let's set specific options for this color picker
-		var nonProperties = ['preset']; // these options won't be set as instance properties
+		var nonProperties = [
+			// these options won't be set as instance properties
+			'preset',
+		];
 		for (var opt in opts) {
 			if (opts.hasOwnProperty(opt)) {
 				if (nonProperties.indexOf(opt) === -1) {
-					jsc.setOption.call(this, opt, opts[opt]);
+					try {
+						setOption(opt, opts[opt]);
+					} catch (e) {
+						console.warn(e);
+					}
 				}
 			}
 		}
+
+
+		// Getter: option(name)
+		// Setter: option(name, value)
+		//         option({name:value, ...})
+		//
+		this.option = function () {
+			if (!arguments.length) {
+				throw new Error('No option specified');
+			}
+
+			if (arguments.length === 1 && typeof arguments[0] === 'string') {
+				// getting a single option
+				try {
+					return getOption(arguments[0]);
+				} catch (e) {
+					console.warn(e);
+				}
+				return false;
+
+			} else if (arguments.length >= 2 && typeof arguments[0] === 'string') {
+				// setting a single option
+				try {
+					if (!setOption(arguments[0], arguments[1])) {
+						return false;
+					}
+				} catch (e) {
+					console.warn(e);
+					return false;
+				}
+				this.redraw(); // immediately redraws the picker, if it's displayed
+				this.exposeColor(); // in case some preview-related or format-related option was changed
+				return true;
+
+			} else if (arguments.length === 1 && typeof arguments[0] === 'object') {
+				// setting multiple options
+				var opts = arguments[0];
+				var success = true;
+				for (var opt in opts) {
+					if (opts.hasOwnProperty(opt)) {
+						try {
+							if (!setOption(opt, opts[opt])) {
+								success = false;
+							}
+						} catch (e) {
+							console.warn(e);
+							success = false;
+						}
+					}
+				}
+				this.redraw(); // immediately redraws the picker, if it's displayed
+				this.exposeColor(); // in case some preview-related or format-related option was changed
+				return success;
+			}
+
+			throw new Error('Invalid arguments');
+		}
+
+
+		// Getter: channel(name)
+		// Setter: channel(name, value)
+		//
+		this.channel = function (name, value) {
+			if (typeof name !== 'string') {
+				throw new Error('Invalid value for channel name: ' + name);
+			}
+
+			if (value === undefined) {
+				// getting channel value
+				if (!this.channels.hasOwnProperty(name.toLowerCase())) {
+					console.warn('Getting unknown channel: ' + name);
+					return false;
+				}
+				return this.channels[name.toLowerCase()];
+
+			} else {
+				// setting channel value
+				var res = false;
+				switch (name.toLowerCase()) {
+					case 'r': res = this.fromRGBA(value, null, null, null); break;
+					case 'g': res = this.fromRGBA(null, value, null, null); break;
+					case 'b': res = this.fromRGBA(null, null, value, null); break;
+					case 'h': res = this.fromHSVA(value, null, null, null); break;
+					case 's': res = this.fromHSVA(null, value, null, null); break;
+					case 'v': res = this.fromHSVA(null, null, value, null); break;
+					case 'a': res = this.fromHSVA(null, null, null, value); break;
+					default:
+						console.warn('Setting unknown channel: ' + name);
+						return false;
+				}
+				if (res) {
+					this.redraw(); // immediately redraws the picker, if it's displayed
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+
+		// Triggers given input event(s) by:
+		// - executing on<Event> callback specified as picker's option
+		// - triggering standard DOM event listeners attached to the value element
+		//
+		// It is possible to specify multiple events separated with a space.
+		//
+		this.trigger = function (eventNames) {
+			var evs = jsc.strList(eventNames);
+			for (var i = 0; i < evs.length; i += 1) {
+				var ev = evs[i].toLowerCase();
+
+				// trigger a callback
+				var callbackProp = null;
+				switch (ev) {
+					case 'input': callbackProp = 'onInput'; break;
+					case 'change': callbackProp = 'onChange'; break;
+				}
+				if (callbackProp) {
+					jsc.triggerCallback(this, callbackProp); 
+				}
+
+				// trigger standard DOM event listeners on the value element
+				jsc.triggerInputEvent(this.valueElement, ev, true, true);
+			}
+		};
+
+
+		// h: 0-360
+		// s: 0-100
+		// v: 0-100
+		// a: 0.0-1.0
+		//
+		this.fromHSVA = function (h, s, v, a, flags) { // null = don't change
+			if (h === undefined) { h = null; }
+			if (s === undefined) { s = null; }
+			if (v === undefined) { v = null; }
+			if (a === undefined) { a = null; }
+
+			if (h !== null) {
+				if (isNaN(h)) { return false; }
+				this.channels.h = Math.max(0, Math.min(360, h));
+			}
+			if (s !== null) {
+				if (isNaN(s)) { return false; }
+				this.channels.s = Math.max(0, Math.min(100, this.maxS, s), this.minS);
+			}
+			if (v !== null) {
+				if (isNaN(v)) { return false; }
+				this.channels.v = Math.max(0, Math.min(100, this.maxV, v), this.minV);
+			}
+			if (a !== null) {
+				if (isNaN(a)) { return false; }
+				this.channels.a = this.isAlphaEnabled() ?
+					Math.max(0, Math.min(1, this.maxA, a), this.minA) :
+					1.0; // if alpha channel is disabled, the color should stay 100% opaque
+			}
+
+			var rgb = jsc.HSV_RGB(
+				this.channels.h,
+				this.channels.s,
+				this.channels.v
+			);
+			this.channels.r = rgb[0];
+			this.channels.g = rgb[1];
+			this.channels.b = rgb[2];
+
+			this.exposeColor(flags);
+			return true;
+		};
+
+
+		// r: 0-255
+		// g: 0-255
+		// b: 0-255
+		// a: 0.0-1.0
+		//
+		this.fromRGBA = function (r, g, b, a, flags) { // null = don't change
+			if (r === undefined) { r = null; }
+			if (g === undefined) { g = null; }
+			if (b === undefined) { b = null; }
+			if (a === undefined) { a = null; }
+
+			if (r !== null) {
+				if (isNaN(r)) { return false; }
+				r = Math.max(0, Math.min(255, r));
+			}
+			if (g !== null) {
+				if (isNaN(g)) { return false; }
+				g = Math.max(0, Math.min(255, g));
+			}
+			if (b !== null) {
+				if (isNaN(b)) { return false; }
+				b = Math.max(0, Math.min(255, b));
+			}
+			if (a !== null) {
+				if (isNaN(a)) { return false; }
+				this.channels.a = this.isAlphaEnabled() ?
+					Math.max(0, Math.min(1, this.maxA, a), this.minA) :
+					1.0; // if alpha channel is disabled, the color should stay 100% opaque
+			}
+
+			var hsv = jsc.RGB_HSV(
+				r===null ? this.channels.r : r,
+				g===null ? this.channels.g : g,
+				b===null ? this.channels.b : b
+			);
+			if (hsv[0] !== null) {
+				this.channels.h = Math.max(0, Math.min(360, hsv[0]));
+			}
+			if (hsv[2] !== 0) { // fully black color stays black through entire saturation range, so let's not change saturation
+				this.channels.s = Math.max(0, this.minS, Math.min(100, this.maxS, hsv[1]));
+			}
+			this.channels.v = Math.max(0, this.minV, Math.min(100, this.maxV, hsv[2]));
+
+			// update RGB according to final HSV, as some values might be trimmed
+			var rgb = jsc.HSV_RGB(this.channels.h, this.channels.s, this.channels.v);
+			this.channels.r = rgb[0];
+			this.channels.g = rgb[1];
+			this.channels.b = rgb[2];
+
+			this.exposeColor(flags);
+			return true;
+		};
+
+
+		// DEPRECATED. Use .fromHSVA() instead
+		//
+		this.fromHSV = function (h, s, v, flags) {
+			console.warn('fromHSV() method is DEPRECATED. Using fromHSVA() instead.');
+			return this.fromHSVA(h, s, v, null, flags);
+		};
+
+
+		// DEPRECATED. Use .fromRGBA() instead
+		//
+		this.fromRGB = function (r, g, b, flags) {
+			console.warn('fromRGB() method is DEPRECATED. Using fromRGBA() instead.');
+			return this.fromRGBA(r, g, b, null, flags);
+		};
+
+
+		this.fromString = function (str, flags) {
+			var color = jsc.parseColorString(str);
+			if (!color) {
+				return false; // could not parse
+			}
+			if (this.format.toLowerCase() === 'any') {
+				this._currentFormat = color.format; // adapt format
+			}
+			this.fromRGBA(
+				color.rgba[0],
+				color.rgba[1],
+				color.rgba[2],
+				color.rgba[3],
+				flags
+			);
+			return true;
+		};
+
+
+		this.toString = function (format) {
+			if (format === undefined) {
+				format = this._currentFormat; // format not specified -> use the current format
+			}
+			switch (format.toLowerCase()) {
+				case 'hex': return this.toHEXString(); break;
+				case 'rgb': return this.toRGBString(); break;
+				case 'rgba': return this.toRGBAString(); break;
+			}
+			return false;
+		};
+
+
+		this.toHEXString = function () {
+			return '#' + (
+				('0' + Math.round(this.channels.r).toString(16)).substr(-2) +
+				('0' + Math.round(this.channels.g).toString(16)).substr(-2) +
+				('0' + Math.round(this.channels.b).toString(16)).substr(-2)
+			).toUpperCase();
+		};
+
+
+		this.toRGBString = function () {
+			return ('rgb(' +
+				Math.round(this.channels.r) + ',' +
+				Math.round(this.channels.g) + ',' +
+				Math.round(this.channels.b) +
+			')');
+		};
+
+
+		this.toRGBAString = function () {
+			return ('rgba(' +
+				Math.round(this.channels.r) + ',' +
+				Math.round(this.channels.g) + ',' +
+				Math.round(this.channels.b) + ',' +
+				(Math.round(this.channels.a * 100) / 100) +
+			')');
+		};
+
+
+		this.toGrayscale = function () {
+			return (
+				0.213 * this.channels.r +
+				0.715 * this.channels.g +
+				0.072 * this.channels.b
+			);
+		};
+
+
+		this.toCanvas = function () {
+			return jsc.genColorPreviewCanvas(this.toRGBAString()).canvas;
+		};
+
+
+		this.toDataURL = function () {
+			return this.toCanvas().toDataURL();
+		};
+
+
+		this.toBackground = function () {
+			var backgrounds = [];
+
+			// CSS gradient for background color preview
+			backgrounds.push(jsc.genColorPreviewGradient(this.toRGBAString()));
+
+			// data URL of generated PNG image with a gray transparency chessboard
+			var preview = jsc.genColorPreviewCanvas();
+			backgrounds.push([
+				'url(\'' + preview.canvas.toDataURL() + '\')',
+				'left top',
+				'repeat',
+			].join(' '));
+
+			return backgrounds.join(', ');
+		};
+
+
+		this.isLight = function () {
+			return this.toGrayscale() > 255 / 2;
+		};
 
 
 		this.hide = function () {
@@ -1135,231 +1938,198 @@ var jsc = {
 		};
 
 
-		this.importColor = function () {
-			if (!this.valueElement) {
-				this.exportColor();
-			} else {
-				if (jsc.isElementType(this.valueElement, 'input')) {
-					if (!this.refine) {
-						if (!this.fromString(this.valueElement.value, jsc.leaveValue)) {
-							if (this.styleElement) {
-								this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
-								this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
-								this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
-							}
-							this.exportColor(jsc.leaveValue | jsc.leaveStyle);
-						}
-					} else if (!this.required && /^\s*$/.test(this.valueElement.value)) {
-						this.valueElement.value = '';
-						if (this.styleElement) {
-							this.styleElement.style.backgroundImage = this.styleElement._jscOrigStyle.backgroundImage;
-							this.styleElement.style.backgroundColor = this.styleElement._jscOrigStyle.backgroundColor;
-							this.styleElement.style.color = this.styleElement._jscOrigStyle.color;
-						}
-						this.exportColor(jsc.leaveValue | jsc.leaveStyle);
-
-					} else if (this.fromString(this.valueElement.value)) {
-						// managed to import color successfully from the value -> OK, don't do anything
-					} else {
-						this.exportColor();
-					}
-				} else {
-					// not an input element -> doesn't have any value
-					this.exportColor();
-				}
+		this.isAlphaEnabled = function () {
+			if (this.alphaChannel === true) {
+				return true; // the alpha channel is explicitly enabled
 			}
-		};
-
-
-		this.exportColor = function (flags) {
-			if (!(flags & jsc.leaveValue) && this.valueElement) {
-				var value = this.toString();
-				if (this.uppercase) { value = value.toUpperCase(); }
-				if (this.hash) { value = '#' + value; }
-
-				if (jsc.isElementType(this.valueElement, 'input')) {
-					if (this.valueElement.value !== value) {
-						this.valueElement.value = value;
-					}
-				} else {
-					this.valueElement.innerHTML = value;
-				}
-			}
-			if (!(flags & jsc.leaveStyle)) {
-				if (this.styleElement) {
-					var bgColor = '#' + this.toString();
-					var fgColor = this.isLight() ? '#000' : '#FFF';
-
-					this.styleElement.style.backgroundImage = 'none';
-					this.styleElement.style.backgroundColor = bgColor;
-					this.styleElement.style.color = fgColor;
-
-					if (this.overwriteImportant) {
-						this.styleElement.setAttribute('style',
-							'background: ' + bgColor + ' !important; ' +
-							'color: ' + fgColor + ' !important;'
-						);
-					}
-				}
-			}
-			if (!(flags & jsc.leavePad) && isPickerOwner()) {
-				redrawPad();
-			}
-			if (!(flags & jsc.leaveSld) && isPickerOwner()) {
-				redrawSld();
-			}
-		};
-
-
-		// h: 0-360
-		// s: 0-100
-		// v: 0-100
-		//
-		this.fromHSV = function (h, s, v, flags) { // null = don't change
-			if (h !== null) {
-				if (isNaN(h)) { return false; }
-				h = Math.max(0, Math.min(360, h));
-			}
-			if (s !== null) {
-				if (isNaN(s)) { return false; }
-				s = Math.max(0, Math.min(100, this.maxS, s), this.minS);
-			}
-			if (v !== null) {
-				if (isNaN(v)) { return false; }
-				v = Math.max(0, Math.min(100, this.maxV, v), this.minV);
-			}
-
-			this.rgb = HSV_RGB(
-				h===null ? this.hsv[0] : (this.hsv[0]=h),
-				s===null ? this.hsv[1] : (this.hsv[1]=s),
-				v===null ? this.hsv[2] : (this.hsv[2]=v)
-			);
-
-			this.exportColor(flags);
-		};
-
-
-		// r: 0-255
-		// g: 0-255
-		// b: 0-255
-		//
-		this.fromRGB = function (r, g, b, flags) { // null = don't change
-			if (r !== null) {
-				if (isNaN(r)) { return false; }
-				r = Math.max(0, Math.min(255, r));
-			}
-			if (g !== null) {
-				if (isNaN(g)) { return false; }
-				g = Math.max(0, Math.min(255, g));
-			}
-			if (b !== null) {
-				if (isNaN(b)) { return false; }
-				b = Math.max(0, Math.min(255, b));
-			}
-
-			var hsv = RGB_HSV(
-				r===null ? this.rgb[0] : r,
-				g===null ? this.rgb[1] : g,
-				b===null ? this.rgb[2] : b
-			);
-			if (hsv[0] !== null) {
-				this.hsv[0] = Math.max(0, Math.min(360, hsv[0]));
-			}
-			if (hsv[2] !== 0) {
-				this.hsv[1] = hsv[1]===null ? null : Math.max(0, this.minS, Math.min(100, this.maxS, hsv[1]));
-			}
-			this.hsv[2] = hsv[2]===null ? null : Math.max(0, this.minV, Math.min(100, this.maxV, hsv[2]));
-
-			// update RGB according to final HSV, as some values might be trimmed
-			var rgb = HSV_RGB(this.hsv[0], this.hsv[1], this.hsv[2]);
-			this.rgb[0] = rgb[0];
-			this.rgb[1] = rgb[1];
-			this.rgb[2] = rgb[2];
-
-			this.exportColor(flags);
-		};
-
-
-		this.fromString = function (str, flags) {
-			var m;
-			if (m = str.match(/^\W*([0-9A-F]{3}([0-9A-F]{3})?)\W*$/i)) {
-				// HEX notation
-				//
-
-				if (m[1].length === 6) {
-					// 6-char notation
-					this.fromRGB(
-						parseInt(m[1].substr(0,2),16),
-						parseInt(m[1].substr(2,2),16),
-						parseInt(m[1].substr(4,2),16),
-						flags
-					);
-				} else {
-					// 3-char notation
-					this.fromRGB(
-						parseInt(m[1].charAt(0) + m[1].charAt(0),16),
-						parseInt(m[1].charAt(1) + m[1].charAt(1),16),
-						parseInt(m[1].charAt(2) + m[1].charAt(2),16),
-						flags
-					);
-				}
-				return true;
-
-			} else if (m = str.match(/^\W*rgba?\(([^)]*)\)\W*$/i)) {
-				var params = m[1].split(',');
-				var re = /^\s*(\d*)(\.\d+)?\s*$/;
-				var mR, mG, mB;
-				if (
-					params.length >= 3 &&
-					(mR = params[0].match(re)) &&
-					(mG = params[1].match(re)) &&
-					(mB = params[2].match(re))
-				) {
-					var r = parseFloat((mR[1] || '0') + (mR[2] || ''));
-					var g = parseFloat((mG[1] || '0') + (mG[2] || ''));
-					var b = parseFloat((mB[1] || '0') + (mB[2] || ''));
-					this.fromRGB(r, g, b, flags);
-					return true;
-				}
+			if (this.alphaChannel === 'auto') {
+				return (
+					this.format.toLowerCase() === 'any' || // when the format is 'any', it can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
+					this._currentFormat === 'rgba' || // the current format supports alpha channel
+					this.alphaElement // the alpha value is redirected, so we're working with alpha channel
+				);
 			}
 			return false;
 		};
 
 
-		this.toString = function () {
-			return (
-				(0x100 | Math.round(this.rgb[0])).toString(16).substr(1) +
-				(0x100 | Math.round(this.rgb[1])).toString(16).substr(1) +
-				(0x100 | Math.round(this.rgb[2])).toString(16).substr(1)
-			);
+		this.processValueInput = function (str) {
+
+			if (!this.required && str.trim() === '') {
+				// input's value is empty (or just whitespace) -> leave the value
+				this.setPreviewElementBg(null);
+				this.exposeColor(jsc.flags.leaveValue | jsc.flags.leavePreview);
+				return;
+			}
+
+			if (!this.refine) {
+				if (!this.fromString(str, jsc.flags.leaveValue)) {
+					// input's value could not be parsed -> remove background
+					this.setPreviewElementBg(null);
+					this.exposeColor(jsc.flags.leaveValue | jsc.flags.leavePreview);
+				}
+				return;
+			}
+
+			if (!this.fromString(str)) {
+				// could not parse the color value - let's just expose the current color
+				this.exposeColor();
+			}
 		};
 
 
-		this.toHEXString = function () {
-			return '#' + this.toString().toUpperCase();
+		this.processAlphaInput = function (str) {
+			if (!this.fromHSVA(null, null, null, parseFloat(str))) {
+				// could not parse the alpha value - let's just expose the current color
+				this.exposeColor();
+			}
 		};
 
 
-		this.toRGBString = function () {
-			return ('rgb(' +
-				Math.round(this.rgb[0]) + ',' +
-				Math.round(this.rgb[1]) + ',' +
-				Math.round(this.rgb[2]) + ')'
-			);
+		this.exposeColor = function (flags) {
+
+			if (!(flags & jsc.flags.leaveValue) && this.valueElement) {
+				var value = this.toString();
+
+				if (this._currentFormat === 'hex') {
+					if (!this.uppercase) { value = value.toLowerCase(); }
+					if (!this.hash) { value = value.replace(/^#/, ''); }
+				}
+
+				if (jsc.nodeName(this.valueElement) === 'input') {
+					this.valueElement.value = value;
+				} else {
+					this.valueElement.innerHTML = value;
+				}
+			}
+
+			if (!(flags & jsc.flags.leaveAlpha) && this.alphaElement) {
+				var value = Math.round(this.channels.a * 100) / 100;
+
+				if (jsc.nodeName(this.alphaElement) === 'input') {
+					this.alphaElement.value = value;
+				} else {
+					this.alphaElement.innerHTML = value;
+				}
+			}
+
+			if (!(flags & jsc.flags.leavePreview) && this.previewElement) {
+				var previewPos = null; // 'left' | 'right' (null -> fill the entire element)
+
+				if (
+					jsc.isTextInput(this.previewElement) || // text input
+					(jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement)) // button with text
+				) {
+					previewPos = this.previewPosition;
+				}
+
+				this.setPreviewElementBg(this.toRGBAString());
+			}
+
+			if (isPickerOwner()) {
+				redrawPad();
+				redrawSld();
+				redrawASld();
+			}
 		};
 
 
-		this.toGrayscale = function () {
-			return (
-				0.213 * this.rgb[0] +
-				0.715 * this.rgb[1] +
-				0.072 * this.rgb[2]
-			);
-		};
+		this.setPreviewElementBg = function (color) {
+			if (!this.previewElement) {
+				return;
+			}
+
+			var position = null; // color preview position:  null | 'left' | 'right'
+			var width = null; // color preview width:  px | null = fill the entire element
+			if (
+				jsc.isTextInput(this.previewElement) || // text input
+				(jsc.isButton(this.previewElement) && !jsc.isButtonEmpty(this.previewElement)) // button with text
+			) {
+				position = this.previewPosition;
+				width = this.previewSize;
+			}
+
+			var backgrounds = [];
+
+			if (!color) {
+				// there is no color preview to display -> let's remove any previous background image
+				backgrounds.push({
+					image: 'none',
+					position: 'left top',
+					size: 'auto',
+					repeat: 'no-repeat',
+					origin: 'padding-box',
+				});
+			} else {
+				// CSS gradient for background color preview
+				backgrounds.push({
+					image: jsc.genColorPreviewGradient(
+						color,
+						position,
+						width ? width - jsc.pub.previewSeparator.length : null
+					),
+					position: 'left top',
+					size: 'auto',
+					repeat: position ? 'repeat-y' : 'repeat',
+					origin: 'padding-box',
+				});
+
+				// data URL of generated PNG image with a gray transparency chessboard
+				var preview = jsc.genColorPreviewCanvas(
+					'rgba(0,0,0,0)',
+					position ? {'left':'right', 'right':'left'}[position] : null,
+					width,
+					true
+				);
+				backgrounds.push({
+					image: 'url(\'' + preview.canvas.toDataURL() + '\')',
+					position: (position || 'left') + ' top',
+					size: preview.width + 'px ' + preview.height + 'px',
+					repeat: position ? 'repeat-y' : 'repeat',
+					origin: 'padding-box',
+				});
+			}
+
+			var bg = {
+				image: [],
+				position: [],
+				size: [],
+				repeat: [],
+				origin: [],
+			};
+			for (var i = 0; i < backgrounds.length; i += 1) {
+				bg.image.push(backgrounds[i].image);
+				bg.position.push(backgrounds[i].position);
+				bg.size.push(backgrounds[i].size);
+				bg.repeat.push(backgrounds[i].repeat);
+				bg.origin.push(backgrounds[i].origin);
+			}
+
+			// set previewElement's background-images
+			var sty = {
+				'background-image': bg.image.join(', '),
+				'background-position': bg.position.join(', '),
+				'background-size': bg.size.join(', '),
+				'background-repeat': bg.repeat.join(', '),
+				'background-origin': bg.origin.join(', '),
+			};
+			jsc.setStyle(this.previewElement, sty, this.forceStyle);
 
 
-		this.isLight = function () {
-			return this.toGrayscale() > 255 / 2;
+			// set/restore previewElement's padding
+			var padding = {
+				left: null,
+				right: null,
+			};
+			if (position) {
+				padding[position] = (this.previewSize + this.previewPadding) + 'px';
+			}
+
+			var sty = {
+				'padding-left': padding.left,
+				'padding-right': padding.right,
+			};
+			jsc.setStyle(this.previewElement, sty, this.forceStyle, true);
 		};
 
 
@@ -1371,11 +2141,8 @@ var jsc = {
 			do {
 				// If the target element or one of its parent nodes has fixed position,
 				// then use fixed positioning instead
-				//
-				// Note: In Firefox, getComputedStyle returns null in a hidden iframe,
-				// that's why we need to check if the returned style object is non-empty
-				var currStyle = jsc.getStyle(elm);
-				if (currStyle && currStyle.position.toLowerCase() === 'fixed') {
+				var compStyle = jsc.getCompStyle(elm);
+				if (compStyle.position && compStyle.position.toLowerCase() === 'fixed') {
 					this.fixed = true;
 				}
 
@@ -1390,67 +2157,73 @@ var jsc = {
 						elm._jscEventsAttached = true;
 					}
 				}
-			} while ((elm = elm.parentNode) && !jsc.isElementType(elm, 'body'));
+			} while ((elm = elm.parentNode) && jsc.nodeName(elm) !== 'body');
 		};
 
 
-		// r: 0-255
-		// g: 0-255
-		// b: 0-255
-		//
-		// returns: [ 0-360, 0-100, 0-100 ]
-		//
-		function RGB_HSV (r, g, b) {
-			r /= 255;
-			g /= 255;
-			b /= 255;
-			var n = Math.min(Math.min(r,g),b);
-			var v = Math.max(Math.max(r,g),b);
-			var m = v - n;
-			if (m === 0) { return [ null, 0, 100 * v ]; }
-			var h = r===n ? 3+(b-g)/m : (g===n ? 5+(r-b)/m : 1+(g-r)/m);
-			return [
-				60 * (h===6?0:h),
-				100 * (m/v),
-				100 * v
-			];
+		function setOption (option, value) {
+			if (typeof option !== 'string') {
+				throw new Error('Invalid value for option name: ' + option);
+			}
+
+			// enum option
+			if (jsc.enumOpts.hasOwnProperty(option)) {
+				if (typeof value === 'string') { // enum string values are case insensitive
+					value = value.toLowerCase();
+				}
+				if (jsc.enumOpts[option].indexOf(value) === -1) {
+					throw new Error('Option \'' + option + '\' has invalid value: ' + value);
+				}
+			}
+
+			// deprecated option
+			if (jsc.deprecatedOpts.hasOwnProperty(option)) {
+				var oldOpt = option;
+				var newOpt = jsc.deprecatedOpts[option];
+				if (newOpt) {
+					// if we have a new name for this option, let's log a warning and use the new name
+					console.warn('Option \'%s\' is DEPRECATED, using \'%s\' instead', oldOpt, newOpt);
+					option = newOpt;
+				} else {
+					// new name not available for the option
+					throw new Error('Option \'' + option + '\' is DEPRECATED');
+				}
+			}
+
+			if (!(option in THIS)) {
+				throw new Error('Unrecognized configuration option: ' + option);
+			}
+
+			THIS[option] = value;
+			return true;
 		}
 
 
-		// h: 0-360
-		// s: 0-100
-		// v: 0-100
-		//
-		// returns: [ 0-255, 0-255, 0-255 ]
-		//
-		function HSV_RGB (h, s, v) {
-			var u = 255 * (v / 100);
-
-			if (h === null) {
-				return [ u, u, u ];
+		function getOption (option) {
+			// deprecated option
+			if (jsc.deprecatedOpts.hasOwnProperty(option)) {
+				var oldOpt = option;
+				var newOpt = jsc.deprecatedOpts[option];
+				if (newOpt) {
+					// if we have a new name for this option, let's log a warning and use the new name
+					console.warn('Option \'%s\' is DEPRECATED, using \'%s\' instead', oldOpt, newOpt);
+					option = newOpt;
+				} else {
+					// new name not available for the option
+					throw new Error('Option \'' + option + '\' is DEPRECATED');
+				}
 			}
 
-			h /= 60;
-			s /= 100;
-
-			var i = Math.floor(h);
-			var f = i%2 ? h-i : 1-(h-i);
-			var m = u * (1 - s);
-			var n = u * (1 - s * f);
-			switch (i) {
-				case 6:
-				case 0: return [u,n,m];
-				case 1: return [n,u,m];
-				case 2: return [m,u,n];
-				case 3: return [m,n,u];
-				case 4: return [n,m,u];
-				case 5: return [u,m,n];
+			if (!(option in THIS)) {
+				throw new Error('Unrecognized configuration option: ' + option);
 			}
+
+			return THIS[option];
 		}
 
 
 		function detachPicker () {
-			jsc.unsetClass(THIS.targetElement, THIS.activeClass);
+			jsc.removeClass(THIS.targetElement, jsc.pub.activeClassName);
 			jsc.picker.wrap.parentNode.removeChild(jsc.picker.wrap);
 			delete jsc.picker.owner;
 		}
@@ -1465,7 +2238,7 @@ var jsc = {
 
 			if (!jsc.picker) {
 				jsc.picker = {
-					owner: null,
+					owner: null, // owner picker instance
 					wrap : document.createElement('div'),
 					box : document.createElement('div'),
 					boxS : document.createElement('div'), // shadow area
@@ -1479,7 +2252,7 @@ var jsc = {
 					crossBX : document.createElement('div'), // border X
 					crossLY : document.createElement('div'), // line Y
 					crossLX : document.createElement('div'), // line X
-					sld : document.createElement('div'),
+					sld : document.createElement('div'), // slider
 					sldB : document.createElement('div'), // border
 					sldM : document.createElement('div'), // mouse/touch area
 					sldGrad : jsc.createSliderGradient(),
@@ -1487,8 +2260,16 @@ var jsc = {
 					sldPtrIB : document.createElement('div'), // slider pointer inner border
 					sldPtrMB : document.createElement('div'), // slider pointer middle border
 					sldPtrOB : document.createElement('div'), // slider pointer outer border
+					asld : document.createElement('div'), // alpha slider
+					asldB : document.createElement('div'), // border
+					asldM : document.createElement('div'), // mouse/touch area
+					asldGrad : jsc.createASliderGradient(),
+					asldPtrS : document.createElement('div'), // slider pointer spacer
+					asldPtrIB : document.createElement('div'), // slider pointer inner border
+					asldPtrMB : document.createElement('div'), // slider pointer middle border
+					asldPtrOB : document.createElement('div'), // slider pointer outer border
 					btn : document.createElement('div'),
-					btnT : document.createElement('span') // text
+					btnT : document.createElement('span'), // text
 				};
 
 				jsc.picker.pad.appendChild(jsc.picker.padPal.elm);
@@ -1510,6 +2291,15 @@ var jsc = {
 				jsc.picker.box.appendChild(jsc.picker.sldB);
 				jsc.picker.box.appendChild(jsc.picker.sldM);
 
+				jsc.picker.asld.appendChild(jsc.picker.asldGrad.elm);
+				jsc.picker.asldB.appendChild(jsc.picker.asld);
+				jsc.picker.asldB.appendChild(jsc.picker.asldPtrOB);
+				jsc.picker.asldPtrOB.appendChild(jsc.picker.asldPtrMB);
+				jsc.picker.asldPtrMB.appendChild(jsc.picker.asldPtrIB);
+				jsc.picker.asldPtrIB.appendChild(jsc.picker.asldPtrS);
+				jsc.picker.box.appendChild(jsc.picker.asldB);
+				jsc.picker.box.appendChild(jsc.picker.asldM);
+
 				jsc.picker.btn.appendChild(jsc.picker.btnT);
 				jsc.picker.box.appendChild(jsc.picker.btn);
 
@@ -1520,10 +2310,11 @@ var jsc = {
 
 			var p = jsc.picker;
 
-			var displaySlider = !!jsc.getSliderComponent(THIS);
+			var displaySlider = !!jsc.getSliderChannel(THIS);
+			var displayAlphaSlider = THIS.isAlphaEnabled();
 			var dims = jsc.getPickerDims(THIS);
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
-			var padToSliderPadding = jsc.getPadToSliderPadding(THIS);
+			var controlPadding = jsc.getControlPadding(THIS);
 			var borderRadius = Math.min(
 				THIS.borderRadius,
 				Math.round(THIS.padding * Math.PI)); // px
@@ -1561,11 +2352,14 @@ var jsc = {
 			// IE hack:
 			// If the element is transparent, IE will trigger the event on the elements under it,
 			// e.g. on Canvas or on elements with border
-			p.padM.style.background =
-			p.sldM.style.background =
-				'#FFF';
-			jsc.setStyle(p.padM, 'opacity', '0');
-			jsc.setStyle(p.sldM, 'opacity', '0');
+			p.padM.style.background = 'rgba(255,0,0,.2)';
+			p.sldM.style.background = 'rgba(0,255,0,.2)';
+			p.asldM.style.background = 'rgba(0,0,255,.2)';
+
+			p.padM.style.opacity =
+			p.sldM.style.opacity =
+			p.asldM.style.opacity =
+				'0';
 
 			// pad
 			p.pad.style.position = 'relative';
@@ -1573,23 +2367,23 @@ var jsc = {
 			p.pad.style.height = THIS.height + 'px';
 
 			// pad palettes (HSV and HVS)
-			p.padPal.draw(THIS.width, THIS.height, jsc.getPadYComponent(THIS));
+			p.padPal.draw(THIS.width, THIS.height, jsc.getPadYChannel(THIS));
 
 			// pad border
 			p.padB.style.position = 'absolute';
 			p.padB.style.left = THIS.padding + 'px';
 			p.padB.style.top = THIS.padding + 'px';
-			p.padB.style.border = THIS.insetWidth + 'px solid';
-			p.padB.style.borderColor = THIS.insetColor;
+			p.padB.style.border = THIS.controlBorderWidth + 'px solid';
+			p.padB.style.borderColor = THIS.controlBorderColor;
 
 			// pad mouse area
 			p.padM._jscInstance = THIS;
 			p.padM._jscControlName = 'pad';
 			p.padM.style.position = 'absolute';
-			p.padM.style.left = '0';
-			p.padM.style.top = '0';
-			p.padM.style.width = (THIS.padding + 2 * THIS.insetWidth + THIS.width + padToSliderPadding / 2) + 'px';
-			p.padM.style.height = dims[1] + 'px';
+			p.padM.style.left = -THIS.borderWidth + 'px';
+			p.padM.style.top = -THIS.borderWidth + 'px';
+			p.padM.style.width = (THIS.borderWidth + THIS.padding + 2 * THIS.controlBorderWidth + THIS.width + controlPadding) + 'px';
+			p.padM.style.height = (2 * THIS.borderWidth + dims[1]) + 'px';
 			p.padM.style.cursor = padCursor;
 
 			// pad cross
@@ -1641,6 +2435,7 @@ var jsc = {
 			p.crossLX.style.left =
 				THIS.pointerBorderWidth + 'px';
 
+
 			// slider
 			p.sld.style.overflow = 'hidden';
 			p.sld.style.width = THIS.sliderSize + 'px';
@@ -1652,20 +2447,23 @@ var jsc = {
 			// slider border
 			p.sldB.style.display = displaySlider ? 'block' : 'none';
 			p.sldB.style.position = 'absolute';
-			p.sldB.style.right = THIS.padding + 'px';
+			p.sldB.style.left = (THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + 2 * controlPadding) + 'px';
 			p.sldB.style.top = THIS.padding + 'px';
-			p.sldB.style.border = THIS.insetWidth + 'px solid';
-			p.sldB.style.borderColor = THIS.insetColor;
+			p.sldB.style.border = THIS.controlBorderWidth + 'px solid';
+			p.sldB.style.borderColor = THIS.controlBorderColor;
 
 			// slider mouse area
 			p.sldM._jscInstance = THIS;
 			p.sldM._jscControlName = 'sld';
 			p.sldM.style.display = displaySlider ? 'block' : 'none';
 			p.sldM.style.position = 'absolute';
-			p.sldM.style.right = '0';
-			p.sldM.style.top = '0';
-			p.sldM.style.width = (THIS.sliderSize + padToSliderPadding / 2 + THIS.padding + 2 * THIS.insetWidth) + 'px';
-			p.sldM.style.height = dims[1] + 'px';
+			p.sldM.style.left = (THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + controlPadding) + 'px';
+			p.sldM.style.top = -THIS.borderWidth + 'px';
+			p.sldM.style.width = (
+					(THIS.sliderSize + 2 * controlPadding + 2 * THIS.controlBorderWidth) +
+					(displayAlphaSlider ? 0 : Math.max(0, THIS.padding - controlPadding)) // remaining padding to the right edge
+				) + 'px';
+			p.sldM.style.height = (2 * THIS.borderWidth + dims[1]) + 'px';
 			p.sldM.style.cursor = 'default';
 
 			// slider pointer inner and outer border
@@ -1683,31 +2481,82 @@ var jsc = {
 
 			// slider pointer spacer
 			p.sldPtrS.style.width = THIS.sliderSize + 'px';
-			p.sldPtrS.style.height = sliderPtrSpace + 'px';
+			p.sldPtrS.style.height = jsc.pub.sliderInnerSpace + 'px';
+
+
+			// alpha slider
+			p.asld.style.overflow = 'hidden';
+			p.asld.style.width = THIS.sliderSize + 'px';
+			p.asld.style.height = THIS.height + 'px';
+
+			// alpha slider gradient
+			p.asldGrad.draw(THIS.sliderSize, THIS.height, '#000');
+
+			// alpha slider border
+			p.asldB.style.display = displayAlphaSlider ? 'block' : 'none';
+			p.asldB.style.position = 'absolute';
+			p.asldB.style.left = (
+					(THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + controlPadding) +
+					(displaySlider ? (THIS.sliderSize + 3 * controlPadding + 2 * THIS.controlBorderWidth) : 0)
+				) + 'px';
+			p.asldB.style.top = THIS.padding + 'px';
+			p.asldB.style.border = THIS.controlBorderWidth + 'px solid';
+			p.asldB.style.borderColor = THIS.controlBorderColor;
+
+			// alpha slider mouse area
+			p.asldM._jscInstance = THIS;
+			p.asldM._jscControlName = 'asld';
+			p.asldM.style.display = displayAlphaSlider ? 'block' : 'none';
+			p.asldM.style.position = 'absolute';
+			p.asldM.style.left = (
+					(THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + controlPadding) +
+					(displaySlider ? (THIS.sliderSize + 2 * controlPadding + 2 * THIS.controlBorderWidth) : 0)
+				) + 'px';
+			p.asldM.style.top = -THIS.borderWidth + 'px';
+			p.asldM.style.width = (
+					(THIS.sliderSize + 2 * controlPadding + 2 * THIS.controlBorderWidth) +
+					Math.max(0, THIS.padding - controlPadding) // remaining padding to the right edge
+				) + 'px';
+			p.asldM.style.height = (2 * THIS.borderWidth + dims[1]) + 'px';
+			p.asldM.style.cursor = 'default';
+
+			// alpha slider pointer inner and outer border
+			p.asldPtrIB.style.border =
+			p.asldPtrOB.style.border =
+				THIS.pointerBorderWidth + 'px solid ' + THIS.pointerBorderColor;
+
+			// alpha slider pointer outer border
+			p.asldPtrOB.style.position = 'absolute';
+			p.asldPtrOB.style.left = -(2 * THIS.pointerBorderWidth + THIS.pointerThickness) + 'px';
+			p.asldPtrOB.style.top = '0';
+
+			// alpha slider pointer middle border
+			p.asldPtrMB.style.border = THIS.pointerThickness + 'px solid ' + THIS.pointerColor;
+
+			// alpha slider pointer spacer
+			p.asldPtrS.style.width = THIS.sliderSize + 'px';
+			p.asldPtrS.style.height = jsc.pub.sliderInnerSpace + 'px';
+
 
 			// the Close button
 			function setBtnBorder () {
-				var insetColors = THIS.insetColor.split(/\s+/);
+				var insetColors = THIS.controlBorderColor.split(/\s+/);
 				var outsetColor = insetColors.length < 2 ? insetColors[0] : insetColors[1] + ' ' + insetColors[0] + ' ' + insetColors[0] + ' ' + insetColors[1];
 				p.btn.style.borderColor = outsetColor;
 			}
 			p.btn.className = 'jscolor-btn-close';
-			p.btn.style.display = THIS.closable ? 'block' : 'none';
+			p.btn.style.display = THIS.closeButton ? 'block' : 'none';
 			p.btn.style.position = 'absolute';
 			p.btn.style.left = THIS.padding + 'px';
 			p.btn.style.bottom = THIS.padding + 'px';
 			p.btn.style.padding = '0 15px';
 			p.btn.style.height = THIS.buttonHeight + 'px';
-			p.btn.style.border = THIS.insetWidth + 'px solid';
+			p.btn.style.border = THIS.controlBorderWidth + 'px solid';
 			setBtnBorder();
 			p.btn.style.color = THIS.buttonColor;
 			p.btn.style.font = '12px sans-serif';
 			p.btn.style.textAlign = 'center';
-			try {
-				p.btn.style.cursor = 'pointer';
-			} catch(eOldIE) {
-				p.btn.style.cursor = 'hand';
-			}
+			p.btn.style.cursor = 'pointer';
 			p.btn.onmousedown = function () {
 				THIS.hide();
 			};
@@ -1715,53 +2564,51 @@ var jsc = {
 			p.btnT.innerHTML = '';
 			p.btnT.appendChild(document.createTextNode(THIS.closeText));
 
-			// place pointers
+			// reposition the pointers
 			redrawPad();
 			redrawSld();
+			redrawASld();
 
 			// If we are changing the owner without first closing the picker,
 			// make sure to first deal with the old owner
 			if (jsc.picker.owner && jsc.picker.owner !== THIS) {
-				jsc.unsetClass(jsc.picker.owner.targetElement, THIS.activeClass);
+				jsc.removeClass(jsc.picker.owner.targetElement, jsc.pub.activeClassName);
 			}
 
-			// Set the new picker owner
+			// Set a new picker owner
 			jsc.picker.owner = THIS;
 
 			// The redrawPosition() method needs picker.owner to be set, that's why we call it here,
 			// after setting the owner
-			if (jsc.isElementType(container, 'body')) {
+			if (THIS.container === document.body) {
 				jsc.redrawPosition();
 			} else {
 				jsc._drawPosition(THIS, 0, 0, 'relative', false);
 			}
 
-			if (p.wrap.parentNode != container) {
-				container.appendChild(p.wrap);
+			if (p.wrap.parentNode !== THIS.container) {
+				THIS.container.appendChild(p.wrap);
 			}
 
-			jsc.setClass(THIS.targetElement, THIS.activeClass);
+			jsc.addClass(THIS.targetElement, jsc.pub.activeClassName);
 		}
 
 
 		function redrawPad () {
 			// redraw the pad pointer
-			switch (jsc.getPadYComponent(THIS)) {
-			case 's': var yComponent = 1; break;
-			case 'v': var yComponent = 2; break;
-			}
-			var x = Math.round((THIS.hsv[0] / 360) * (THIS.width - 1));
-			var y = Math.round((1 - THIS.hsv[yComponent] / 100) * (THIS.height - 1));
+			var yChannel = jsc.getPadYChannel(THIS);
+			var x = Math.round((THIS.channels.h / 360) * (THIS.width - 1));
+			var y = Math.round((1 - THIS.channels[yChannel] / 100) * (THIS.height - 1));
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
 			var ofs = -Math.floor(crossOuterSize / 2);
 			jsc.picker.cross.style.left = (x + ofs) + 'px';
 			jsc.picker.cross.style.top = (y + ofs) + 'px';
 
 			// redraw the slider
-			switch (jsc.getSliderComponent(THIS)) {
+			switch (jsc.getSliderChannel(THIS)) {
 			case 's':
-				var rgb1 = HSV_RGB(THIS.hsv[0], 100, THIS.hsv[2]);
-				var rgb2 = HSV_RGB(THIS.hsv[0], 0, THIS.hsv[2]);
+				var rgb1 = jsc.HSV_RGB(THIS.channels.h, 100, THIS.channels.v);
+				var rgb2 = jsc.HSV_RGB(THIS.channels.h, 0, THIS.channels.v);
 				var color1 = 'rgb(' +
 					Math.round(rgb1[0]) + ',' +
 					Math.round(rgb1[1]) + ',' +
@@ -1773,7 +2620,7 @@ var jsc = {
 				jsc.picker.sldGrad.draw(THIS.sliderSize, THIS.height, color1, color2);
 				break;
 			case 'v':
-				var rgb = HSV_RGB(THIS.hsv[0], THIS.hsv[1], 100);
+				var rgb = jsc.HSV_RGB(THIS.channels.h, THIS.channels.s, 100);
 				var color1 = 'rgb(' +
 					Math.round(rgb[0]) + ',' +
 					Math.round(rgb[1]) + ',' +
@@ -1782,20 +2629,28 @@ var jsc = {
 				jsc.picker.sldGrad.draw(THIS.sliderSize, THIS.height, color1, color2);
 				break;
 			}
+
+			// redraw the alpha slider
+			jsc.picker.asldGrad.draw(THIS.sliderSize, THIS.height, THIS.toHEXString());
 		}
 
 
 		function redrawSld () {
-			var sldComponent = jsc.getSliderComponent(THIS);
-			if (sldComponent) {
+			var sldChannel = jsc.getSliderChannel(THIS);
+			if (sldChannel) {
 				// redraw the slider pointer
-				switch (sldComponent) {
-				case 's': var yComponent = 1; break;
-				case 'v': var yComponent = 2; break;
-				}
-				var y = Math.round((1 - THIS.hsv[yComponent] / 100) * (THIS.height - 1));
-				jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(sliderPtrSpace / 2)) + 'px';
+				var y = Math.round((1 - THIS.channels[sldChannel] / 100) * (THIS.height - 1));
+				jsc.picker.sldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(jsc.pub.sliderInnerSpace / 2)) + 'px';
 			}
+
+			// redraw the alpha slider
+			jsc.picker.asldGrad.draw(THIS.sliderSize, THIS.height, THIS.toHEXString());
+		}
+
+
+		function redrawASld () {
+			var y = Math.round((1 - THIS.channels.a) * (THIS.height - 1));
+			jsc.picker.asldPtrOB.style.top = (y - (2 * THIS.pointerBorderWidth + THIS.pointerThickness) - Math.floor(jsc.pub.sliderInnerSpace / 2)) + 'px';
 		}
 
 
@@ -1804,112 +2659,289 @@ var jsc = {
 		}
 
 
-		function handleValueBlur () {
-			THIS.importColor();
-		}
-
-
-		// Find the target element
-		if (typeof targetElement === 'string') {
-			var id = targetElement;
-			var elm = document.getElementById(id);
-			if (elm) {
-				this.targetElement = elm;
-			} else {
-				jsc.warn('Could not find target element with ID \'' + id + '\'');
-			}
-		} else if (targetElement) {
-			this.targetElement = targetElement;
-		} else {
-			jsc.warn('Invalid target element: \'' + targetElement + '\'');
-		}
-
-		if (this.targetElement._jscLinkedInstance) {
-			jsc.warn('Cannot link jscolor twice to the same element. Skipping.');
-			return;
-		}
-		this.targetElement._jscLinkedInstance = this;
-
-		// Find the value element
-		this.valueElement = jsc.fetchElement(this.valueElement);
-		// Find the style element
-		this.styleElement = jsc.fetchElement(this.styleElement);
-
-		var THIS = this;
-		var container =
-			this.container ?
-			jsc.fetchElement(this.container) :
-			document.getElementsByTagName('body')[0];
-		var sliderPtrSpace = 3; // px
-
-		// For BUTTON elements it's important to stop them from sending the form when clicked
-		// (e.g. in Safari)
-		if (jsc.isElementType(this.targetElement, 'button')) {
-			if (this.targetElement.onclick) {
-				var origCallback = this.targetElement.onclick;
-				this.targetElement.onclick = function (evt) {
-					origCallback.call(this, evt);
-					return false;
-				};
-			} else {
-				this.targetElement.onclick = function () { return false; };
+		function onValueBlur () {
+			if (THIS.valueElement) {
+				THIS.processValueInput(THIS.valueElement.value);
 			}
 		}
 
-		/*
-		var elm = this.targetElement;
-		do {
-			// If the target element or one of its offsetParents has fixed position,
-			// then use fixed positioning instead
-			//
-			// Note: In Firefox, getComputedStyle returns null in a hidden iframe,
-			// that's why we need to check if the returned style object is non-empty
-			var currStyle = jsc.getStyle(elm);
-			if (currStyle && currStyle.position.toLowerCase() === 'fixed') {
-				this.fixed = true;
+
+		function onAlphaBlur () {
+			if (THIS.alphaElement) {
+				THIS.processAlphaInput(THIS.alphaElement.value);
+			}
+		}
+
+
+		function onValueKeyDown (ev) {
+			if (jsc.eventKey(ev) === 'Enter') {
+				if (THIS.valueElement) {
+					THIS.processValueInput(THIS.valueElement.value);
+				}
+				THIS.hide();
+			}
+		}
+
+
+		function onAlphaKeyDown (ev) {
+			if (jsc.eventKey(ev) === 'Enter') {
+				if (THIS.alphaElement) {
+					THIS.processAlphaInput(THIS.alphaElement.value);
+				}
+				THIS.hide();
+			}
+		}
+
+
+		function onValueChange (ev) {
+			if (jsc.getData(ev, 'internal')) {
+				return; // skip if the event was internally triggered by jscolor
+			}
+			jsc.triggerCallback(THIS, 'onChange');
+
+			// triggering valueElement's onchange
+			// (not needed, it was dispatched normally by the browser)
+		}
+
+
+		function onAlphaChange (ev) {
+			if (jsc.getData(ev, 'internal')) {
+				return; // skip if the event was internally triggered by jscolor
+			}
+			jsc.triggerCallback(THIS, 'onChange');
+
+			// triggering valueElement's onchange (because changing alpha changes the entire color, e.g. with rgba format)
+			jsc.triggerInputEvent(THIS.valueElement, 'change', true, true);
+		}
+
+
+		function onValueInput (ev) {
+			if (jsc.getData(ev, 'internal')) {
+				return; // skip if the event was internally triggered by jscolor
 			}
 
-			if (elm !== this.targetElement) {
-				// attach onParentScroll so that we can recompute the picker position
-				// when one of the offsetParents is scrolled
-				if (!elm._jscEventsAttached) {
-					jsc.attachEvent(elm, 'scroll', jsc.onParentScroll);
-					elm._jscEventsAttached = true;
+			if (THIS.valueElement) {
+				THIS.fromString(THIS.valueElement.value, jsc.flags.leaveValue);
+			}
+
+			jsc.triggerCallback(THIS, 'onInput');
+
+			// triggering valueElement's oninput
+			// (not needed, it was dispatched normally by the browser)
+		}
+
+
+		function onAlphaInput (ev) {
+			if (jsc.getData(ev, 'internal')) {
+				return; // skip if the event was internally triggered by jscolor
+			}
+
+			if (THIS.alphaElement) {
+				THIS.fromHSVA(null, null, null, parseFloat(THIS.alphaElement.value), jsc.flags.leaveAlpha);
+			}
+
+			jsc.triggerCallback(THIS, 'onInput');
+
+			// triggering valueElement's oninput (because changing alpha changes the entire color, e.g. with rgba format)
+			jsc.triggerInputEvent(THIS.valueElement, 'input', true, true);
+		}
+
+
+		//
+		// Install the color picker on chosen element(s)
+		//
+
+
+		// Determine picker's container element
+		if (this.container === undefined) {
+			this.container = document.body; // default container is BODY element
+
+		} else { // explicitly set to custom element
+			this.container = jsc.fetchElement(this.container);
+		}
+
+		if (!this.container) {
+			throw new Error('Cannot instantiate color picker without a container element');
+		}
+
+
+		// Fetch the target element
+		this.targetElement = jsc.fetchElement(targetElement);
+
+		if (!this.targetElement) {
+			// temporarily customized error message to help with migrating from versions prior to 2.2
+			if (typeof targetElement === 'string' && /^[a-zA-Z][\w:.-]*$/.test(targetElement)) {
+				// targetElement looks like valid ID
+				var possiblyId = targetElement;
+				throw new Error('If \'' + possiblyId + '\' is supposed to be an ID, please use \'#' + possiblyId + '\' or any valid CSS selector.');
+			}
+
+			throw new Error('Cannot instantiate color picker without a target element');
+		}
+
+		if (this.targetElement.jscolor && this.targetElement.jscolor instanceof jsc.pub) {
+			throw new Error('Color picker already installed on this element');
+		}
+
+
+		// link this instance with the target element
+		this.targetElement.jscolor = this;
+		jsc.addClass(this.targetElement, jsc.pub.className);
+
+		// register this instance
+		jsc.instances.push(this);
+
+
+		// if target is BUTTON
+		if (jsc.isButton(this.targetElement)) {
+
+			if (this.targetElement.type.toLowerCase() !== 'button') {
+				// on buttons, always force type to be 'button', e.g. in situations the target <button> has no type
+				// and thus defaults to 'submit' and would submit the form when clicked
+				this.targetElement.type = 'button';
+			}
+
+			if (jsc.isButtonEmpty(this.targetElement)) { // empty button
+				// it is important to clear element's contents first.
+				// if we're re-instantiating color pickers on DOM that has been modified by changing page's innerHTML,
+				// we would keep adding more non-breaking spaces to element's content (because element's contents survive
+				// innerHTML changes, but picker instances don't)
+				jsc.removeChildren(this.targetElement);
+
+				// let's insert a non-breaking space
+				this.targetElement.appendChild(document.createTextNode('\xa0'));
+
+				// set min-width = previewSize, if not already greater
+				var compStyle = jsc.getCompStyle(this.targetElement);
+				var currMinWidth = parseFloat(compStyle['min-width']) || 0;
+				if (currMinWidth < this.previewSize) {
+					jsc.setStyle(this.targetElement, {
+						'min-width': this.previewSize + 'px',
+					}, this.forceStyle);
 				}
 			}
-		} while ((elm = elm.offsetParent) && !jsc.isElementType(elm, 'body'));
-		*/
+		}
+
+		// Determine the value element
+		if (this.valueElement === undefined) {
+			if (jsc.isTextInput(this.targetElement)) {
+				// for text inputs, default valueElement is targetElement
+				this.valueElement = this.targetElement;
+			} else {
+				// leave it undefined
+			}
+
+		} else if (this.valueElement === null) { // explicitly set to null
+			// leave it null
+
+		} else { // explicitly set to custom element
+			this.valueElement = jsc.fetchElement(this.valueElement);
+		}
+
+		// Determine the alpha element
+		if (this.alphaElement) {
+			this.alphaElement = jsc.fetchElement(this.alphaElement);
+		}
+
+		// Determine the preview element
+		if (this.previewElement === undefined) {
+			this.previewElement = this.targetElement; // default previewElement is targetElement
+
+		} else if (this.previewElement === null) { // explicitly set to null
+			// leave it null
+
+		} else { // explicitly set to custom element
+			this.previewElement = jsc.fetchElement(this.previewElement);
+		}
 
 		// valueElement
-		if (this.valueElement) {
-			if (jsc.isElementType(this.valueElement, 'input')) {
-				var handleValueInput = function () {
-					THIS.fromString(THIS.valueElement.value, jsc.leaveValue);
-					jsc.dispatchFineChange(THIS);
-				};
-				jsc.attachEvent(this.valueElement, 'keyup', handleValueInput);
-				jsc.attachEvent(this.valueElement, 'input', handleValueInput);
-				jsc.attachEvent(this.valueElement, 'blur', handleValueBlur);
-				this.valueElement.setAttribute('autocomplete', 'off');
+		if (this.valueElement && jsc.isTextInput(this.valueElement)) {
+
+			// If the value element has oninput event already set, we need to detach it and attach AFTER our listener.
+			// otherwise the picker instance would still contain the old color when accessed from the oninput handler.
+			var valueElementOrigEvents = {
+				oninput: this.valueElement.oninput
+			};
+			this.valueElement.oninput = null;
+
+			jsc.attachEvent(this.valueElement, 'blur', onValueBlur);
+			jsc.attachEvent(this.valueElement, 'keydown', onValueKeyDown);
+			jsc.attachEvent(this.valueElement, 'change', onValueChange);
+			jsc.attachEvent(this.valueElement, 'input', onValueInput);
+			// the original event listener must be attached AFTER our handler (to let it first set picker's color)
+			if (valueElementOrigEvents.oninput) {
+				jsc.attachEvent(this.valueElement, 'input', valueElementOrigEvents.oninput);
+			}
+
+			this.valueElement.setAttribute('autocomplete', 'off');
+		}
+
+		// alphaElement
+		if (this.alphaElement && jsc.isTextInput(this.alphaElement)) {
+			jsc.attachEvent(this.alphaElement, 'blur', onAlphaBlur);
+			jsc.attachEvent(this.alphaElement, 'keydown', onAlphaKeyDown);
+			jsc.attachEvent(this.alphaElement, 'change', onAlphaChange);
+			jsc.attachEvent(this.alphaElement, 'input', onAlphaInput);
+
+			this.alphaElement.setAttribute('autocomplete', 'off');
+		}
+
+		// determine initial color value
+		//
+		var initValue = 'FFFFFF';
+
+		if (this.value !== undefined) {
+			initValue = this.value; // get initial color from the 'value' property
+		}
+		if (this.valueElement && this.valueElement.value !== undefined) {
+			if (this.value !== undefined) {
+				this.valueElement.value = this.value; // sync valueElement's value with the 'value' property
+			} else {
+				initValue = this.valueElement.value; // get initial color from valueElement's value
 			}
 		}
 
-		// styleElement
-		if (this.styleElement) {
-			this.styleElement._jscOrigStyle = {
-				backgroundImage : this.styleElement.style.backgroundImage,
-				backgroundColor : this.styleElement.style.backgroundColor,
-				color : this.styleElement.style.color
-			};
+		// determine initial alpha value
+		//
+		var initAlpha = undefined;
+
+		if (this.alpha !== undefined) {
+			initAlpha = (''+this.alpha); // get initial alpha value from the 'alpha' property
+		}
+		if (this.alphaElement && this.alphaElement.value !== undefined) {
+			if (this.alpha !== undefined) {
+				this.alphaElement.value = (''+this.alpha); // sync alphaElement's value with the 'alpha' property
+			} else {
+				initAlpha = this.alphaElement.value; // get initial color from alphaElement's value
+			}
 		}
 
-		if (this.value) {
-			// Try to set the color from the .value option and if unsuccessful,
-			// export the current color
-			this.fromString(this.value) || this.exportColor();
+		// determine current format based on the initial color value
+		//
+		this._currentFormat = null;
+
+		if (['auto', 'any'].indexOf(this.format.toLowerCase()) > -1) {
+			// format is 'auto' or 'any' -> let's auto-detect current format
+			var color = jsc.parseColorString(initValue);
+			this._currentFormat = color ? color.format : 'hex';
 		} else {
-			this.importColor();
+			// format is specified
+			this._currentFormat = this.format.toLowerCase();
 		}
+
+
+		// let's parse the initial color value and expose color's preview
+		this.processValueInput(initValue);
+
+		// let's also parse and expose the initial alpha value, if any
+		//
+		// Note: If the initial color value contains alpha value in it (e.g. in rgba format),
+		// this will overwrite it. So we should only process alpha input if there was any initial
+		// alpha explicitly set, otherwise we could needlessly lose initial value's alpha
+		if (initAlpha !== undefined) {
+			this.processAlphaInput(initAlpha);
+		}
+
 	}
 
 };
@@ -1918,38 +2950,101 @@ var jsc = {
 //================================
 // Public properties and methods
 //================================
+
 //
 // These will be publicly available via jscolor.<name> and JSColor.<name>
 //
 
 
-// Initializes jscolor on current DOM tree
-jsc.jscolor.init = function () {
-	if (jsc.jscolor.lookupClass) {
-		jsc.jscolor.installByClassName(jsc.jscolor.lookupClass);
+// class that will be set to elements having jscolor installed on them
+jsc.pub.className = 'jscolor';
+
+
+// class that will be set to elements having jscolor active on them
+jsc.pub.activeClassName = 'jscolor-active';
+
+
+// whether to try to parse the options string by evaluating it using 'new Function()'
+// in case it could not be parsed with JSON.parse()
+jsc.pub.looseJSON = true;
+
+
+// presets
+jsc.pub.presets = {};
+
+// built-in presets
+jsc.pub.presets['default'] = {}; // baseline for customization
+
+jsc.pub.presets['light'] = { backgroundColor:'#FFFFFF', controlBorderColor:'#BBBBBB' }; // default color scheme
+jsc.pub.presets['dark'] = { backgroundColor:'#333333', controlBorderColor:'#999999' };
+
+jsc.pub.presets['small'] = { width:101, height:101, padding:10 };
+jsc.pub.presets['medium'] = { width:181, height:101, padding:12 }; // default size
+jsc.pub.presets['large'] = { width:271, height:151, padding:12 };
+
+jsc.pub.presets['thin'] = { borderWidth:1, controlBorderWidth:1, pointerBorderWidth:1 }; // default thickness
+jsc.pub.presets['thick'] = { borderWidth:2, controlBorderWidth:2, pointerBorderWidth:2 };
+
+
+// size of space in the sliders
+jsc.pub.sliderInnerSpace = 3; // px
+
+// transparency chessboard
+jsc.pub.chessboardSize = 8; // px
+jsc.pub.chessboardColor1 = '#666666';
+jsc.pub.chessboardColor2 = '#999999';
+
+// preview separator
+jsc.pub.previewSeparator = ['rgba(255,255,255,.65)', 'rgba(128,128,128,.65)'];
+
+
+// Installs jscolor on current DOM tree
+jsc.pub.install = function () {
+	jsc.installBySelector('[data-jscolor]');
+
+	// for backward compatibility with DEPRECATED installation using class name
+	if (jsc.pub.lookupClass) {
+		jsc.installBySelector(
+			'input.' + jsc.pub.lookupClass + ', ' +
+			'button.' + jsc.pub.lookupClass
+		);
 	}
 };
 
 
-jsc.jscolor.presets = {};
+// Triggers given input event(s) (e.g. 'input' or 'change') on all color pickers.
+//
+// It is possible to specify multiple events separated with a space.
+// If called before jscolor is initialized, then the events will be triggered after initialization.
+//
+jsc.pub.trigger = function (eventNames) {
+	if (jsc.initialized) {
+		jsc.triggerGlobal(eventNames);
+	} else {
+		jsc.triggerQueue.push(eventNames);
+	}
+};
 
-jsc.jscolor.presets['default'] = {}; // baseline for customization
 
-jsc.jscolor.presets['light'] = { backgroundColor:'#FFFFFF', insetColor:'#BBBBBB' }; // default color scheme
-jsc.jscolor.presets['dark'] = { backgroundColor:'#333333', insetColor:'#999999' };
+// Returns a data URL of a gray chessboard image that indicates transparency
+jsc.pub.chessboard = function (color) {
+	if (!color) {
+		color = 'rgba(0,0,0,0)';
+	}
+	var preview = jsc.genColorPreviewCanvas(color);
+	return preview.canvas.toDataURL();
+};
 
-jsc.jscolor.presets['small'] = { width:101, height:101 };
-jsc.jscolor.presets['medium'] = { width:181, height:101 }; // default size
-jsc.jscolor.presets['large'] = { width:271, height:151 };
 
-jsc.jscolor.presets['thin'] = { borderWidth:1, insetWidth:1, pointerBorderWidth:1 }; // default thickness
-jsc.jscolor.presets['thick'] = { borderWidth:2, insetWidth:2, pointerBorderWidth:2 };
+//
+// DEPRECATED properties and methods
+//
 
 
 // DEPRECATED. Use jscolor.presets.default instead.
 //
 // Custom default options for all color pickers, e.g. { hash: true, width: 300 }
-jsc.jscolor.options = {};
+jsc.pub.options = {};
 
 
 // DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
@@ -1959,25 +3054,30 @@ jsc.jscolor.options = {};
 // You can change what class name will be looked for by setting the property jscolor.lookupClass
 // anywhere in your HTML document. To completely disable the automatic lookup, set it to null.
 //
-jsc.jscolor.lookupClass = 'jscolor';
+jsc.pub.lookupClass = 'jscolor';
+
+
+// DEPRECATED. Use jscolor.install() instead
+//
+jsc.pub.init = function () {
+	console.warn('jscolor.init() is DEPRECATED. Using jscolor.install() instead.');
+	return jsc.pub.install();
+};
 
 
 // DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
 //
 // Install jscolor on all elements that have the specified class name
-jsc.jscolor.installByClassName = function (className) {
-	var inputElms = document.getElementsByTagName('input');
-	var buttonElms = document.getElementsByTagName('button');
-
-	jsc.tryInstallOnElements(inputElms, className);
-	jsc.tryInstallOnElements(buttonElms, className);
+jsc.pub.installByClassName = function () {
+	console.error('jscolor.installByClassName() is DEPRECATED. Use data-jscolor="" attribute instead of a class name.');
+	return false;
 };
 
 
 jsc.register();
 
 
-return jsc.jscolor;
+return jsc.pub;
 
 
 })(); // END window.jscolor
