@@ -1014,7 +1014,7 @@ var jsc = {
 		var target = e.target || e.srcElement;
 
 		if (target.jscolor && target.jscolor instanceof jsc.pub) {
-			if (target.jscolor.showOnClick) {
+			if (target.jscolor.showOnClick && !target.disabled) {
 				target.jscolor.show();
 			}
 		} else if (target._jscControlName) {
