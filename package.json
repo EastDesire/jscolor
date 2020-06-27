@@ -1,6 +1,6 @@
 {
   "name": "@EastDesire/jscolor",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "JavaScript Color Picker with opacity (alpha) that aims to stay super easy both for developers to install and for web users to use. https://jscolor.com",
   "main": "jscolor.js",
   "scripts": {
