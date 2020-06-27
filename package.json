@@ -11,9 +11,12 @@
     "url": "git+https://github.com/EastDesire/jscolor.git"
   },
   "author": "Jan Odvarko - EastDesire",
-  "license": "GPLv3",
+  "license": "GPLv3 for non-commercial use / jscolor license for commercial use",
   "bugs": {
     "url": "https://github.com/EastDesire/jscolor/issues"
   },
-  "homepage": "https://jscolor.com"
+  "homepage": "https://jscolor.com",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  }
 }
