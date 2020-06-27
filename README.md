@@ -40,19 +40,10 @@ Documentation can be found at https://jscolor.com/docs/
 
 
 * **Highly customizable:**
-  jscolor provides many configuration options.
-  Whether you need to change color picker's size or colors, or attach a function to its onchange event, the color picker can be fine-tuned for your web project.
+  jscolor provides many [configuration options](https://jscolor.com/docs/). Whether you need to change color picker's size or colors, or attach a function to its onchange event, the configuration can be fine-tuned for your web project.
 
 
 
 ## Website
 
 For more info on jscolor project, see [jscolor website](http://jscolor.com)
-
-
-
-## Pull requests
-
-I am unfortunately unable to merge any pull requests at the moment.
-
-Apologies to all contributors who already have submitted their pull requests.
