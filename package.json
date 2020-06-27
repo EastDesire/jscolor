@@ -1,7 +1,7 @@
 {
   "name": "@EastDesire/jscolor",
   "version": "2.2.1",
-  "description": "JavaScript Color Picker with opacity (alpha) that aims to stay super easy both for developers to install and for web users to use. https://jscolor.com",
+  "description": "JavaScript Color Picker with opacity (alpha) that aims to stay super easy both for developers to install and for web users to use.",
   "main": "jscolor.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,7 +11,7 @@
     "url": "git+https://github.com/EastDesire/jscolor.git"
   },
   "author": "Jan Odvarko - EastDesire",
-  "license": "GPLv3 for non-commercial use / jscolor license for commercial use",
+  "license": "GPLv3",
   "bugs": {
     "url": "https://github.com/EastDesire/jscolor/issues"
   },
