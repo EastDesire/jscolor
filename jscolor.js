@@ -3026,6 +3026,14 @@ jsc.pub.trigger = function (eventNames) {
 };
 
 
+// Hides current color picker box
+jsc.pub.hide = function () {
+	if (jsc.picker && jsc.picker.owner) {
+		jsc.picker.owner.hide();
+	}
+};
+
+
 // Returns a data URL of a gray chessboard image that indicates transparency
 jsc.pub.chessboard = function (color) {
 	if (!color) {
