@@ -1,7 +1,8 @@
 # jscolor - JavaScript Color Picker for RGBA/HEX colors
 
-**jscolor.js** is a **HEX** and **RGBA** color picker that aims to stay super easy both for developers to install and for web users to use.
+**jscolor.js** is a **HEX** and **RGBA** color picker with opacity (alpha channel).
 
+It aims to stay super easy both for developers to install and for web users to use.
 
 
 ## Installation in two lines
