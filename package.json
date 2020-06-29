@@ -10,12 +10,6 @@
     "type": "git",
     "url": "git+https://github.com/EastDesire/jscolor.git"
   },
-  "author": "Jan Odvarko - EastDesire",
-  "license": "GPL-3.0-or-later",
-  "bugs": {
-    "url": "https://github.com/EastDesire/jscolor/issues"
-  },
-  "homepage": "https://jscolor.com",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
   },
@@ -55,5 +49,11 @@
     "framework",
     "tool",
     "applet"
-  ]
+  ],
+  "author": "Jan Odvarko - East Desire",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/EastDesire/jscolor/issues"
+  },
+  "homepage": "https://jscolor.com",
 }
