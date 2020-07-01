@@ -30,7 +30,6 @@ var jsc = {
 	register : function () {
 		jsc.attachDOMReadyEvent(jsc.init);
 		jsc.attachEvent(document, 'mousedown', jsc.onDocumentMouseDown);
-		jsc.attachEvent(document, 'touchstart', jsc.onDocumentTouchStart);
 		jsc.attachEvent(document, 'keyup', jsc.onDocumentKeyUp);
 		jsc.attachEvent(window, 'resize', jsc.onWindowResize);
 	},
@@ -1028,23 +1027,6 @@ var jsc = {
 	},
 
 
-	onDocumentTouchStart : function (e) {
-		var target = e.target || e.srcElement;
-
-		if (target.jscolor && target.jscolor instanceof jsc.pub) {
-			if (target.jscolor.showOnClick) {
-				target.jscolor.show();
-			}
-		} else if (target._jscControlName) {
-			jsc.onControlPointerStart(e, target, target._jscControlName, 'touch');
-		} else {
-			if (jsc.picker && jsc.picker.owner) {
-				jsc.picker.owner.hide();
-			}
-		}
-	},
-
-
 	onDocumentKeyUp : function (e) {
 		if (['Tab', 'Escape'].indexOf(jsc.eventKey(e)) !== -1) {
 			if (jsc.picker && jsc.picker.owner) {
@@ -1063,6 +1045,15 @@ var jsc = {
 		// hide the picker when one of the parent elements is scrolled
 		if (jsc.picker && jsc.picker.owner) {
 			jsc.picker.owner.hide();
+		}
+	},
+
+
+	onPickerTouchStart : function (e) {
+		var target = e.target || e.srcElement;
+
+		if (target._jscControlName) {
+			jsc.onControlPointerStart(e, target, target._jscControlName, 'touch');
 		}
 	},
 
@@ -2306,6 +2297,8 @@ var jsc = {
 				jsc.picker.boxB.appendChild(jsc.picker.box);
 				jsc.picker.wrap.appendChild(jsc.picker.boxS);
 				jsc.picker.wrap.appendChild(jsc.picker.boxB);
+
+				jsc.attachEvent(jsc.picker.wrap, 'touchstart', jsc.onPickerTouchStart);
 			}
 
 			var p = jsc.picker;
