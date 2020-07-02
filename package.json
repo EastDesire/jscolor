@@ -10,9 +10,6 @@
     "type": "git",
     "url": "git+https://github.com/EastDesire/jscolor.git"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "keywords": [
     "HTML5",
     "HEX",
