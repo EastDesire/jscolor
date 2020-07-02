@@ -122,9 +122,8 @@ var jsc = {
 					throw new Error('Could not evaluate jscolor options: ' + eEval);
 				}
 			}
-		} finally {
-			return opts;
 		}
+		return opts;
 	},
 
 
