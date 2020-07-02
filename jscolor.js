@@ -28,10 +28,10 @@ var jsc = {
 
 
 	register : function () {
-		jsc.attachDOMReadyEvent(jsc.init);
-		jsc.attachEvent(document, 'mousedown', jsc.onDocumentMouseDown);
-		jsc.attachEvent(document, 'keyup', jsc.onDocumentKeyUp);
-		jsc.attachEvent(window, 'resize', jsc.onWindowResize);
+		document.addEventListener('DOMContentLoaded', jsc.init, false);
+		document.addEventListener('mousedown', jsc.onDocumentMouseDown, false);
+		document.addEventListener('keyup', jsc.onDocumentKeyUp, false);
+		window.addEventListener('resize', jsc.onWindowResize, false);
 	},
 
 
@@ -122,9 +122,8 @@ var jsc = {
 					throw new Error('Could not evaluate jscolor options: ' + eEval);
 				}
 			}
-		} finally {
-			return opts;
 		}
+		return opts;
 	},
 
 
@@ -210,6 +209,22 @@ var jsc = {
 		}
 		return null; // could not determine element's text
 	},
+
+
+	// See https://github.com/WICG/EventListenerOptions/blob/gh-pages/explainer.md
+	isPassiveEventSupported : (function () {
+		var supported = false;
+
+		try {
+			var opts = Object.defineProperty({}, 'passive', {
+				get: function () { supported = true; }
+			});
+			window.addEventListener('testPassive', null, opts);
+			window.removeEventListener('testPassive', null, opts);
+		} catch (e) {}
+
+		return supported;
+	})(),
 
 
 	isColorAttrSupported : (function () {
@@ -301,16 +316,6 @@ var jsc = {
 	},
 
 
-	attachEvent : function (el, evnt, func) {
-		el.addEventListener(evnt, func, false);
-	},
-
-
-	detachEvent : function (el, evnt, func) {
-		el.removeEventListener(evnt, func, false);
-	},
-
-
 	_attachedGroupEvents : {},
 
 
@@ -319,7 +324,7 @@ var jsc = {
 			jsc._attachedGroupEvents[groupName] = [];
 		}
 		jsc._attachedGroupEvents[groupName].push([el, evnt, func]);
-		jsc.attachEvent(el, evnt, func);
+		el.addEventListener(evnt, func, false);
 	},
 
 
@@ -327,16 +332,9 @@ var jsc = {
 		if (jsc._attachedGroupEvents.hasOwnProperty(groupName)) {
 			for (var i = 0; i < jsc._attachedGroupEvents[groupName].length; i += 1) {
 				var evt = jsc._attachedGroupEvents[groupName][i];
-				jsc.detachEvent(evt[0], evt[1], evt[2]);
+				evt[0].removeEventListener(evt[1], evt[2], false);
 			}
 			delete jsc._attachedGroupEvents[groupName];
-		}
-	},
-
-
-	attachDOMReadyEvent : function (func) {
-		if (document.addEventListener) {
-			document.addEventListener('DOMContentLoaded', func, false);
 		}
 	},
 
@@ -1184,7 +1182,7 @@ var jsc = {
 			jsc.releaseTarget();
 
 			// Always trigger changes AFTER detaching outstanding mouse handlers,
-			// in case some color change occured in user-defined onchange/oninput handler
+			// in case some color change occured in user-defined onChange/onInput handler
 			// would intrude into current mouse events
 			thisObj.trigger('input');
 			thisObj.trigger('change');
@@ -1685,7 +1683,7 @@ var jsc = {
 					case 'change': callbackProp = 'onChange'; break;
 				}
 				if (callbackProp) {
-					jsc.triggerCallback(this, callbackProp); 
+					jsc.triggerCallback(this, callbackProp);
 				}
 
 				// trigger standard DOM event listeners on the value element
@@ -2144,7 +2142,7 @@ var jsc = {
 					// Note: It's not just offsetParents that can be scrollable,
 					// that's why we loop through all parent nodes
 					if (!elm._jscEventsAttached) {
-						jsc.attachEvent(elm, 'scroll', jsc.onParentScroll);
+						elm.addEventListener('scroll', jsc.onParentScroll, false);
 						elm._jscEventsAttached = true;
 					}
 				}
@@ -2298,7 +2296,8 @@ var jsc = {
 				jsc.picker.wrap.appendChild(jsc.picker.boxS);
 				jsc.picker.wrap.appendChild(jsc.picker.boxB);
 
-				jsc.attachEvent(jsc.picker.wrap, 'touchstart', jsc.onPickerTouchStart);
+				jsc.picker.wrap.addEventListener('touchstart', jsc.onPickerTouchStart,
+					jsc.isPassiveEventSupported ? {passive: false} : false);
 			}
 
 			var p = jsc.picker;
@@ -2692,7 +2691,7 @@ var jsc = {
 			}
 			jsc.triggerCallback(THIS, 'onChange');
 
-			// triggering valueElement's onchange
+			// triggering valueElement's onChange
 			// (not needed, it was dispatched normally by the browser)
 		}
 
@@ -2703,7 +2702,7 @@ var jsc = {
 			}
 			jsc.triggerCallback(THIS, 'onChange');
 
-			// triggering valueElement's onchange (because changing alpha changes the entire color, e.g. with rgba format)
+			// triggering valueElement's onChange (because changing alpha changes the entire color, e.g. with rgba format)
 			jsc.triggerInputEvent(THIS.valueElement, 'change', true, true);
 		}
 
@@ -2719,7 +2718,7 @@ var jsc = {
 
 			jsc.triggerCallback(THIS, 'onInput');
 
-			// triggering valueElement's oninput
+			// triggering valueElement's onInput
 			// (not needed, it was dispatched normally by the browser)
 		}
 
@@ -2735,7 +2734,7 @@ var jsc = {
 
 			jsc.triggerCallback(THIS, 'onInput');
 
-			// triggering valueElement's oninput (because changing alpha changes the entire color, e.g. with rgba format)
+			// triggering valueElement's onInput (because changing alpha changes the entire color, e.g. with rgba format)
 			jsc.triggerInputEvent(THIS.valueElement, 'input', true, true);
 		}
 
@@ -2850,20 +2849,20 @@ var jsc = {
 		// valueElement
 		if (this.valueElement && jsc.isTextInput(this.valueElement)) {
 
-			// If the value element has oninput event already set, we need to detach it and attach AFTER our listener.
-			// otherwise the picker instance would still contain the old color when accessed from the oninput handler.
+			// If the value element has onInput event already set, we need to detach it and attach AFTER our listener.
+			// otherwise the picker instance would still contain the old color when accessed from the onInput handler.
 			var valueElementOrigEvents = {
-				oninput: this.valueElement.oninput
+				onInput: this.valueElement.oninput
 			};
 			this.valueElement.oninput = null;
 
-			jsc.attachEvent(this.valueElement, 'blur', onValueBlur);
-			jsc.attachEvent(this.valueElement, 'keydown', onValueKeyDown);
-			jsc.attachEvent(this.valueElement, 'change', onValueChange);
-			jsc.attachEvent(this.valueElement, 'input', onValueInput);
+			this.valueElement.addEventListener('blur', onValueBlur, false);
+			this.valueElement.addEventListener('keydown', onValueKeyDown, false);
+			this.valueElement.addEventListener('change', onValueChange, false);
+			this.valueElement.addEventListener('input', onValueInput, false);
 			// the original event listener must be attached AFTER our handler (to let it first set picker's color)
-			if (valueElementOrigEvents.oninput) {
-				jsc.attachEvent(this.valueElement, 'input', valueElementOrigEvents.oninput);
+			if (valueElementOrigEvents.onInput) {
+				this.valueElement.addEventListener('input', valueElementOrigEvents.onInput, false);
 			}
 
 			this.valueElement.setAttribute('autocomplete', 'off');
@@ -2871,10 +2870,10 @@ var jsc = {
 
 		// alphaElement
 		if (this.alphaElement && jsc.isTextInput(this.alphaElement)) {
-			jsc.attachEvent(this.alphaElement, 'blur', onAlphaBlur);
-			jsc.attachEvent(this.alphaElement, 'keydown', onAlphaKeyDown);
-			jsc.attachEvent(this.alphaElement, 'change', onAlphaChange);
-			jsc.attachEvent(this.alphaElement, 'input', onAlphaInput);
+			this.alphaElement.addEventListener('blur', onAlphaBlur, false);
+			this.alphaElement.addEventListener('keydown', onAlphaKeyDown, false);
+			this.alphaElement.addEventListener('change', onAlphaChange, false);
+			this.alphaElement.addEventListener('input', onAlphaInput, false);
 
 			this.alphaElement.setAttribute('autocomplete', 'off');
 		}
