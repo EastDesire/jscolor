@@ -2867,6 +2867,9 @@ var jsc = {
 			}
 
 			this.valueElement.setAttribute('autocomplete', 'off');
+			this.valueElement.setAttribute('autocorrect', 'off');
+			this.valueElement.setAttribute('autocapitalize', 'off');
+			this.valueElement.setAttribute('spellcheck', false);
 		}
 
 		// alphaElement
@@ -2877,6 +2880,9 @@ var jsc = {
 			this.alphaElement.addEventListener('input', onAlphaInput, false);
 
 			this.alphaElement.setAttribute('autocomplete', 'off');
+			this.alphaElement.setAttribute('autocorrect', 'off');
+			this.alphaElement.setAttribute('autocapitalize', 'off');
+			this.alphaElement.setAttribute('spellcheck', false);
 		}
 
 		// determine initial color value
