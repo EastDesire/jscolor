@@ -15,7 +15,7 @@ Color: <input value="rgba(40,170,255,0.5)" data-jscolor="">
 ```
 
 
-![Screenshots of jscolor](https://jscolor.com/hosted/gui/jscolor-2.2.4.png)
+[<img src="https://jscolor.com/hosted/gui/jscolor-2.2.4.png" alt="Screenshots of jscolor">](https://jscolor.com/examples)
 
 
 
