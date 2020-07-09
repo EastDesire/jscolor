@@ -1935,7 +1935,8 @@ var jsc = {
 				return (
 					this.format.toLowerCase() === 'any' || // when the format is 'any', it can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
 					this._currentFormat === 'rgba' || // the current format supports alpha channel
-					this.alphaElement // the alpha value is redirected, so we're working with alpha channel
+					this.alpha !== undefined || // initial alpha value is set, so we're working with alpha channel
+					this.alphaElement !== undefined // the alpha value is redirected, so we're working with alpha channel
 				);
 			}
 			return false;
