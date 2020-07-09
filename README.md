@@ -22,7 +22,7 @@ Color: <input value="rgba(40,170,255,0.5)" data-jscolor="">
 
 ## Usage examples
 
-See http://jscolor.com/examples/
+See https://jscolor.com/examples/
 
 
 
@@ -56,4 +56,4 @@ Documentation can be found at https://jscolor.com/docs/
 
 ## Website
 
-For more info on jscolor project, see [jscolor website](http://jscolor.com)
+For more info on jscolor project, see [jscolor website](https://jscolor.com)
