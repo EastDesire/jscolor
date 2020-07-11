@@ -1448,7 +1448,7 @@ var jsc = {
 		this.previewPadding = 8; // (px) space between color preview and content of the previewElement
 		this.required = true; // whether the associated text input must always contain a color value. If false, the input can be left empty.
 		this.refine = true; // whether to auto-format the entered color code (e.g. remove whitespace)
-		this.hash = false; // whether to prefix the HEX color code with # symbol (only applicable for HEX format)
+		this.hash = true; // whether to prefix the HEX color code with # symbol (only applicable for HEX format)
 		this.uppercase = true; // whether to show the HEX color code in upper case (only applicable for HEX format)
 		this.forceStyle = true; // whether to overwrite CSS style of the previewElement using !important flag
 
