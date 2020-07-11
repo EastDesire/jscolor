@@ -2653,20 +2653,6 @@ var jsc = {
 		}
 
 
-		function onValueBlur () {
-			if (THIS.valueElement) {
-				THIS.processValueInput(THIS.valueElement.value);
-			}
-		}
-
-
-		function onAlphaBlur () {
-			if (THIS.alphaElement) {
-				THIS.processAlphaInput(THIS.alphaElement.value);
-			}
-		}
-
-
 		function onValueKeyDown (ev) {
 			if (jsc.eventKey(ev) === 'Enter') {
 				if (THIS.valueElement) {
@@ -2691,10 +2677,17 @@ var jsc = {
 			if (jsc.getData(ev, 'internal')) {
 				return; // skip if the event was internally triggered by jscolor
 			}
+
+			var oldVal = THIS.valueElement.value;
+
+			THIS.processValueInput(THIS.valueElement.value); // this might change the value
+
 			jsc.triggerCallback(THIS, 'onChange');
 
-			// triggering valueElement's onChange
-			// (not needed, it was dispatched normally by the browser)
+			if (THIS.valueElement.value !== oldVal) {
+				// value was additionally changed -> let's trigger the change event again, even though it was natively dispatched
+				jsc.triggerInputEvent(THIS.valueElement, 'change', true, true);
+			}
 		}
 
 
@@ -2702,10 +2695,20 @@ var jsc = {
 			if (jsc.getData(ev, 'internal')) {
 				return; // skip if the event was internally triggered by jscolor
 			}
+
+			var oldVal = THIS.alphaElement.value;
+
+			THIS.processAlphaInput(THIS.alphaElement.value); // this might change the value
+
 			jsc.triggerCallback(THIS, 'onChange');
 
 			// triggering valueElement's onChange (because changing alpha changes the entire color, e.g. with rgba format)
 			jsc.triggerInputEvent(THIS.valueElement, 'change', true, true);
+
+			if (THIS.alphaElement.value !== oldVal) {
+				// value was additionally changed -> let's trigger the change event again, even though it was natively dispatched
+				jsc.triggerInputEvent(THIS.alphaElement, 'change', true, true);
+			}
 		}
 
 
@@ -2858,7 +2861,6 @@ var jsc = {
 			};
 			this.valueElement.oninput = null;
 
-			this.valueElement.addEventListener('blur', onValueBlur, false);
 			this.valueElement.addEventListener('keydown', onValueKeyDown, false);
 			this.valueElement.addEventListener('change', onValueChange, false);
 			this.valueElement.addEventListener('input', onValueInput, false);
@@ -2875,7 +2877,6 @@ var jsc = {
 
 		// alphaElement
 		if (this.alphaElement && jsc.isTextInput(this.alphaElement)) {
-			this.alphaElement.addEventListener('blur', onAlphaBlur, false);
 			this.alphaElement.addEventListener('keydown', onAlphaKeyDown, false);
 			this.alphaElement.addEventListener('change', onAlphaChange, false);
 			this.alphaElement.addEventListener('input', onAlphaInput, false);
