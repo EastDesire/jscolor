@@ -745,7 +745,7 @@ var jsc = {
 			// rgb(...) or rgba(...) notation
 
 			var params = m[1].split(',');
-			var re = /^\s*(\d+|\d*\.\d+)\s*$/;
+			var re = /^\s*(\d+|\d*\.\d+|\d+\.\d*)\s*$/;
 			var mR, mG, mB, mA;
 			if (
 				params.length >= 3 &&
@@ -961,7 +961,7 @@ var jsc = {
 		if (jsc.getSliderChannel(thisObj)) {
 			dims[0] += sliderSpace;
 		}
-		if (thisObj.isAlphaEnabled()) {
+		if (thisObj.hasAlphaChannel()) {
 			dims[0] += sliderSpace;
 		}
 		if (thisObj.closeButton) {
@@ -1717,7 +1717,7 @@ var jsc = {
 			}
 			if (a !== null) {
 				if (isNaN(a)) { return false; }
-				this.channels.a = this.isAlphaEnabled() ?
+				this.channels.a = this.hasAlphaChannel() ?
 					Math.max(0, Math.min(1, this.maxA, a), this.minA) :
 					1.0; // if alpha channel is disabled, the color should stay 100% opaque
 			}
@@ -1761,7 +1761,7 @@ var jsc = {
 			}
 			if (a !== null) {
 				if (isNaN(a)) { return false; }
-				this.channels.a = this.isAlphaEnabled() ?
+				this.channels.a = this.hasAlphaChannel() ?
 					Math.max(0, Math.min(1, this.maxA, a), this.minA) :
 					1.0; // if alpha channel is disabled, the color should stay 100% opaque
 			}
@@ -1813,6 +1813,10 @@ var jsc = {
 			}
 			if (this.format.toLowerCase() === 'any') {
 				this._currentFormat = color.format; // adapt format
+				if (this._currentFormat !== 'rgba') {
+					color.rgba[3] = 1.0; // when switching to a format that doesn't support alpha, set full opacity
+				}
+				this.redraw(); // to show/hide the alpha slider according to current format
 			}
 			this.fromRGBA(
 				color.rgba[0],
@@ -1927,19 +1931,16 @@ var jsc = {
 		};
 
 
-		this.isAlphaEnabled = function () {
-			if (this.alphaChannel === true) {
-				return true; // the alpha channel is explicitly enabled
-			}
+		this.hasAlphaChannel = function () {
 			if (this.alphaChannel === 'auto') {
 				return (
-					this.format.toLowerCase() === 'any' || // when the format is 'any', it can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
 					this._currentFormat === 'rgba' || // the current format supports alpha channel
 					this.alpha !== undefined || // initial alpha value is set, so we're working with alpha channel
 					this.alphaElement !== undefined // the alpha value is redirected, so we're working with alpha channel
 				);
 			}
-			return false;
+
+			return this.alphaChannel; // the alpha channel is explicitly set
 		};
 
 
@@ -2304,7 +2305,7 @@ var jsc = {
 			var p = jsc.picker;
 
 			var displaySlider = !!jsc.getSliderChannel(THIS);
-			var displayAlphaSlider = THIS.isAlphaEnabled();
+			var displayAlphaSlider = THIS.hasAlphaChannel();
 			var dims = jsc.getPickerDims(THIS);
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
 			var controlPadding = jsc.getControlPadding(THIS);
