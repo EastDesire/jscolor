@@ -1148,7 +1148,7 @@ var jsc = {
 
 		case 'asld':
 			// if format is flexible and the current format doesn't support alpha, switch to a suitable one
-			if (thisObj.format.toLowerCase() === 'any' && thisObj._currentFormat !== 'rgba') {
+			if (thisObj.format.toLowerCase() === 'any' && thisObj.getFormat() !== 'rgba') {
 				thisObj._currentFormat = 'rgba';
 			}
 
@@ -1820,7 +1820,7 @@ var jsc = {
 			}
 			if (this.format.toLowerCase() === 'any') {
 				this._currentFormat = color.format; // adapt format
-				if (this._currentFormat !== 'rgba') {
+				if (this.getFormat() !== 'rgba') {
 					color.rgba[3] = 1.0; // when switching to a format that doesn't support alpha, set full opacity
 				}
 				this.redraw(); // to show/hide the alpha slider according to current format
@@ -1838,7 +1838,7 @@ var jsc = {
 
 		this.toString = function (format) {
 			if (format === undefined) {
-				format = this._currentFormat; // format not specified -> use the current format
+				format = this.getFormat(); // format not specified -> use the current format
 			}
 			switch (format.toLowerCase()) {
 				case 'hex': return this.toHEXString(); break;
@@ -1938,11 +1938,16 @@ var jsc = {
 		};
 
 
+		this.getFormat = function () {
+			return this._currentFormat;
+		};
+
+
 		this.hasAlphaChannel = function () {
 			if (this.alphaChannel === 'auto') {
 				return (
 					this.format.toLowerCase() === 'any' || // format can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
-					this._currentFormat === 'rgba' || // the current format supports alpha channel
+					this.getFormat() === 'rgba' || // the current format supports alpha channel
 					this.alpha !== undefined || // initial alpha value is set, so we're working with alpha channel
 					this.alphaElement !== undefined // the alpha value is redirected, so we're working with alpha channel
 				);
@@ -1990,7 +1995,7 @@ var jsc = {
 			if (!(flags & jsc.flags.leaveValue) && this.valueElement) {
 				var value = this.toString();
 
-				if (this._currentFormat === 'hex') {
+				if (this.getFormat() === 'hex') {
 					if (!this.uppercase) { value = value.toLowerCase(); }
 					if (!this.hash) { value = value.replace(/^#/, ''); }
 				}
