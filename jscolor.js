@@ -1147,6 +1147,11 @@ var jsc = {
 			break;
 
 		case 'asld':
+			// if format is flexible and the current format doesn't support alpha, switch to a suitable one
+			if (thisObj.format.toLowerCase() === 'any' && thisObj._currentFormat !== 'rgba') {
+				thisObj._currentFormat = 'rgba';
+			}
+
 			jsc.setASld(thisObj, e, 0);
 			break;
 		}
@@ -1934,6 +1939,7 @@ var jsc = {
 		this.hasAlphaChannel = function () {
 			if (this.alphaChannel === 'auto') {
 				return (
+					this.format.toLowerCase() === 'any' || // format can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
 					this._currentFormat === 'rgba' || // the current format supports alpha channel
 					this.alpha !== undefined || // initial alpha value is set, so we're working with alpha channel
 					this.alphaElement !== undefined // the alpha value is redirected, so we're working with alpha channel
