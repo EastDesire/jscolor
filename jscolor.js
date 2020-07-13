@@ -1147,11 +1147,6 @@ var jsc = {
 			break;
 
 		case 'asld':
-			// if format is flexible and the current format doesn't support alpha, switch to a suitable one
-			if (thisObj.format.toLowerCase() === 'any' && thisObj.getFormat() !== 'rgba') {
-				thisObj._currentFormat = 'rgba';
-			}
-
 			jsc.setASld(thisObj, e, 0);
 			break;
 		}
@@ -1226,6 +1221,13 @@ var jsc = {
 		var pointerAbs = jsc.getAbsPointerPos(e);
 		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
 		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
+
+		if (yVal < 1.0) {
+			// if format is flexible and the current format doesn't support alpha, switch to a suitable one
+			if (thisObj.format.toLowerCase() === 'any' && thisObj.getFormat() !== 'rgba') {
+				thisObj._currentFormat = 'rgba';
+			}
+		}
 
 		thisObj.fromHSVA(null, null, null, yVal);
 	},
