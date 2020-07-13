@@ -1528,8 +1528,10 @@ var jsc = {
 			}
 		}
 
-		// always use the 'default' preset as a baseline
-		presetsArr.push('default');
+		// always use the 'default' preset. If it's not listed, append it to the end.
+		if (presetsArr.indexOf('default') === -1) {
+			presetsArr.push('default');
+		}
 
 		// let's apply the presets in reverse order, so that should there be any overlapping options,
 		// the formerly listed preset will override the latter
