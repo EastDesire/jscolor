@@ -51,8 +51,13 @@ var jsc = {
 	},
 
 
-	installBySelector : function (selector) {
-		var elms = document.querySelectorAll(selector);
+	installBySelector : function (selector, rootNode) {
+		rootNode = rootNode ? jsc.node(rootNode) : document;
+		if (!rootNode) {
+			throw new Error('Missing root node');
+		}
+
+		var elms = rootNode.querySelectorAll(selector);
 
 		// for backward compatibility with DEPRECATED installation/configuration using className
 		var matchClass = new RegExp('(^|\\s)(' + jsc.pub.lookupClass + ')(\\s*(\\{[^}]*\\})|\\s|$)', 'i');
@@ -139,14 +144,14 @@ var jsc = {
 	},
 
 
-	fetchElement : function (elementOrSelector) {
-		if (!elementOrSelector) {
+	node : function (nodeOrSelector) {
+		if (!nodeOrSelector) {
 			return null;
 		}
 
-		if (typeof elementOrSelector === 'string') {
+		if (typeof nodeOrSelector === 'string') {
 			// query selector
-			var sel = elementOrSelector;
+			var sel = nodeOrSelector;
 			var el = null;
 			try {
 				el = document.querySelector(sel);
@@ -160,13 +165,22 @@ var jsc = {
 			return el;
 		}
 
-		if (typeof elementOrSelector === 'object' && elementOrSelector instanceof HTMLElement) {
-			// HTML element
-			return elementOrSelector;
+		if (jsc.isNode(nodeOrSelector)) {
+			// DOM node
+			return nodeOrSelector;
 		}
 
-		console.warn('Invalid element of type %s: %s', typeof elementOrSelector, elementOrSelector);
+		console.warn('Invalid node of type %s: %s', typeof nodeOrSelector, nodeOrSelector);
 		return null;
+	},
+
+
+	// See https://stackoverflow.com/questions/384286/
+	isNode : function (val) {
+		if (typeof Node === 'object') {
+			return val instanceof Node;
+		}
+		return val && typeof val === 'object' && typeof val.nodeType === 'number' && typeof val.nodeName === 'string';
 	},
 
 
@@ -2769,7 +2783,7 @@ var jsc = {
 			this.container = document.body; // default container is BODY element
 
 		} else { // explicitly set to custom element
-			this.container = jsc.fetchElement(this.container);
+			this.container = jsc.node(this.container);
 		}
 
 		if (!this.container) {
@@ -2778,7 +2792,7 @@ var jsc = {
 
 
 		// Fetch the target element
-		this.targetElement = jsc.fetchElement(targetElement);
+		this.targetElement = jsc.node(targetElement);
 
 		if (!this.targetElement) {
 			// temporarily customized error message to help with migrating from versions prior to 2.2
@@ -2847,12 +2861,12 @@ var jsc = {
 			// leave it null
 
 		} else { // explicitly set to custom element
-			this.valueElement = jsc.fetchElement(this.valueElement);
+			this.valueElement = jsc.node(this.valueElement);
 		}
 
 		// Determine the alpha element
 		if (this.alphaElement) {
-			this.alphaElement = jsc.fetchElement(this.alphaElement);
+			this.alphaElement = jsc.node(this.alphaElement);
 		}
 
 		// Determine the preview element
@@ -2863,7 +2877,7 @@ var jsc = {
 			// leave it null
 
 		} else { // explicitly set to custom element
-			this.previewElement = jsc.fetchElement(this.previewElement);
+			this.previewElement = jsc.node(this.previewElement);
 		}
 
 		// valueElement
@@ -3015,16 +3029,30 @@ jsc.pub.previewSeparator = ['rgba(255,255,255,.65)', 'rgba(128,128,128,.65)'];
 
 
 // Installs jscolor on current DOM tree
-jsc.pub.install = function () {
-	jsc.installBySelector('[data-jscolor]');
+jsc.pub.install = function (rootNode) {
+	var success = true;
+
+	try {
+		jsc.installBySelector('[data-jscolor]', rootNode);
+	} catch (e) {
+		success = false;
+		console.warn(e);
+	}
 
 	// for backward compatibility with DEPRECATED installation using class name
 	if (jsc.pub.lookupClass) {
-		jsc.installBySelector(
-			'input.' + jsc.pub.lookupClass + ', ' +
-			'button.' + jsc.pub.lookupClass
-		);
+		try {
+			jsc.installBySelector(
+				(
+					'input.' + jsc.pub.lookupClass + ', ' +
+					'button.' + jsc.pub.lookupClass
+				),
+				rootNode
+			);
+		} catch (e) {}
 	}
+
+	return success;
 };
 
 
