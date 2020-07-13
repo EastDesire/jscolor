@@ -85,7 +85,7 @@ var jsc = {
 					optsStr = dataOpts;
 
 				} else if (m) { // installation using className (DEPRECATED)
-					console.warn('Installation using class name is DEPRECATED. Use data-jscolor="" attribute instead.');
+					console.warn('Installation using class name is DEPRECATED. Use data-jscolor="" attribute instead.' + jsc.docsRef);
 					if (m[4]) {
 						optsStr = m[4];
 					}
@@ -1429,6 +1429,9 @@ var jsc = {
 	},
 
 
+	docsRef : ' ' + 'See https://jscolor.com/docs/',
+
+
 	//
 	// Usage:
 	// var myPicker = new JSColor(<targetElement> [, <options>])
@@ -1816,7 +1819,7 @@ var jsc = {
 		// DEPRECATED. Use .fromHSVA() instead
 		//
 		this.fromHSV = function (h, s, v, flags) {
-			console.warn('fromHSV() method is DEPRECATED. Using fromHSVA() instead.');
+			console.warn('fromHSV() method is DEPRECATED. Using fromHSVA() instead.' + jsc.docsRef);
 			return this.fromHSVA(h, s, v, null, flags);
 		};
 
@@ -1824,7 +1827,7 @@ var jsc = {
 		// DEPRECATED. Use .fromRGBA() instead
 		//
 		this.fromRGB = function (r, g, b, flags) {
-			console.warn('fromRGB() method is DEPRECATED. Using fromRGBA() instead.');
+			console.warn('fromRGB() method is DEPRECATED. Using fromRGBA() instead.' + jsc.docsRef);
 			return this.fromRGBA(r, g, b, null, flags);
 		};
 
@@ -2202,7 +2205,7 @@ var jsc = {
 				var newOpt = jsc.deprecatedOpts[option];
 				if (newOpt) {
 					// if we have a new name for this option, let's log a warning and use the new name
-					console.warn('Option \'%s\' is DEPRECATED, using \'%s\' instead', oldOpt, newOpt);
+					console.warn('Option \'%s\' is DEPRECATED, using \'%s\' instead.' + jsc.docsRef, oldOpt, newOpt);
 					option = newOpt;
 				} else {
 					// new name not available for the option
@@ -2226,7 +2229,7 @@ var jsc = {
 				var newOpt = jsc.deprecatedOpts[option];
 				if (newOpt) {
 					// if we have a new name for this option, let's log a warning and use the new name
-					console.warn('Option \'%s\' is DEPRECATED, using \'%s\' instead', oldOpt, newOpt);
+					console.warn('Option \'%s\' is DEPRECATED, using \'%s\' instead.' + jsc.docsRef, oldOpt, newOpt);
 					option = newOpt;
 				} else {
 					// new name not available for the option
@@ -3112,7 +3115,7 @@ jsc.pub.lookupClass = 'jscolor';
 // DEPRECATED. Use jscolor.install() instead
 //
 jsc.pub.init = function () {
-	console.warn('jscolor.init() is DEPRECATED. Using jscolor.install() instead.');
+	console.warn('jscolor.init() is DEPRECATED. Using jscolor.install() instead.' + jsc.docsRef);
 	return jsc.pub.install();
 };
 
@@ -3121,7 +3124,7 @@ jsc.pub.init = function () {
 //
 // Install jscolor on all elements that have the specified class name
 jsc.pub.installByClassName = function () {
-	console.error('jscolor.installByClassName() is DEPRECATED. Use data-jscolor="" attribute instead of a class name.');
+	console.error('jscolor.installByClassName() is DEPRECATED. Use data-jscolor="" attribute instead of a class name.' + jsc.docsRef);
 	return false;
 };
 
