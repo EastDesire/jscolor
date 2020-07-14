@@ -54,6 +54,13 @@ Documentation can be found at https://jscolor.com/docs/
 
 
 
+## License
+
+* [GNU GPL v3](http://www.gnu.org/licenses/gpl-3.0.txt) for open source use
+* [Commercial license](https://jscolor.com/download/#licenses) for commercial use
+
+
+
 ## Website
 
 For more info on jscolor project, see [jscolor website](https://jscolor.com)
