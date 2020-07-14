@@ -42,11 +42,11 @@ Documentation can be found at https://jscolor.com/docs/
 
 * **Cross-browser** \
   All modern browsers are supported, including:
-  Edge, Firefox, Chrome, Safari, Opera, Internet Explorer 10 and above, and others…
+  Edge, Firefox, Chrome, Safari, Opera, Internet Explorer 10 and above, and others...
 
 
 * **Highly customizable** \
-  jscolor provides many [configuration options](https://jscolor.com/docs/). Whether you need to change color picker's size or colors, or attach a function to its onchange event, the configuration can be fine-tuned for your web project.
+  jscolor provides many [configuration options](https://jscolor.com/docs/#doc-api-options). Whether you need to change color picker's size or colors, or attach a function to its onchange event, the configuration can be fine-tuned for your web project.
 
 
 * **Mobile friendly** \
