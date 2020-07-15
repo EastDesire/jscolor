@@ -144,6 +144,13 @@ var jsc = {
 	},
 
 
+	createEl : function (tagName) {
+		var el = document.createElement(tagName);
+		jsc.setData(el, 'gui', true)
+		return el;
+	},
+
+
 	node : function (nodeOrSelector) {
 		if (!nodeOrSelector) {
 			return null;
@@ -813,7 +820,7 @@ var jsc = {
 		var cWidth = specWidth ? specWidth : sqSize * 2;
 		var cHeight = sqSize * 2;
 
-		var canvas = document.createElement('canvas');
+		var canvas = jsc.createEl('canvas');
 		var ctx = canvas.getContext('2d');
 
 		canvas.width = cWidth;
@@ -1024,14 +1031,18 @@ var jsc = {
 	onDocumentMouseDown : function (e) {
 		var target = e.target || e.srcElement;
 
-		if (target.jscolor && target.jscolor instanceof jsc.pub) {
+		if (target.jscolor && target.jscolor instanceof jsc.pub) { // clicked targetElement -> show picker
 			if (target.jscolor.showOnClick && !target.disabled) {
 				target.jscolor.show();
 			}
-		} else if (target._jscControlName) {
-			jsc.onControlPointerStart(e, target, target._jscControlName, 'mouse');
+		} else if (jsc.getData(target, 'gui')) { // clicked jscolor's GUI element
+			var control = jsc.getData(target, 'control');
+			if (control) {
+				// jscolor's control
+				jsc.onControlPointerStart(e, target, jsc.getData(target, 'control'), 'mouse');
+			}
 		} else {
-			// Mouse is outside the picker controls -> hide the color picker!
+			// mouse is outside the picker's controls -> hide the color picker!
 			if (jsc.picker && jsc.picker.owner) {
 				jsc.picker.owner.hide();
 			}
@@ -1064,8 +1075,8 @@ var jsc = {
 	onPickerTouchStart : function (e) {
 		var target = e.target || e.srcElement;
 
-		if (target._jscControlName) {
-			jsc.onControlPointerStart(e, target, target._jscControlName, 'touch');
+		if (jsc.getData(target, 'control')) {
+			jsc.onControlPointerStart(e, target, jsc.getData(target, 'control'), 'touch');
 		}
 	},
 
@@ -1120,7 +1131,7 @@ var jsc = {
 
 
 	onControlPointerStart : function (e, target, controlName, pointerType) {
-		var thisObj = target._jscInstance;
+		var thisObj = jsc.getData(target, 'instance');
 
 		jsc.preventDefault(e);
 		jsc.captureTarget(target);
@@ -1170,7 +1181,7 @@ var jsc = {
 
 	onDocumentPointerMove : function (e, target, controlName, pointerType, offset) {
 		return function (e) {
-			var thisObj = target._jscInstance;
+			var thisObj = jsc.getData(target, 'instance');
 			switch (controlName) {
 			case 'pad':
 				jsc.setPad(thisObj, e, offset[0], offset[1]);
@@ -1191,7 +1202,7 @@ var jsc = {
 
 	onDocumentPointerEnd : function (e, target, controlName, pointerType) {
 		return function (e) {
-			var thisObj = target._jscInstance;
+			var thisObj = jsc.getData(target, 'instance');
 			jsc.detachGroupEvents('drag');
 			jsc.releaseTarget();
 
@@ -1206,8 +1217,8 @@ var jsc = {
 
 	setPad : function (thisObj, e, ofsX, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var x = ofsX + pointerAbs.x - jsc._pointerOrigin.x - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
+		var x = ofsX + pointerAbs.x - jsc._pointerOrigin.x - thisObj.padding - thisObj.controlBorderWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth;
 
 		var xVal = x * (360 / (thisObj.width - 1));
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
@@ -1221,7 +1232,7 @@ var jsc = {
 
 	setSld : function (thisObj, e, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth;
 		var yVal = 100 - (y * (100 / (thisObj.height - 1)));
 
 		switch (jsc.getSliderChannel(thisObj)) {
@@ -1233,7 +1244,7 @@ var jsc = {
 
 	setASld : function (thisObj, e, ofsY) {
 		var pointerAbs = jsc.getAbsPointerPos(e);
-		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth - thisObj.borderWidth;
+		var y = ofsY + pointerAbs.y - jsc._pointerOrigin.y - thisObj.padding - thisObj.controlBorderWidth;
 		var yVal = 1.0 - (y * (1.0 / (thisObj.height - 1)));
 
 		if (yVal < 1.0) {
@@ -1254,7 +1265,7 @@ var jsc = {
 			draw: null
 		};
 
-		var canvas = document.createElement('canvas');
+		var canvas = jsc.createEl('canvas');
 		var ctx = canvas.getContext('2d');
 
 		var drawFunc = function (width, height, type) {
@@ -1304,7 +1315,7 @@ var jsc = {
 			draw: null
 		};
 
-		var canvas = document.createElement('canvas');
+		var canvas = jsc.createEl('canvas');
 		var ctx = canvas.getContext('2d');
 
 		var drawFunc = function (width, height, color1, color2) {
@@ -1335,7 +1346,7 @@ var jsc = {
 			draw: null
 		};
 
-		var canvas = document.createElement('canvas');
+		var canvas = jsc.createEl('canvas');
 		var ctx = canvas.getContext('2d');
 
 		var drawFunc = function (width, height, color) {
@@ -2175,9 +2186,9 @@ var jsc = {
 					//
 					// Note: It's not just offsetParents that can be scrollable,
 					// that's why we loop through all parent nodes
-					if (!elm._jscEventsAttached) {
+					if (!jsc.getData(elm, 'hasScrollListener')) {
 						elm.addEventListener('scroll', jsc.onParentScroll, false);
-						elm._jscEventsAttached = true;
+						jsc.setData(elm, 'hasScrollListener', true);
 					}
 				}
 			} while ((elm = elm.parentNode) && jsc.nodeName(elm) !== 'body');
@@ -2262,37 +2273,37 @@ var jsc = {
 			if (!jsc.picker) {
 				jsc.picker = {
 					owner: null, // owner picker instance
-					wrap : document.createElement('div'),
-					box : document.createElement('div'),
-					boxS : document.createElement('div'), // shadow area
-					boxB : document.createElement('div'), // border
-					pad : document.createElement('div'),
-					padB : document.createElement('div'), // border
-					padM : document.createElement('div'), // mouse/touch area
+					wrap : jsc.createEl('div'),
+					box : jsc.createEl('div'),
+					boxS : jsc.createEl('div'), // shadow area
+					boxB : jsc.createEl('div'), // border
+					pad : jsc.createEl('div'),
+					padB : jsc.createEl('div'), // border
+					padM : jsc.createEl('div'), // mouse/touch area
 					padPal : jsc.createPalette(),
-					cross : document.createElement('div'),
-					crossBY : document.createElement('div'), // border Y
-					crossBX : document.createElement('div'), // border X
-					crossLY : document.createElement('div'), // line Y
-					crossLX : document.createElement('div'), // line X
-					sld : document.createElement('div'), // slider
-					sldB : document.createElement('div'), // border
-					sldM : document.createElement('div'), // mouse/touch area
+					cross : jsc.createEl('div'),
+					crossBY : jsc.createEl('div'), // border Y
+					crossBX : jsc.createEl('div'), // border X
+					crossLY : jsc.createEl('div'), // line Y
+					crossLX : jsc.createEl('div'), // line X
+					sld : jsc.createEl('div'), // slider
+					sldB : jsc.createEl('div'), // border
+					sldM : jsc.createEl('div'), // mouse/touch area
 					sldGrad : jsc.createSliderGradient(),
-					sldPtrS : document.createElement('div'), // slider pointer spacer
-					sldPtrIB : document.createElement('div'), // slider pointer inner border
-					sldPtrMB : document.createElement('div'), // slider pointer middle border
-					sldPtrOB : document.createElement('div'), // slider pointer outer border
-					asld : document.createElement('div'), // alpha slider
-					asldB : document.createElement('div'), // border
-					asldM : document.createElement('div'), // mouse/touch area
+					sldPtrS : jsc.createEl('div'), // slider pointer spacer
+					sldPtrIB : jsc.createEl('div'), // slider pointer inner border
+					sldPtrMB : jsc.createEl('div'), // slider pointer middle border
+					sldPtrOB : jsc.createEl('div'), // slider pointer outer border
+					asld : jsc.createEl('div'), // alpha slider
+					asldB : jsc.createEl('div'), // border
+					asldM : jsc.createEl('div'), // mouse/touch area
 					asldGrad : jsc.createASliderGradient(),
-					asldPtrS : document.createElement('div'), // slider pointer spacer
-					asldPtrIB : document.createElement('div'), // slider pointer inner border
-					asldPtrMB : document.createElement('div'), // slider pointer middle border
-					asldPtrOB : document.createElement('div'), // slider pointer outer border
-					btn : document.createElement('div'),
-					btnT : document.createElement('span'), // text
+					asldPtrS : jsc.createEl('div'), // slider pointer spacer
+					asldPtrIB : jsc.createEl('div'), // slider pointer inner border
+					asldPtrMB : jsc.createEl('div'), // slider pointer middle border
+					asldPtrOB : jsc.createEl('div'), // slider pointer outer border
+					btn : jsc.createEl('div'),
+					btnT : jsc.createEl('span'), // text
 				};
 
 				jsc.picker.pad.appendChild(jsc.picker.padPal.elm);
@@ -2403,14 +2414,16 @@ var jsc = {
 			p.padB.style.borderColor = THIS.controlBorderColor;
 
 			// pad mouse area
-			p.padM._jscInstance = THIS;
-			p.padM._jscControlName = 'pad';
 			p.padM.style.position = 'absolute';
-			p.padM.style.left = -THIS.borderWidth + 'px';
-			p.padM.style.top = -THIS.borderWidth + 'px';
-			p.padM.style.width = (THIS.borderWidth + THIS.padding + 2 * THIS.controlBorderWidth + THIS.width + controlPadding) + 'px';
-			p.padM.style.height = (2 * THIS.borderWidth + dims[1]) + 'px';
+			p.padM.style.left = 0 + 'px';
+			p.padM.style.top = 0 + 'px';
+			p.padM.style.width = (THIS.padding + 2 * THIS.controlBorderWidth + THIS.width + controlPadding) + 'px';
+			p.padM.style.height = (2 * THIS.controlBorderWidth + 2 * THIS.padding + THIS.height) + 'px';
 			p.padM.style.cursor = padCursor;
+			jsc.setData(p.padM, {
+				instance: THIS,
+				control: 'pad',
+			})
 
 			// pad cross
 			p.cross.style.position = 'absolute';
@@ -2479,18 +2492,20 @@ var jsc = {
 			p.sldB.style.borderColor = THIS.controlBorderColor;
 
 			// slider mouse area
-			p.sldM._jscInstance = THIS;
-			p.sldM._jscControlName = 'sld';
 			p.sldM.style.display = displaySlider ? 'block' : 'none';
 			p.sldM.style.position = 'absolute';
 			p.sldM.style.left = (THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + controlPadding) + 'px';
-			p.sldM.style.top = -THIS.borderWidth + 'px';
+			p.sldM.style.top = 0 + 'px';
 			p.sldM.style.width = (
 					(THIS.sliderSize + 2 * controlPadding + 2 * THIS.controlBorderWidth) +
 					(displayAlphaSlider ? 0 : Math.max(0, THIS.padding - controlPadding)) // remaining padding to the right edge
 				) + 'px';
-			p.sldM.style.height = (2 * THIS.borderWidth + dims[1]) + 'px';
+			p.sldM.style.height = (2 * THIS.controlBorderWidth + 2 * THIS.padding + THIS.height) + 'px';
 			p.sldM.style.cursor = 'default';
+			jsc.setData(p.sldM, {
+				instance: THIS,
+				control: 'sld',
+			})
 
 			// slider pointer inner and outer border
 			p.sldPtrIB.style.border =
@@ -2530,21 +2545,23 @@ var jsc = {
 			p.asldB.style.borderColor = THIS.controlBorderColor;
 
 			// alpha slider mouse area
-			p.asldM._jscInstance = THIS;
-			p.asldM._jscControlName = 'asld';
 			p.asldM.style.display = displayAlphaSlider ? 'block' : 'none';
 			p.asldM.style.position = 'absolute';
 			p.asldM.style.left = (
 					(THIS.padding + THIS.width + 2 * THIS.controlBorderWidth + controlPadding) +
 					(displaySlider ? (THIS.sliderSize + 2 * controlPadding + 2 * THIS.controlBorderWidth) : 0)
 				) + 'px';
-			p.asldM.style.top = -THIS.borderWidth + 'px';
+			p.asldM.style.top = 0 + 'px';
 			p.asldM.style.width = (
 					(THIS.sliderSize + 2 * controlPadding + 2 * THIS.controlBorderWidth) +
 					Math.max(0, THIS.padding - controlPadding) // remaining padding to the right edge
 				) + 'px';
-			p.asldM.style.height = (2 * THIS.borderWidth + dims[1]) + 'px';
+			p.asldM.style.height = (2 * THIS.controlBorderWidth + 2 * THIS.padding + THIS.height) + 'px';
 			p.asldM.style.cursor = 'default';
+			jsc.setData(p.asldM, {
+				instance: THIS,
+				control: 'asld',
+			})
 
 			// alpha slider pointer inner and outer border
 			p.asldPtrIB.style.border =
@@ -3008,12 +3025,20 @@ jsc.pub.presets = {};
 // built-in presets
 jsc.pub.presets['default'] = {}; // baseline for customization
 
-jsc.pub.presets['light'] = { backgroundColor:'#FFFFFF', controlBorderColor:'#BBBBBB' }; // default color scheme
-jsc.pub.presets['dark'] = { backgroundColor:'#333333', controlBorderColor:'#999999' };
+jsc.pub.presets['light'] = { // default color scheme
+	backgroundColor: 'rgba(255,255,255,1)',
+	controlBorderColor: 'rgba(187,187,187,1)',
+	buttonColor: 'rgba(0,0,0,1)',
+};
+jsc.pub.presets['dark'] = {
+	backgroundColor: 'rgba(51,51,51,1)',
+	controlBorderColor: 'rgba(153,153,153,1)',
+	buttonColor: 'rgba(240,240,240,1)',
+};
 
-jsc.pub.presets['small'] = { width:101, height:101, padding:10 };
-jsc.pub.presets['medium'] = { width:181, height:101, padding:12 }; // default size
-jsc.pub.presets['large'] = { width:271, height:151, padding:12 };
+jsc.pub.presets['small'] = { width:101, height:101, padding:10, sliderSize:14 };
+jsc.pub.presets['medium'] = { width:181, height:101, padding:12, sliderSize:16 }; // default size
+jsc.pub.presets['large'] = { width:271, height:151, padding:12, sliderSize:24 };
 
 jsc.pub.presets['thin'] = { borderWidth:1, controlBorderWidth:1, pointerBorderWidth:1 }; // default thickness
 jsc.pub.presets['thick'] = { borderWidth:2, controlBorderWidth:2, pointerBorderWidth:2 };
