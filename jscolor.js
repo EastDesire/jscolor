@@ -1927,20 +1927,7 @@ var jsc = {
 
 
 		this.toBackground = function () {
-			var backgrounds = [];
-
-			// CSS gradient for background color preview
-			backgrounds.push(jsc.genColorPreviewGradient(this.toRGBAString()));
-
-			// data URL of generated PNG image with a gray transparency chessboard
-			var preview = jsc.genColorPreviewCanvas();
-			backgrounds.push([
-				'url(\'' + preview.canvas.toDataURL() + '\')',
-				'left top',
-				'repeat',
-			].join(' '));
-
-			return backgrounds.join(', ');
+			return jsc.pub.background(this.toRGBAString());
 		};
 
 
@@ -3113,6 +3100,25 @@ jsc.pub.chessboard = function (color) {
 	}
 	var preview = jsc.genColorPreviewCanvas(color);
 	return preview.canvas.toDataURL();
+};
+
+
+// Returns a data URL of a gray chessboard image that indicates transparency
+jsc.pub.background = function (color) {
+	var backgrounds = [];
+
+	// CSS gradient for background color preview
+	backgrounds.push(jsc.genColorPreviewGradient(color));
+
+	// data URL of generated PNG image with a gray transparency chessboard
+	var preview = jsc.genColorPreviewCanvas();
+	backgrounds.push([
+		'url(\'' + preview.canvas.toDataURL() + '\')',
+		'left top',
+		'repeat',
+	].join(' '));
+
+	return backgrounds.join(', ');
 };
 
 
