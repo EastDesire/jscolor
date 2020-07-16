@@ -1437,6 +1437,7 @@ var jsc = {
 		'closable': 'closeButton',
 		'insetWidth': 'controlBorderWidth',
 		'insetColor': 'controlBorderColor',
+		'refine': null,
 	},
 
 
@@ -1482,7 +1483,6 @@ var jsc = {
 		this.previewSize = 32; // (px) width of the color preview displayed in previewElement
 		this.previewPadding = 8; // (px) space between color preview and content of the previewElement
 		this.required = true; // whether the associated text input must always contain a color value. If false, the input can be left empty.
-		this.refine = true; // whether to auto-format the entered color code (e.g. remove whitespace)
 		this.hash = true; // whether to prefix the HEX color code with # symbol (only applicable for HEX format)
 		this.uppercase = true; // whether to show the HEX color code in upper case (only applicable for HEX format)
 		this.forceStyle = true; // whether to overwrite CSS style of the previewElement using !important flag
@@ -1844,6 +1844,13 @@ var jsc = {
 
 
 		this.fromString = function (str, flags) {
+			if (!this.required && str.trim() === '') {
+				// setting empty string to an optional color input
+				this.setPreviewElementBg(null);
+				this.setValueElementValue('');
+				return true;
+			}
+
 			var color = jsc.parseColorString(str);
 			if (!color) {
 				return false; // could not parse
@@ -1975,23 +1982,6 @@ var jsc = {
 
 
 		this.processValueInput = function (str) {
-
-			if (!this.required && str.trim() === '') {
-				// input's value is empty (or just whitespace) -> leave the value
-				this.setPreviewElementBg(null);
-				this.exposeColor(jsc.flags.leaveValue | jsc.flags.leavePreview);
-				return;
-			}
-
-			if (!this.refine) {
-				if (!this.fromString(str, jsc.flags.leaveValue)) {
-					// input's value could not be parsed -> remove background
-					this.setPreviewElementBg(null);
-					this.exposeColor(jsc.flags.leaveValue | jsc.flags.leavePreview);
-				}
-				return;
-			}
-
 			if (!this.fromString(str)) {
 				// could not parse the color value - let's just expose the current color
 				this.exposeColor();
@@ -2017,21 +2007,12 @@ var jsc = {
 					if (!this.hash) { value = value.replace(/^#/, ''); }
 				}
 
-				if (jsc.nodeName(this.valueElement) === 'input') {
-					this.valueElement.value = value;
-				} else {
-					this.valueElement.innerHTML = value;
-				}
+				this.setValueElementValue(value);
 			}
 
 			if (!(flags & jsc.flags.leaveAlpha) && this.alphaElement) {
 				var value = Math.round(this.channels.a * 100) / 100;
-
-				if (jsc.nodeName(this.alphaElement) === 'input') {
-					this.alphaElement.value = value;
-				} else {
-					this.alphaElement.innerHTML = value;
-				}
+				this.setAlphaElementValue(value);
 			}
 
 			if (!(flags & jsc.flags.leavePreview) && this.previewElement) {
@@ -2151,6 +2132,28 @@ var jsc = {
 				'padding-right': padding.right,
 			};
 			jsc.setStyle(this.previewElement, sty, this.forceStyle, true);
+		};
+
+
+		this.setValueElementValue = function (str) {
+			if (this.valueElement) {
+				if (jsc.nodeName(this.valueElement) === 'input') {
+					this.valueElement.value = str;
+				} else {
+					this.valueElement.innerHTML = str;
+				}
+			}
+		};
+
+
+		this.setAlphaElementValue = function (str) {
+			if (this.alphaElement) {
+				if (jsc.nodeName(this.alphaElement) === 'input') {
+					this.alphaElement.value = str;
+				} else {
+					this.alphaElement.innerHTML = str;
+				}
+			}
 		};
 
 
@@ -2929,13 +2932,8 @@ var jsc = {
 
 		if (this.value !== undefined) {
 			initValue = this.value; // get initial color from the 'value' property
-		}
-		if (this.valueElement && this.valueElement.value !== undefined) {
-			if (this.value !== undefined) {
-				this.valueElement.value = this.value; // sync valueElement's value with the 'value' property
-			} else {
-				initValue = this.valueElement.value; // get initial color from valueElement's value
-			}
+		} else if (this.valueElement && this.valueElement.value !== undefined) {
+			initValue = this.valueElement.value; // get initial color from valueElement's value
 		}
 
 		// determine initial alpha value
@@ -2944,13 +2942,8 @@ var jsc = {
 
 		if (this.alpha !== undefined) {
 			initAlpha = (''+this.alpha); // get initial alpha value from the 'alpha' property
-		}
-		if (this.alphaElement && this.alphaElement.value !== undefined) {
-			if (this.alpha !== undefined) {
-				this.alphaElement.value = (''+this.alpha); // sync alphaElement's value with the 'alpha' property
-			} else {
-				initAlpha = this.alphaElement.value; // get initial color from alphaElement's value
-			}
+		} else if (this.alphaElement && this.alphaElement.value !== undefined) {
+			initAlpha = this.alphaElement.value; // get initial color from alphaElement's value
 		}
 
 		// determine current format based on the initial color value
