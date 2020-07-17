@@ -2359,7 +2359,6 @@ var jsc = {
 			p.box.style.width = dims[0] + 'px';
 			p.box.style.height = dims[1] + 'px';
 			p.box.style.position = 'relative';
-			p.box.style.overflow = 'hidden';
 
 			// picker shadow
 			p.boxS.className = 'jscolor-picker-shadow';
