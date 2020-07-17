@@ -2578,12 +2578,15 @@ var jsc = {
 				var outsetColor = insetColors.length < 2 ? insetColors[0] : insetColors[1] + ' ' + insetColors[0] + ' ' + insetColors[0] + ' ' + insetColors[1];
 				p.btn.style.borderColor = outsetColor;
 			}
+			var btnPadding = 15; // px
 			p.btn.className = 'jscolor-btn-close';
 			p.btn.style.display = THIS.closeButton ? 'block' : 'none';
 			p.btn.style.position = 'absolute';
 			p.btn.style.left = THIS.padding + 'px';
 			p.btn.style.bottom = THIS.padding + 'px';
-			p.btn.style.padding = '0 15px';
+			p.btn.style.padding = '0 ' + btnPadding + 'px';
+			p.btn.style.maxWidth = (dims[0] - 2 * THIS.padding - 2 * THIS.controlBorderWidth - 2 * btnPadding) + 'px';
+			p.btn.style.overflow = 'hidden';
 			p.btn.style.height = THIS.buttonHeight + 'px';
 			p.btn.style.whiteSpace = 'nowrap';
 			p.btn.style.border = THIS.controlBorderWidth + 'px solid';
