@@ -2358,6 +2358,8 @@ var jsc = {
 			p.box.className = 'jscolor-picker';
 			p.box.style.width = dims[0] + 'px';
 			p.box.style.height = dims[1] + 'px';
+			p.box.style.position = 'relative';
+			p.box.style.overflow = 'hidden';
 
 			// picker shadow
 			p.boxS.className = 'jscolor-picker-shadow';
@@ -2584,6 +2586,7 @@ var jsc = {
 			p.btn.style.bottom = THIS.padding + 'px';
 			p.btn.style.padding = '0 15px';
 			p.btn.style.height = THIS.buttonHeight + 'px';
+			p.btn.style.whiteSpace = 'nowrap';
 			p.btn.style.border = THIS.controlBorderWidth + 'px solid';
 			setBtnBorder();
 			p.btn.style.color = THIS.buttonColor;
