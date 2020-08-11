@@ -1044,7 +1044,7 @@ var jsc = {
 		} else {
 			// mouse is outside the picker's controls -> hide the color picker!
 			if (jsc.picker && jsc.picker.owner) {
-				jsc.picker.owner.hide();
+				jsc.picker.owner.tryHide();
 			}
 		}
 	},
@@ -1053,7 +1053,7 @@ var jsc = {
 	onDocumentKeyUp : function (e) {
 		if (['Tab', 'Escape'].indexOf(jsc.eventKey(e)) !== -1) {
 			if (jsc.picker && jsc.picker.owner) {
-				jsc.picker.owner.hide();
+				jsc.picker.owner.tryHide();
 			}
 		}
 	},
@@ -1067,7 +1067,7 @@ var jsc = {
 	onParentScroll : function (e) {
 		// hide the picker when one of the parent elements is scrolled
 		if (jsc.picker && jsc.picker.owner) {
-			jsc.picker.owner.hide();
+			jsc.picker.owner.tryHide();
 		}
 	},
 
@@ -1495,7 +1495,8 @@ var jsc = {
 		this.alphaChannel = 'auto'; // 'auto' | true | false - if alpha channel is enabled, the alpha slider will be visible. If 'auto', it will be determined according to color format
 		this.position = 'bottom'; // 'left' | 'right' | 'top' | 'bottom' - position relative to the target element
 		this.smartPosition = true; // automatically change picker position when there is not enough space for it
-		this.showOnClick = true; // whether to display the color picker when user clicks on its target element
+		this.showOnClick = true; // whether to show the picker when user clicks its target element
+		this.hideOnLeave = true; // whether to automatically hide the picker when user leaves its target element (e.g. upon clicking the document)
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
 		this.closeButton = false; // whether to display the Close button
@@ -2185,6 +2186,13 @@ var jsc = {
 		};
 
 
+		this.tryHide = function () {
+			if (this.hideOnLeave) {
+				this.hide();
+			}
+		};
+
+
 		function setOption (option, value) {
 			if (typeof option !== 'string') {
 				throw new Error('Invalid value for option name: ' + option);
@@ -2702,7 +2710,7 @@ var jsc = {
 				if (THIS.valueElement) {
 					THIS.processValueInput(THIS.valueElement.value);
 				}
-				THIS.hide();
+				THIS.tryHide();
 			}
 		}
 
@@ -2712,7 +2720,7 @@ var jsc = {
 				if (THIS.alphaElement) {
 					THIS.processAlphaInput(THIS.alphaElement.value);
 				}
-				THIS.hide();
+				THIS.tryHide();
 			}
 		}
 
