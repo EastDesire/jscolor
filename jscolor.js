@@ -10,12 +10,35 @@
  */
 
 
-"use strict";
+(function (global, factory) {
+
+	'use strict';
+
+	if (typeof module === 'object' && typeof module.exports === 'object') {
+		// Export jscolor as a module
+		module.exports = global.document ?
+			factory (global) :
+			function (win) {
+				if (!win.document) {
+					throw new Error('jscolor needs a window with document');
+				}
+				return factory(win);
+			}
+		return;
+	}
+
+	// Default use (no module export)
+	factory(global);
+
+})(typeof window !== 'undefined' ? window : this, function (window) { // BEGIN factory
+
+// BEGIN jscolor code
 
 
-if (!window.jscolor) {
+'use strict';
 
-window.jscolor = (function () { // BEGIN window.jscolor
+
+var jscolor = (function () { // BEGIN jscolor
 
 var jsc = {
 
@@ -28,10 +51,9 @@ var jsc = {
 
 
 	register : function () {
-		document.addEventListener('DOMContentLoaded', jsc.init, false);
-		document.addEventListener('mousedown', jsc.onDocumentMouseDown, false);
-		document.addEventListener('keyup', jsc.onDocumentKeyUp, false);
-		window.addEventListener('resize', jsc.onWindowResize, false);
+		if (typeof window !== 'undefined' && window.document) {
+			window.document.addEventListener('DOMContentLoaded', jsc.init, false);
+		}
 	},
 
 
@@ -40,7 +62,14 @@ var jsc = {
 			return;
 		}
 
+		// attach some necessary handlers
+		window.document.addEventListener('mousedown', jsc.onDocumentMouseDown, false);
+		window.document.addEventListener('keyup', jsc.onDocumentKeyUp, false);
+		window.addEventListener('resize', jsc.onWindowResize, false);
+
+		// install jscolor on current DOM
 		jsc.pub.install();
+
 		jsc.initialized = true;
 
 		// trigger events waiting in the queue
@@ -52,7 +81,7 @@ var jsc = {
 
 
 	installBySelector : function (selector, rootNode) {
-		rootNode = rootNode ? jsc.node(rootNode) : document;
+		rootNode = rootNode ? jsc.node(rootNode) : window.document;
 		if (!rootNode) {
 			throw new Error('Missing root node');
 		}
@@ -145,7 +174,7 @@ var jsc = {
 
 
 	createEl : function (tagName) {
-		var el = document.createElement(tagName);
+		var el = window.document.createElement(tagName);
 		jsc.setData(el, 'gui', true)
 		return el;
 	},
@@ -161,7 +190,7 @@ var jsc = {
 			var sel = nodeOrSelector;
 			var el = null;
 			try {
-				el = document.querySelector(sel);
+				el = window.document.querySelector(sel);
 			} catch (e) {
 				console.warn(e);
 				return null;
@@ -249,7 +278,7 @@ var jsc = {
 
 
 	isColorAttrSupported : (function () {
-		var elm = document.createElement('input');
+		var elm = window.document.createElement('input');
 		if (elm.setAttribute) {
 			elm.setAttribute('type', 'color');
 			if (elm.type.toLowerCase() == 'color') {
@@ -398,7 +427,7 @@ var jsc = {
 			});
 		} else {
 			// IE
-			ev = document.createEvent('Event');
+			ev = window.document.createEvent('Event');
 			ev.initEvent(eventName, bubbles, cancelable);
 		}
 
@@ -568,7 +597,7 @@ var jsc = {
 		function getFuncName () {
 			var stdName = 'linear-gradient';
 			var prefixes = ['', '-webkit-', '-moz-', '-o-', '-ms-'];
-			var helper = document.createElement('div');
+			var helper = window.document.createElement('div');
 
 			for (var i = 0; i < prefixes.length; i += 1) {
 				var tryFunc = prefixes[i] + stdName;
@@ -659,7 +688,7 @@ var jsc = {
 
 
 	getViewPos : function () {
-		var doc = document.documentElement;
+		var doc = window.document.documentElement;
 		return [
 			(window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0),
 			(window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0)
@@ -668,7 +697,7 @@ var jsc = {
 
 
 	getViewSize : function () {
-		var doc = document.documentElement;
+		var doc = window.document.documentElement;
 		return [
 			(window.innerWidth || doc.clientWidth),
 			(window.innerHeight || doc.clientHeight),
@@ -1143,7 +1172,7 @@ var jsc = {
 				jsc.onDocumentPointerEnd(e, target, controlName, pointerType));
 		};
 
-		registerDragEvents(document, [0, 0]);
+		registerDragEvents(window.document, [0, 0]);
 
 		if (window.parent && window.frameElement) {
 			var rect = window.frameElement.getBoundingClientRect();
@@ -2608,7 +2637,7 @@ var jsc = {
 			};
 			p.btnT.style.lineHeight = THIS.buttonHeight + 'px';
 			p.btnT.innerHTML = '';
-			p.btnT.appendChild(document.createTextNode(THIS.closeText));
+			p.btnT.appendChild(window.document.createTextNode(THIS.closeText));
 
 			// reposition the pointers
 			redrawPad();
@@ -2626,7 +2655,7 @@ var jsc = {
 
 			// The redrawPosition() method needs picker.owner to be set, that's why we call it here,
 			// after setting the owner
-			if (THIS.container === document.body) {
+			if (THIS.container === window.document.body) {
 				jsc.redrawPosition();
 			} else {
 				jsc._drawPosition(THIS, 0, 0, 'relative', false);
@@ -2803,7 +2832,7 @@ var jsc = {
 
 		// Determine picker's container element
 		if (this.container === undefined) {
-			this.container = document.body; // default container is BODY element
+			this.container = window.document.body; // default container is BODY element
 
 		} else { // explicitly set to custom element
 			this.container = jsc.node(this.container);
@@ -2858,7 +2887,7 @@ var jsc = {
 				jsc.removeChildren(this.targetElement);
 
 				// let's insert a non-breaking space
-				this.targetElement.appendChild(document.createTextNode('\xa0'));
+				this.targetElement.appendChild(window.document.createTextNode('\xa0'));
 
 				// set min-width = previewSize, if not already greater
 				var compStyle = jsc.getCompStyle(this.targetElement);
@@ -3172,8 +3201,16 @@ jsc.register();
 return jsc.pub;
 
 
-})(); // END window.jscolor
+})(); // END jscolor
 
-window.JSColor = window.jscolor; // 'JSColor' is an alias to 'jscolor'
 
-} // endif
+if (typeof window.jscolor === 'undefined') {
+	window.jscolor = window.JSColor = jscolor;
+}
+
+
+// END jscolor code
+
+return jscolor;
+
+}); // END factory
