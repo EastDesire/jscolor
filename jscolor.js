@@ -52,30 +52,7 @@ var jsc = {
 
 	register : function () {
 		if (typeof window !== 'undefined' && window.document) {
-			window.document.addEventListener('DOMContentLoaded', jsc.init, false);
-		}
-	},
-
-
-	init : function () {
-		if (jsc.initialized) {
-			return;
-		}
-
-		// attach some necessary handlers
-		window.document.addEventListener('mousedown', jsc.onDocumentMouseDown, false);
-		window.document.addEventListener('keyup', jsc.onDocumentKeyUp, false);
-		window.addEventListener('resize', jsc.onWindowResize, false);
-
-		// install jscolor on current DOM
-		jsc.pub.install();
-
-		jsc.initialized = true;
-
-		// trigger events waiting in the queue
-		while (jsc.triggerQueue.length) {
-			var ev = jsc.triggerQueue.shift();
-			jsc.triggerGlobal(ev);
+			window.document.addEventListener('DOMContentLoaded', jsc.pub.init, false);
 		}
 	},
 
@@ -3078,6 +3055,30 @@ jsc.pub.chessboardColor2 = '#999999';
 jsc.pub.previewSeparator = ['rgba(255,255,255,.65)', 'rgba(128,128,128,.65)'];
 
 
+// Initializes jscolor
+jsc.pub.init = function () {
+	if (jsc.initialized) {
+		return;
+	}
+
+	// attach some necessary handlers
+	window.document.addEventListener('mousedown', jsc.onDocumentMouseDown, false);
+	window.document.addEventListener('keyup', jsc.onDocumentKeyUp, false);
+	window.addEventListener('resize', jsc.onWindowResize, false);
+
+	// install jscolor on current DOM
+	jsc.pub.install();
+
+	jsc.initialized = true;
+
+	// trigger events waiting in the queue
+	while (jsc.triggerQueue.length) {
+		var ev = jsc.triggerQueue.shift();
+		jsc.triggerGlobal(ev);
+	}
+};
+
+
 // Installs jscolor on current DOM tree
 jsc.pub.install = function (rootNode) {
 	var success = true;
@@ -3176,14 +3177,6 @@ jsc.pub.options = {};
 // anywhere in your HTML document. To completely disable the automatic lookup, set it to null.
 //
 jsc.pub.lookupClass = 'jscolor';
-
-
-// DEPRECATED. Use jscolor.install() instead
-//
-jsc.pub.init = function () {
-	console.warn('jscolor.init() is DEPRECATED. Using jscolor.install() instead.' + jsc.docsRef);
-	return jsc.pub.install();
-};
 
 
 // DEPRECATED. Use data-jscolor attribute instead, which installs jscolor on given element.
