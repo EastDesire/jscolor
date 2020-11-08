@@ -2184,8 +2184,8 @@ var jsc = {
 					// Note: It's not just offsetParents that can be scrollable,
 					// that's why we loop through all parent nodes
 					if (!jsc.getData(elm, 'hasScrollListener')) {
-						elm.addEventListener('scroll', jsc.onParentScroll, false);
-						jsc.setData(elm, 'hasScrollListener', true);
+						elm.addEventListener('scroll', jsc.onParentScroll, false); // TODO: revert on uninstall
+						jsc.setData(elm, 'hasScrollListener', true); // TODO: revert on uninstall
 					}
 				}
 			} while ((elm = elm.parentNode) && jsc.nodeName(elm) !== 'body');
@@ -2639,10 +2639,10 @@ var jsc = {
 			}
 
 			if (p.wrap.parentNode !== THIS.container) {
-				THIS.container.appendChild(p.wrap);
+				THIS.container.appendChild(p.wrap); // TODO: revert on uninstall
 			}
 
-			jsc.addClass(THIS.targetElement, jsc.pub.activeClassName);
+			jsc.addClass(THIS.targetElement, jsc.pub.activeClassName); // TODO: revert on uninstall
 		}
 
 
@@ -2840,11 +2840,11 @@ var jsc = {
 
 
 		// link this instance with the target element
-		this.targetElement.jscolor = this;
-		jsc.addClass(this.targetElement, jsc.pub.className);
+		this.targetElement.jscolor = this; // TODO: revert on uninstall
+		jsc.addClass(this.targetElement, jsc.pub.className); // TODO: revert on uninstall
 
 		// register this instance
-		jsc.instances.push(this);
+		jsc.instances.push(this); // TODO: revert on uninstall
 
 
 		// if target is BUTTON
@@ -2853,7 +2853,7 @@ var jsc = {
 			if (this.targetElement.type.toLowerCase() !== 'button') {
 				// on buttons, always force type to be 'button', e.g. in situations the target <button> has no type
 				// and thus defaults to 'submit' and would submit the form when clicked
-				this.targetElement.type = 'button';
+				this.targetElement.type = 'button'; // TODO: revert on uninstall
 			}
 
 			if (jsc.isButtonEmpty(this.targetElement)) { // empty button
@@ -2861,15 +2861,16 @@ var jsc = {
 				// if we're re-instantiating color pickers on DOM that has been modified by changing page's innerHTML,
 				// we would keep adding more non-breaking spaces to element's content (because element's contents survive
 				// innerHTML changes, but picker instances don't)
-				jsc.removeChildren(this.targetElement);
+				jsc.removeChildren(this.targetElement); // TODO: revert on uninstall
 
 				// let's insert a non-breaking space
-				this.targetElement.appendChild(window.document.createTextNode('\xa0'));
+				this.targetElement.appendChild(window.document.createTextNode('\xa0')); // TODO: revert on uninstall
 
 				// set min-width = previewSize, if not already greater
 				var compStyle = jsc.getCompStyle(this.targetElement);
 				var currMinWidth = parseFloat(compStyle['min-width']) || 0;
 				if (currMinWidth < this.previewSize) {
+					// TODO: revert on uninstall
 					jsc.setStyle(this.targetElement, {
 						'min-width': this.previewSize + 'px',
 					}, this.forceStyle);
@@ -2917,8 +2918,9 @@ var jsc = {
 			var valueElementOrigEvents = {
 				onInput: this.valueElement.oninput
 			};
-			this.valueElement.oninput = null;
+			this.valueElement.oninput = null; // TODO: revert on uninstall
 
+			// TODO: revert these on uninstall
 			this.valueElement.addEventListener('keydown', onValueKeyDown, false);
 			this.valueElement.addEventListener('change', onValueChange, false);
 			this.valueElement.addEventListener('input', onValueInput, false);
@@ -2927,6 +2929,7 @@ var jsc = {
 				this.valueElement.addEventListener('input', valueElementOrigEvents.onInput, false);
 			}
 
+			// TODO: revert these on uninstall
 			this.valueElement.setAttribute('autocomplete', 'off');
 			this.valueElement.setAttribute('autocorrect', 'off');
 			this.valueElement.setAttribute('autocapitalize', 'off');
@@ -2935,10 +2938,12 @@ var jsc = {
 
 		// alphaElement
 		if (this.alphaElement && jsc.isTextInput(this.alphaElement)) {
+			// TODO: revert these on uninstall
 			this.alphaElement.addEventListener('keydown', onAlphaKeyDown, false);
 			this.alphaElement.addEventListener('change', onAlphaChange, false);
 			this.alphaElement.addEventListener('input', onAlphaInput, false);
 
+			// TODO: revert these on uninstall
 			this.alphaElement.setAttribute('autocomplete', 'off');
 			this.alphaElement.setAttribute('autocorrect', 'off');
 			this.alphaElement.setAttribute('autocapitalize', 'off');
@@ -3062,9 +3067,9 @@ jsc.pub.init = function () {
 	}
 
 	// attach some necessary handlers
-	window.document.addEventListener('mousedown', jsc.onDocumentMouseDown, false);
-	window.document.addEventListener('keyup', jsc.onDocumentKeyUp, false);
-	window.addEventListener('resize', jsc.onWindowResize, false);
+	window.document.addEventListener('mousedown', jsc.onDocumentMouseDown, false); // TODO: revert on jsc.pub.destroy()
+	window.document.addEventListener('keyup', jsc.onDocumentKeyUp, false); // TODO: revert on jsc.pub.destroy()
+	window.addEventListener('resize', jsc.onWindowResize, false); // TODO: revert on jsc.pub.destroy()
 
 	// install jscolor on current DOM
 	jsc.pub.install();
@@ -3076,6 +3081,14 @@ jsc.pub.init = function () {
 		var ev = jsc.triggerQueue.shift();
 		jsc.triggerGlobal(ev);
 	}
+};
+
+
+// TODO
+jsc.pub.destroy = function () {
+	jsc.pub.uninstall();
+
+	// TODO: detach jscolor-related window and window.document handlers
 };
 
 
@@ -3104,6 +3117,12 @@ jsc.pub.install = function (rootNode) {
 	}
 
 	return success;
+};
+
+
+// TODO
+jsc.pub.uninstall = function () {
+	// TODO: walk through jsc.instances and call .uninstall() on each one
 };
 
 
