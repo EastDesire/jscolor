@@ -2412,7 +2412,7 @@ var jsc = {
 			p.pad.style.width = THIS.width + 'px';
 			p.pad.style.height = THIS.height + 'px';
 
-			// pad spectrum (HSV and HVS)
+			// pad - color spectrum (HSV and HVS)
 			p.padCanvas.draw(THIS.width, THIS.height, jsc.getPadYChannel(THIS));
 
 			// pad border
