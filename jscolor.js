@@ -803,6 +803,33 @@ var jsc = {
 	},
 
 
+	parsePaletteValue : function (mixed) {
+		var vals = [];
+
+		if (typeof mixed === 'string') { // space-separated color values
+			// rgb() and rgba() may contain spaces too, so let's find all color values by regex
+			mixed.replace(/#[0-9A-F]{3}([0-9A-F]{3})?|rgba?\(([^)]*)\)/ig, function (val) {
+				vals.push(val);
+			});
+		} else { // array of color values
+			vals = mixed;
+		}
+
+		// convert all values into uniform color format
+
+		var colors = [];
+
+		for (var i = 0; i < vals.length; i++) {
+			var color = jsc.parseColorString(vals[i]);
+			if (color) {
+				colors.push(color.rgba);
+			}
+		}
+
+		return colors;
+	},
+
+
 	// Canvas scaling for retina displays
 	//
 	// adapted from https://www.html5rocks.com/en/tutorials/canvas/hidpi/
@@ -2514,7 +2541,7 @@ var jsc = {
 			jsc.setData(p.sldM, {
 				instance: THIS,
 				control: 'sld',
-			})
+			});
 
 			// slider pointer inner and outer border
 			p.sldPtrIB.style.border =
@@ -3080,6 +3107,8 @@ jsc.pub.init = function () {
 		var ev = jsc.triggerQueue.shift();
 		jsc.triggerGlobal(ev);
 	}
+	console.log(jsc.parsePaletteValue('#FFC #F9ffCC rgba(255, 128, 255, .5)  rgb(255,0,10.5), #09c #0099cC')); // TODO
+	console.log(jsc.parsePaletteValue(['#FFC', '#F9ffCC', '  rgba(255, 128, 255, .5) ', ' rgb(255,0,10.5)', '#09c', '#0099cC'])); // TODO
 };
 
 
