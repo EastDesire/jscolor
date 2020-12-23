@@ -806,12 +806,12 @@ var jsc = {
 	parsePaletteValue : function (mixed) {
 		var vals = [];
 
-		if (typeof mixed === 'string') { // space-separated color values
+		if (typeof mixed === 'string') { // input is space-separated color values
 			// rgb() and rgba() may contain spaces too, so let's find all color values by regex
 			mixed.replace(/#[0-9A-F]{3}([0-9A-F]{3})?|rgba?\(([^)]*)\)/ig, function (val) {
 				vals.push(val);
 			});
-		} else { // array of color values
+		} else if (Array.isArray(mixed)) { // input is an array of color values
 			vals = mixed;
 		}
 
@@ -822,7 +822,7 @@ var jsc = {
 		for (var i = 0; i < vals.length; i++) {
 			var color = jsc.parseColorString(vals[i]);
 			if (color) {
-				colors.push(color.rgba);
+				colors.push(color);
 			}
 		}
 
