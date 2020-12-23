@@ -1264,9 +1264,9 @@ var jsc = {
 	},
 
 
-	createPalette : function () {
+	createPadCanvas : function () {
 
-		var paletteObj = {
+		var ret = {
 			elm: null,
 			draw: null
 		};
@@ -1307,16 +1307,16 @@ var jsc = {
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
 		};
 
-		paletteObj.elm = canvas;
-		paletteObj.draw = drawFunc;
+		ret.elm = canvas;
+		ret.draw = drawFunc;
 
-		return paletteObj;
+		return ret;
 	},
 
 
 	createSliderGradient : function () {
 
-		var sliderObj = {
+		var ret = {
 			elm: null,
 			draw: null
 		};
@@ -1338,16 +1338,16 @@ var jsc = {
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
 		};
 
-		sliderObj.elm = canvas;
-		sliderObj.draw = drawFunc;
+		ret.elm = canvas;
+		ret.draw = drawFunc;
 
-		return sliderObj;
+		return ret;
 	},
 
 
 	createASliderGradient : function () {
 
-		var sliderObj = {
+		var ret = {
 			elm: null,
 			draw: null
 		};
@@ -1384,10 +1384,10 @@ var jsc = {
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
 		};
 
-		sliderObj.elm = canvas;
-		sliderObj.draw = drawFunc;
+		ret.elm = canvas;
+		ret.draw = drawFunc;
 
-		return sliderObj;
+		return ret;
 	},
 
 
@@ -1495,14 +1495,18 @@ var jsc = {
 
 		// Color Picker options
 		//
-		this.width = 181; // width of color palette (in px)
-		this.height = 101; // height of color palette (in px)
+		this.width = 181; // width of the color spectrum (in px)
+		this.height = 101; // height of the color spectrum (in px)
 		this.mode = 'HSV'; // 'HSV' | 'HVS' | 'HS' | 'HV' - layout of the color picker controls
 		this.alphaChannel = 'auto'; // 'auto' | true | false - if alpha channel is enabled, the alpha slider will be visible. If 'auto', it will be determined according to color format
 		this.position = 'bottom'; // 'left' | 'right' | 'top' | 'bottom' - position relative to the target element
 		this.smartPosition = true; // automatically change picker position when there is not enough space for it
 		this.showOnClick = true; // whether to show the picker when user clicks its target element
 		this.hideOnLeave = true; // whether to automatically hide the picker when user leaves its target element (e.g. upon clicking the document)
+		this.palette = []; // colors to be displayed in the palette, specified as an array or a string with space-separated color values (in any supported format)
+		this.paletteSize = 10; // size of each color sample in the palette (px)
+		this.paletteSpacing = 2; // minimum distance between color samples in the palette (in px)
+		this.hideOnPaletteClick = true; // when set to true, clicking the palette will hide the color picker
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
 		this.closeButton = false; // whether to display the Close button
@@ -2284,7 +2288,7 @@ var jsc = {
 					pad : jsc.createEl('div'),
 					padB : jsc.createEl('div'), // border
 					padM : jsc.createEl('div'), // mouse/touch area
-					padPal : jsc.createPalette(),
+					padCanvas : jsc.createPadCanvas(),
 					cross : jsc.createEl('div'),
 					crossBY : jsc.createEl('div'), // border Y
 					crossBX : jsc.createEl('div'), // border X
@@ -2310,7 +2314,7 @@ var jsc = {
 					btnT : jsc.createEl('span'), // text
 				};
 
-				jsc.picker.pad.appendChild(jsc.picker.padPal.elm);
+				jsc.picker.pad.appendChild(jsc.picker.padCanvas.elm);
 				jsc.picker.padB.appendChild(jsc.picker.pad);
 				jsc.picker.cross.appendChild(jsc.picker.crossBY);
 				jsc.picker.cross.appendChild(jsc.picker.crossBX);
@@ -2408,8 +2412,8 @@ var jsc = {
 			p.pad.style.width = THIS.width + 'px';
 			p.pad.style.height = THIS.height + 'px';
 
-			// pad palettes (HSV and HVS)
-			p.padPal.draw(THIS.width, THIS.height, jsc.getPadYChannel(THIS));
+			// pad spectrum (HSV and HVS)
+			p.padCanvas.draw(THIS.width, THIS.height, jsc.getPadYChannel(THIS));
 
 			// pad border
 			p.padB.style.position = 'absolute';
