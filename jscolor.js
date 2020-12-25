@@ -1044,6 +1044,10 @@ var jsc = {
 		var w = 0, h = 0;
 		var cr = jsc.getPaletteColsRows(thisObj);
 
+		if (cr[0]) {
+			w = 0; // TODO
+		}
+
 		if (cr[1]) {
 			h =
 				cr[1] * (thisObj.paletteSize + 2 * thisObj.controlBorderWidth) +
