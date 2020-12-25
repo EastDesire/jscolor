@@ -1011,12 +1011,18 @@ var jsc = {
 			2 * thisObj.controlBorderWidth + 2 * thisObj.padding + thisObj.width,
 			2 * thisObj.controlBorderWidth + 2 * thisObj.padding + thisObj.height
 		];
+		var palDims = jsc.getPaletteDims(thisObj);
+
 		var sliderSpace = 2 * thisObj.controlBorderWidth + 2 * jsc.getControlPadding(thisObj) + thisObj.sliderSize;
+
 		if (jsc.getSliderChannel(thisObj)) {
 			dims[0] += sliderSpace;
 		}
 		if (thisObj.hasAlphaChannel()) {
 			dims[0] += sliderSpace;
+		}
+		if (palDims[1]) {
+			dims[1] += palDims[1] + thisObj.padding;
 		}
 		if (thisObj.closeButton) {
 			dims[1] += 2 * thisObj.controlBorderWidth + thisObj.padding + thisObj.buttonHeight;
@@ -1031,6 +1037,16 @@ var jsc = {
 			dims[0] + 2 * thisObj.borderWidth,
 			dims[1] + 2 * thisObj.borderWidth
 		];
+	},
+
+
+	getPaletteDims : function (thisObj) {
+		// TODO
+		var w = 0, h = 0;
+		if (thisObj._palette && thisObj._palette.length) {
+			h = thisObj.paletteSize + (2 * thisObj.controlBorderWidth); // TODO: adjust according to number of rows
+		}
+		return [w, h];
 	},
 
 
@@ -1532,7 +1548,7 @@ var jsc = {
 		this.hideOnLeave = true; // whether to automatically hide the picker when user leaves its target element (e.g. upon clicking the document)
 		this.palette = []; // colors to be displayed in the palette, specified as an array or a string with space-separated color values (in any supported format)
 		this.paletteSize = 10; // size of each color sample in the palette (px)
-		this.paletteSpacing = 2; // minimum distance between color samples in the palette (in px)
+		this.paletteSpacing = 4; // minimum distance between color samples in the palette (in px)
 		this.hideOnPaletteClick = true; // when set to true, clicking the palette will hide the color picker
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
@@ -1565,81 +1581,6 @@ var jsc = {
 		this.maxV = 100; // max allowed value (brightness) (0 - 100)
 		this.minA = 0.0; // min allowed alpha (opacity) (0.0 - 1.0)
 		this.maxA = 1.0; // max allowed alpha (opacity) (0.0 - 1.0)
-
-
-		// let's process the DEPRECATED 'options' property (this will be later removed)
-		if (jsc.pub.options) {
-			// let's set custom default options, if specified
-			for (var opt in jsc.pub.options) {
-				if (jsc.pub.options.hasOwnProperty(opt)) {
-					try {
-						setOption(opt, jsc.pub.options[opt]);
-					} catch (e) {
-						console.warn(e);
-					}
-				}
-			}
-		}
-
-
-		// let's apply configuration presets
-		//
-		var presetsArr = [];
-
-		if (opts.preset) {
-			if (typeof opts.preset === 'string') {
-				presetsArr = opts.preset.split(/\s+/);
-			} else if (Array.isArray(opts.preset)) {
-				presetsArr = opts.preset.slice(); // slice() to clone
-			} else {
-				console.warn('Unrecognized preset value');
-			}
-		}
-
-		// always use the 'default' preset. If it's not listed, append it to the end.
-		if (presetsArr.indexOf('default') === -1) {
-			presetsArr.push('default');
-		}
-
-		// let's apply the presets in reverse order, so that should there be any overlapping options,
-		// the formerly listed preset will override the latter
-		for (var i = presetsArr.length - 1; i >= 0; i -= 1) {
-			var pres = presetsArr[i];
-			if (!pres) {
-				continue; // preset is empty string
-			}
-			if (!jsc.pub.presets.hasOwnProperty(pres)) {
-				console.warn('Unknown preset: %s', pres);
-				continue;
-			}
-			for (var opt in jsc.pub.presets[pres]) {
-				if (jsc.pub.presets[pres].hasOwnProperty(opt)) {
-					try {
-						setOption(opt, jsc.pub.presets[pres][opt]);
-					} catch (e) {
-						console.warn(e);
-					}
-				}
-			}
-		}
-
-
-		// let's set specific options for this color picker
-		var nonProperties = [
-			// these options won't be set as instance properties
-			'preset',
-		];
-		for (var opt in opts) {
-			if (opts.hasOwnProperty(opt)) {
-				if (nonProperties.indexOf(opt) === -1) {
-					try {
-						setOption(opt, opts[opt]);
-					} catch (e) {
-						console.warn(e);
-					}
-				}
-			}
-		}
 
 
 		// Getter: option(name)
@@ -2230,6 +2171,12 @@ var jsc = {
 		};
 
 
+		this.set__palette = function (val) {
+			this.palette = val;
+			this._palette = jsc.parsePaletteValue(val);
+		};
+
+
 		function setOption (option, value) {
 			if (typeof option !== 'string') {
 				throw new Error('Invalid value for option name: ' + option);
@@ -2259,12 +2206,19 @@ var jsc = {
 				}
 			}
 
-			if (!(option in THIS)) {
-				throw new Error('Unrecognized configuration option: ' + option);
+			var setter = 'set__' + option;
+
+			console.log(option + ', ' + setter + ', ' + (typeof THIS[setter])); // TODO
+			if (typeof THIS[setter] === 'function') { // a setter exists for this option
+				THIS[setter](value);
+				return true;
+
+			} else if (option in THIS) { // options exists as a property
+				THIS[option] = value;
+				return true;
 			}
 
-			THIS[option] = value;
-			return true;
+			throw new Error('Unrecognized configuration option: ' + option);
 		}
 
 
@@ -2283,11 +2237,16 @@ var jsc = {
 				}
 			}
 
-			if (!(option in THIS)) {
-				throw new Error('Unrecognized configuration option: ' + option);
+			var getter = 'get__' + option;
+
+			if (typeof THIS[getter] === 'function') { // a getter exists for this option
+				return THIS[getter](value);
+
+			} else if (option in THIS) { // options exists as a property
+				return THIS[option];
 			}
 
-			return THIS[option];
+			throw new Error('Unrecognized configuration option: ' + option);
 		}
 
 
@@ -2833,6 +2792,81 @@ var jsc = {
 		}
 
 
+		// let's process the DEPRECATED 'options' property (this will be later removed)
+		if (jsc.pub.options) {
+			// let's set custom default options, if specified
+			for (var opt in jsc.pub.options) {
+				if (jsc.pub.options.hasOwnProperty(opt)) {
+					try {
+						setOption(opt, jsc.pub.options[opt]);
+					} catch (e) {
+						console.warn(e);
+					}
+				}
+			}
+		}
+
+
+		// let's apply configuration presets
+		//
+		var presetsArr = [];
+
+		if (opts.preset) {
+			if (typeof opts.preset === 'string') {
+				presetsArr = opts.preset.split(/\s+/);
+			} else if (Array.isArray(opts.preset)) {
+				presetsArr = opts.preset.slice(); // slice() to clone
+			} else {
+				console.warn('Unrecognized preset value');
+			}
+		}
+
+		// always use the 'default' preset. If it's not listed, append it to the end.
+		if (presetsArr.indexOf('default') === -1) {
+			presetsArr.push('default');
+		}
+
+		// let's apply the presets in reverse order, so that should there be any overlapping options,
+		// the formerly listed preset will override the latter
+		for (var i = presetsArr.length - 1; i >= 0; i -= 1) {
+			var pres = presetsArr[i];
+			if (!pres) {
+				continue; // preset is empty string
+			}
+			if (!jsc.pub.presets.hasOwnProperty(pres)) {
+				console.warn('Unknown preset: %s', pres);
+				continue;
+			}
+			for (var opt in jsc.pub.presets[pres]) {
+				if (jsc.pub.presets[pres].hasOwnProperty(opt)) {
+					try {
+						setOption(opt, jsc.pub.presets[pres][opt]);
+					} catch (e) {
+						console.warn(e);
+					}
+				}
+			}
+		}
+
+
+		// let's set specific options for this color picker
+		var nonProperties = [
+			// these options won't be set as instance properties
+			'preset',
+		];
+		for (var opt in opts) {
+			if (opts.hasOwnProperty(opt)) {
+				if (nonProperties.indexOf(opt) === -1) {
+					try {
+						setOption(opt, opts[opt]);
+					} catch (e) {
+						console.warn(e);
+					}
+				}
+			}
+		}
+
+
 		//
 		// Install the color picker on chosen element(s)
 		//
@@ -3107,8 +3141,8 @@ jsc.pub.init = function () {
 		var ev = jsc.triggerQueue.shift();
 		jsc.triggerGlobal(ev);
 	}
-	console.log(jsc.parsePaletteValue('#FFC #F9ffCC rgba(255, 128, 255, .5)  rgb(255,0,10.5), #09c #0099cC')); // TODO
-	console.log(jsc.parsePaletteValue(['#FFC', '#F9ffCC', '  rgba(255, 128, 255, .5) ', ' rgb(255,0,10.5)', '#09c', '#0099cC'])); // TODO
+	//console.log(jsc.parsePaletteValue('#FFC #F9ffCC rgba(255, 128, 255, .5)  rgb(255,0,10.5), #09c #0099cC')); // TODO
+	//console.log(jsc.parsePaletteValue(['#FFC', '#F9ffCC', '  rgba(255, 128, 255, .5) ', ' rgb(255,0,10.5)', '#09c', '#0099cC'])); // TODO
 };
 
 
