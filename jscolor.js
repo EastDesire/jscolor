@@ -1041,12 +1041,26 @@ var jsc = {
 
 
 	getPaletteDims : function (thisObj) {
-		// TODO
 		var w = 0, h = 0;
-		if (thisObj._palette && thisObj._palette.length) {
-			h = thisObj.paletteSize + (2 * thisObj.controlBorderWidth); // TODO: adjust according to number of rows
+		var cr = jsc.getPaletteColsRows(thisObj);
+
+		if (cr[1]) {
+			h =
+				cr[1] * (thisObj.paletteSize + 2 * thisObj.controlBorderWidth) +
+				(cr[1] - 1) * thisObj.paletteSpacing;
 		}
 		return [w, h];
+	},
+
+
+	// TODO: reuse this function when drawing palette
+	getPaletteColsRows : function (thisObj) {
+		var cols = 0, rows = 0;
+
+		if (thisObj._palette && thisObj._palette.length) {
+			rows = thisObj._palette.length; // TODO
+		}
+		return [cols, rows];
 	},
 
 
