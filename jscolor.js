@@ -1065,7 +1065,10 @@ var jsc = {
 		var cols = 0, rows = 0;
 
 		if (thisObj._palette && thisObj._palette.length) {
-			rows = thisObj._palette.length; // TODO
+			var sampleSize = thisObj.paletteSize + 2 * thisObj.controlBorderWidth;
+			// TODO: test
+			cols = Math.floor((maxW + thisObj.paletteSpacing) / (sampleSize + thisObj.paletteSpacing));
+			rows = Math.ceil(thisObj._palette.length / cols);
 		}
 		return [cols, rows];
 	},
