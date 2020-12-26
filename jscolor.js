@@ -2226,12 +2226,11 @@ var jsc = {
 
 			var setter = 'set__' + option;
 
-			console.log(option + ', ' + setter + ', ' + (typeof THIS[setter])); // TODO
 			if (typeof THIS[setter] === 'function') { // a setter exists for this option
 				THIS[setter](value);
 				return true;
 
-			} else if (option in THIS) { // options exists as a property
+			} else if (option in THIS) { // option exists as a property
 				THIS[option] = value;
 				return true;
 			}
@@ -2260,7 +2259,7 @@ var jsc = {
 			if (typeof THIS[getter] === 'function') { // a getter exists for this option
 				return THIS[getter](value);
 
-			} else if (option in THIS) { // options exists as a property
+			} else if (option in THIS) { // option exists as a property
 				return THIS[option];
 			}
 
