@@ -2323,6 +2323,7 @@ var jsc = {
 					asldPtrIB : jsc.createEl('div'), // slider pointer inner border
 					asldPtrMB : jsc.createEl('div'), // slider pointer middle border
 					asldPtrOB : jsc.createEl('div'), // slider pointer outer border
+					pal : jsc.createEl('div'), // palette
 					btn : jsc.createEl('div'),
 					btnT : jsc.createEl('span'), // text
 				};
@@ -2354,6 +2355,8 @@ var jsc = {
 				jsc.picker.asldPtrIB.appendChild(jsc.picker.asldPtrS);
 				jsc.picker.box.appendChild(jsc.picker.asldB);
 				jsc.picker.box.appendChild(jsc.picker.asldM);
+
+				jsc.picker.box.appendChild(jsc.picker.pal);
 
 				jsc.picker.btn.appendChild(jsc.picker.btnT);
 				jsc.picker.box.appendChild(jsc.picker.btn);
@@ -2602,6 +2605,13 @@ var jsc = {
 			p.asldPtrS.style.width = THIS.sliderSize + 'px';
 			p.asldPtrS.style.height = jsc.pub.sliderInnerSpace + 'px';
 
+			// palette
+			p.pal.style.position = 'absolute';
+			p.pal.style.left = THIS.padding + 'px';
+			p.pal.style.top = (2 * THIS.controlBorderWidth + 2 * THIS.padding + THIS.height) + 'px';
+			p.pal.style.width = dims.contentW + 'px'; // TODO
+			p.pal.style.height = '20px'; // TODO
+			p.pal.style.backgroundColor = '#C0F'; // TODO
 
 			// the Close button
 			function setBtnBorder () {
