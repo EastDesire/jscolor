@@ -2608,6 +2608,7 @@ var jsc = {
 
 
 			// palette
+			p.pal.className = 'jscolor-palette';
 			p.pal.style.display = pickerDims.palette.rows ? 'block' : 'none';
 			p.pal.style.position = 'absolute';
 			p.pal.style.left = THIS.padding + 'px';
@@ -2628,6 +2629,7 @@ var jsc = {
 					sc.style.height = THIS.paletteSize + 'px';
 
 					var sw = jsc.createEl('div'); // sample wrap
+					sw.className = 'jscolor-palette-sample';
 					sw.style.display = 'block';
 					sw.style.position = 'absolute';
 					sw.style.backgroundImage = 'url(\'' + chessboard.canvas.toDataURL() + '\')';
