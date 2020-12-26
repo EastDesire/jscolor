@@ -952,7 +952,8 @@ var jsc = {
 
 			var ts = jsc.getElementSize(thisObj.targetElement); // target size
 			var vs = jsc.getViewSize(); // view size
-			var ps = jsc.getPickerOuterDims(thisObj); // picker size
+			var pd = jsc.getPickerDims(thisObj);
+			var ps = [pd.borderW, pd.borderH]; // picker outer size
 			var a, b, c;
 			switch (thisObj.position.toLowerCase()) {
 				case 'left': a=1; b=0; c=-1; break;
@@ -1007,42 +1008,44 @@ var jsc = {
 
 
 	getPickerDims : function (thisObj) {
-		var dims = [
-			2 * thisObj.controlBorderWidth + 2 * thisObj.padding + thisObj.width,
-			2 * thisObj.controlBorderWidth + 2 * thisObj.padding + thisObj.height
-		];
-		var palDims = jsc.getPaletteDims(thisObj);
+		var w = 2 * thisObj.controlBorderWidth + thisObj.width;
+		var h = 2 * thisObj.controlBorderWidth + thisObj.height;
 
 		var sliderSpace = 2 * thisObj.controlBorderWidth + 2 * jsc.getControlPadding(thisObj) + thisObj.sliderSize;
 
 		if (jsc.getSliderChannel(thisObj)) {
-			dims[0] += sliderSpace;
+			w += sliderSpace;
 		}
 		if (thisObj.hasAlphaChannel()) {
-			dims[0] += sliderSpace;
+			w += sliderSpace;
 		}
+
+		var palDims = jsc.getPaletteDims(thisObj, w);
+
 		if (palDims[1]) {
-			dims[1] += palDims[1] + thisObj.padding;
+			h += palDims[1] + thisObj.padding;
 		}
 		if (thisObj.closeButton) {
-			dims[1] += 2 * thisObj.controlBorderWidth + thisObj.padding + thisObj.buttonHeight;
+			h += 2 * thisObj.controlBorderWidth + thisObj.padding + thisObj.buttonHeight;
 		}
-		return dims;
+
+		var pW = w + (2 * thisObj.padding);
+		var pH = h + (2 * thisObj.padding);
+
+		return {
+			contentW: w,
+			contentH: h,
+			paddedW: pW,
+			paddedH: pH,
+			borderW: pW + (2 * thisObj.borderWidth),
+			borderH: pH + (2 * thisObj.borderWidth),
+		};
 	},
 
 
-	getPickerOuterDims : function (thisObj) {
-		var dims = jsc.getPickerDims(thisObj);
-		return [
-			dims[0] + 2 * thisObj.borderWidth,
-			dims[1] + 2 * thisObj.borderWidth
-		];
-	},
-
-
-	getPaletteDims : function (thisObj) {
+	getPaletteDims : function (thisObj, maxW) {
 		var w = 0, h = 0;
-		var cr = jsc.getPaletteColsRows(thisObj);
+		var cr = jsc.getPaletteColsRows(thisObj, maxW);
 
 		if (cr[0]) {
 			w = 0; // TODO
@@ -1058,7 +1061,7 @@ var jsc = {
 
 
 	// TODO: reuse this function when drawing palette
-	getPaletteColsRows : function (thisObj) {
+	getPaletteColsRows : function (thisObj, maxW) {
 		var cols = 0, rows = 0;
 
 		if (thisObj._palette && thisObj._palette.length) {
@@ -2155,8 +2158,8 @@ var jsc = {
 
 
 		this._processParentElementsInDOM = function () {
-			if (this._linkedElementsProcessed) { return; }
-			this._linkedElementsProcessed = true;
+			if (this._parentElementsProcessed) { return; }
+			this._parentElementsProcessed = true;
 
 			var elm = this.targetElement;
 			do {
@@ -2240,6 +2243,10 @@ var jsc = {
 
 
 		function getOption (option) {
+			if (typeof option !== 'string') {
+				throw new Error('Invalid value for option name: ' + option);
+			}
+
 			// deprecated option
 			if (jsc.deprecatedOpts.hasOwnProperty(option)) {
 				var oldOpt = option;
@@ -2371,14 +2378,14 @@ var jsc = {
 			// wrap
 			p.wrap.className = 'jscolor-picker-wrap';
 			p.wrap.style.clear = 'both';
-			p.wrap.style.width = (dims[0] + 2 * THIS.borderWidth) + 'px';
-			p.wrap.style.height = (dims[1] + 2 * THIS.borderWidth) + 'px';
+			p.wrap.style.width = dims.borderW + 'px';
+			p.wrap.style.height = dims.borderH + 'px';
 			p.wrap.style.zIndex = THIS.zIndex;
 
 			// picker
 			p.box.className = 'jscolor-picker';
-			p.box.style.width = dims[0] + 'px';
-			p.box.style.height = dims[1] + 'px';
+			p.box.style.width = dims.paddedW + 'px';
+			p.box.style.height = dims.paddedH + 'px';
 			p.box.style.position = 'relative';
 
 			// picker shadow
@@ -2606,7 +2613,7 @@ var jsc = {
 			p.btn.style.left = THIS.padding + 'px';
 			p.btn.style.bottom = THIS.padding + 'px';
 			p.btn.style.padding = '0 ' + btnPadding + 'px';
-			p.btn.style.maxWidth = (dims[0] - 2 * THIS.padding - 2 * THIS.controlBorderWidth - 2 * btnPadding) + 'px';
+			p.btn.style.maxWidth = (dims.contentW - 2 * THIS.controlBorderWidth - 2 * btnPadding) + 'px';
 			p.btn.style.overflow = 'hidden';
 			p.btn.style.height = THIS.buttonHeight + 'px';
 			p.btn.style.whiteSpace = 'nowrap';
