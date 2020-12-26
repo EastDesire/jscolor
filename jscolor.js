@@ -152,7 +152,7 @@ var jsc = {
 
 	createEl : function (tagName) {
 		var el = window.document.createElement(tagName);
-		jsc.setData(el, 'gui', true)
+		jsc.setData(el, 'gui', true);
 		return el;
 	},
 
@@ -1050,8 +1050,8 @@ var jsc = {
 
 		var pal = jsc.getPaletteDims(thisObj, w);
 
-		if (pal.h) {
-			h += pal.h + thisObj.padding;
+		if (pal.height) {
+			h += pal.height + thisObj.padding;
 		}
 		if (thisObj.closeButton) {
 			h += 2 * thisObj.controlBorderWidth + thisObj.padding + thisObj.buttonHeight;
@@ -1072,31 +1072,23 @@ var jsc = {
 	},
 
 
-	// TODO: reuse this function when drawing palette
 	getPaletteDims : function (thisObj, maxW) {
-		var cols = 0, rows = 0;
-		var w = 0, h = 0;
+		var cols = 0, rows = 0, height = 0;
 
 		if (thisObj._palette && thisObj._palette.length) {
 			var sampleSize = thisObj.paletteSize + 2 * thisObj.controlBorderWidth;
-			// TODO: test
 			cols = Math.floor((maxW + thisObj.paletteSpacing) / (sampleSize + thisObj.paletteSpacing));
 			rows = Math.ceil(thisObj._palette.length / cols);
 		}
 
-		if (cols) {
-			w = 0; // TODO
-		}
-
 		if (rows) {
-			h =
+			height =
 				rows * (thisObj.paletteSize + 2 * thisObj.controlBorderWidth) +
 				(rows - 1) * thisObj.paletteSpacing;
 		}
 
 		return {
-			w: w,
-			h: h,
+			height: height,
 			cols: cols,
 			rows: rows,
 		};
@@ -1127,59 +1119,6 @@ var jsc = {
 			}
 		}
 		return null;
-	},
-
-
-	onDocumentMouseDown : function (e) {
-		var target = e.target || e.srcElement;
-
-		if (target.jscolor && target.jscolor instanceof jsc.pub) { // clicked targetElement -> show picker
-			if (target.jscolor.showOnClick && !target.disabled) {
-				target.jscolor.show();
-			}
-		} else if (jsc.getData(target, 'gui')) { // clicked jscolor's GUI element
-			var control = jsc.getData(target, 'control');
-			if (control) {
-				// jscolor's control
-				jsc.onControlPointerStart(e, target, jsc.getData(target, 'control'), 'mouse');
-			}
-		} else {
-			// mouse is outside the picker's controls -> hide the color picker!
-			if (jsc.picker && jsc.picker.owner) {
-				jsc.picker.owner.tryHide();
-			}
-		}
-	},
-
-
-	onDocumentKeyUp : function (e) {
-		if (['Tab', 'Escape'].indexOf(jsc.eventKey(e)) !== -1) {
-			if (jsc.picker && jsc.picker.owner) {
-				jsc.picker.owner.tryHide();
-			}
-		}
-	},
-
-
-	onWindowResize : function (e) {
-		jsc.redrawPosition();
-	},
-
-
-	onParentScroll : function (e) {
-		// hide the picker when one of the parent elements is scrolled
-		if (jsc.picker && jsc.picker.owner) {
-			jsc.picker.owner.tryHide();
-		}
-	},
-
-
-	onPickerTouchStart : function (e) {
-		var target = e.target || e.srcElement;
-
-		if (jsc.getData(target, 'control')) {
-			jsc.onControlPointerStart(e, target, jsc.getData(target, 'control'), 'touch');
-		}
 	},
 
 
@@ -1230,6 +1169,59 @@ var jsc = {
 
 	_pointerOrigin : null,
 	_capturedTarget : null,
+
+
+	onDocumentKeyUp : function (e) {
+		if (['Tab', 'Escape'].indexOf(jsc.eventKey(e)) !== -1) {
+			if (jsc.picker && jsc.picker.owner) {
+				jsc.picker.owner.tryHide();
+			}
+		}
+	},
+
+
+	onWindowResize : function (e) {
+		jsc.redrawPosition();
+	},
+
+
+	onParentScroll : function (e) {
+		// hide the picker when one of the parent elements is scrolled
+		if (jsc.picker && jsc.picker.owner) {
+			jsc.picker.owner.tryHide();
+		}
+	},
+
+
+	onDocumentMouseDown : function (e) {
+		var target = e.target || e.srcElement;
+
+		if (target.jscolor && target.jscolor instanceof jsc.pub) { // clicked targetElement -> show picker
+			if (target.jscolor.showOnClick && !target.disabled) {
+				target.jscolor.show();
+			}
+		} else if (jsc.getData(target, 'gui')) { // clicked jscolor's GUI element
+			var control = jsc.getData(target, 'control');
+			if (control) {
+				// jscolor's control
+				jsc.onControlPointerStart(e, target, jsc.getData(target, 'control'), 'mouse');
+			}
+		} else {
+			// mouse is outside the picker's controls -> hide the color picker!
+			if (jsc.picker && jsc.picker.owner) {
+				jsc.picker.owner.tryHide();
+			}
+		}
+	},
+
+
+	onPickerTouchStart : function (e) {
+		var target = e.target || e.srcElement;
+
+		if (jsc.getData(target, 'control')) {
+			jsc.onControlPointerStart(e, target, jsc.getData(target, 'control'), 'touch');
+		}
+	},
 
 
 	onControlPointerStart : function (e, target, controlName, pointerType) {
@@ -1314,6 +1306,19 @@ var jsc = {
 			thisObj.trigger('input');
 			thisObj.trigger('change');
 		};
+	},
+
+
+	onPaletteSampleClick : function (e) {
+		var target = e.currentTarget;
+		var thisObj = jsc.getData(target, 'instance');
+		var color = jsc.getData(target, 'color');
+
+		thisObj.fromRGBA.apply(thisObj, color.rgba);
+
+		if (thisObj.hideOnPaletteClick) {
+			thisObj.hide();
+		}
 	},
 
 
@@ -2674,6 +2679,12 @@ var jsc = {
 					sw.style.border = THIS.controlBorderWidth + 'px solid';
 					sw.style.borderColor = THIS.controlBorderColor;
 					sw.style.cursor = 'pointer';
+					jsc.setData(sw, {
+						instance: THIS,
+						control: 'palette-sample',
+						color: sampleColor,
+					})
+					sw.addEventListener('click', jsc.onPaletteSampleClick, false);
 					sw.appendChild(sc);
 					p.pal.appendChild(sw);
 				}
@@ -3245,8 +3256,6 @@ jsc.pub.init = function () {
 		var ev = jsc.triggerQueue.shift();
 		jsc.triggerGlobal(ev);
 	}
-	//console.log(jsc.parsePaletteValue('#FFC #F9ffCC rgba(255, 128, 255, .5)  rgb(255,0,10.5), #09c #0099cC')); // TODO
-	//console.log(jsc.parsePaletteValue(['#FFC', '#F9ffCC', '  rgba(255, 128, 255, .5) ', ' rgb(255,0,10.5)', '#09c', '#0099cC'])); // TODO
 };
 
 
