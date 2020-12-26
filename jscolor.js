@@ -1020,10 +1020,10 @@ var jsc = {
 			w += sliderSpace;
 		}
 
-		var palDims = jsc.getPaletteDims(thisObj, w);
+		var pal = jsc.getPaletteDims(thisObj, w);
 
-		if (palDims[1]) {
-			h += palDims[1] + thisObj.padding;
+		if (pal.h) {
+			h += pal.h + thisObj.padding;
 		}
 		if (thisObj.closeButton) {
 			h += 2 * thisObj.controlBorderWidth + thisObj.padding + thisObj.buttonHeight;
@@ -1039,30 +1039,15 @@ var jsc = {
 			paddedH: pH,
 			borderW: pW + (2 * thisObj.borderWidth),
 			borderH: pH + (2 * thisObj.borderWidth),
+			palette: pal,
 		};
 	},
 
 
-	getPaletteDims : function (thisObj, maxW) {
-		var w = 0, h = 0;
-		var cr = jsc.getPaletteColsRows(thisObj, maxW);
-
-		if (cr[0]) {
-			w = 0; // TODO
-		}
-
-		if (cr[1]) {
-			h =
-				cr[1] * (thisObj.paletteSize + 2 * thisObj.controlBorderWidth) +
-				(cr[1] - 1) * thisObj.paletteSpacing;
-		}
-		return [w, h];
-	},
-
-
 	// TODO: reuse this function when drawing palette
-	getPaletteColsRows : function (thisObj, maxW) {
+	getPaletteDims : function (thisObj, maxW) {
 		var cols = 0, rows = 0;
+		var w = 0, h = 0;
 
 		if (thisObj._palette && thisObj._palette.length) {
 			var sampleSize = thisObj.paletteSize + 2 * thisObj.controlBorderWidth;
@@ -1070,7 +1055,23 @@ var jsc = {
 			cols = Math.floor((maxW + thisObj.paletteSpacing) / (sampleSize + thisObj.paletteSpacing));
 			rows = Math.ceil(thisObj._palette.length / cols);
 		}
-		return [cols, rows];
+
+		if (cols) {
+			w = 0; // TODO
+		}
+
+		if (rows) {
+			h =
+				rows * (thisObj.paletteSize + 2 * thisObj.controlBorderWidth) +
+				(rows - 1) * thisObj.paletteSpacing;
+		}
+
+		return {
+			w: w,
+			h: h,
+			cols: cols,
+			rows: rows,
+		};
 	},
 
 
@@ -2373,7 +2374,7 @@ var jsc = {
 
 			var displaySlider = !!jsc.getSliderChannel(THIS);
 			var displayAlphaSlider = THIS.hasAlphaChannel();
-			var dims = jsc.getPickerDims(THIS);
+			var pickerDims = jsc.getPickerDims(THIS);
 			var crossOuterSize = (2 * THIS.pointerBorderWidth + THIS.pointerThickness + 2 * THIS.crossSize);
 			var controlPadding = jsc.getControlPadding(THIS);
 			var borderRadius = Math.min(
@@ -2384,14 +2385,14 @@ var jsc = {
 			// wrap
 			p.wrap.className = 'jscolor-picker-wrap';
 			p.wrap.style.clear = 'both';
-			p.wrap.style.width = dims.borderW + 'px';
-			p.wrap.style.height = dims.borderH + 'px';
+			p.wrap.style.width = pickerDims.borderW + 'px';
+			p.wrap.style.height = pickerDims.borderH + 'px';
 			p.wrap.style.zIndex = THIS.zIndex;
 
 			// picker
 			p.box.className = 'jscolor-picker';
-			p.box.style.width = dims.paddedW + 'px';
-			p.box.style.height = dims.paddedH + 'px';
+			p.box.style.width = pickerDims.paddedW + 'px';
+			p.box.style.height = pickerDims.paddedH + 'px';
 			p.box.style.position = 'relative';
 
 			// picker shadow
@@ -2605,13 +2606,19 @@ var jsc = {
 			p.asldPtrS.style.width = THIS.sliderSize + 'px';
 			p.asldPtrS.style.height = jsc.pub.sliderInnerSpace + 'px';
 
+
 			// palette
+			p.pal.style.display = pickerDims.palette.rows ? 'block' : 'none';
 			p.pal.style.position = 'absolute';
 			p.pal.style.left = THIS.padding + 'px';
 			p.pal.style.top = (2 * THIS.controlBorderWidth + 2 * THIS.padding + THIS.height) + 'px';
-			p.pal.style.width = dims.contentW + 'px'; // TODO
+			p.pal.style.width = pickerDims.contentW + 'px'; // TODO
 			p.pal.style.height = '20px'; // TODO
 			p.pal.style.backgroundColor = '#C0F'; // TODO
+
+			p.btnT.innerHTML = '';
+			// TODO: add color samples
+
 
 			// the Close button
 			function setBtnBorder () {
@@ -2626,7 +2633,7 @@ var jsc = {
 			p.btn.style.left = THIS.padding + 'px';
 			p.btn.style.bottom = THIS.padding + 'px';
 			p.btn.style.padding = '0 ' + btnPadding + 'px';
-			p.btn.style.maxWidth = (dims.contentW - 2 * THIS.controlBorderWidth - 2 * btnPadding) + 'px';
+			p.btn.style.maxWidth = (pickerDims.contentW - 2 * THIS.controlBorderWidth - 2 * btnPadding) + 'px';
 			p.btn.style.overflow = 'hidden';
 			p.btn.style.height = THIS.buttonHeight + 'px';
 			p.btn.style.whiteSpace = 'nowrap';
