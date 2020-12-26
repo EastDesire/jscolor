@@ -1314,6 +1314,14 @@ var jsc = {
 		var thisObj = jsc.getData(target, 'instance');
 		var color = jsc.getData(target, 'color');
 
+		// when format is flexible, use the original format of this color sample
+		if (thisObj.format.toLowerCase() === 'any') {
+			thisObj.setCurrentFormat(color.format); // adapt format
+			if (thisObj.getCurrentFormat() !== 'rgba') {
+				color.rgba[3] = 1.0; // when switching to a format that doesn't support alpha, set full opacity
+			}
+		}
+
 		thisObj.fromRGBA.apply(thisObj, color.rgba);
 
 		if (thisObj.hideOnPaletteClick) {
@@ -1356,8 +1364,8 @@ var jsc = {
 
 		if (yVal < 1.0) {
 			// if format is flexible and the current format doesn't support alpha, switch to a suitable one
-			if (thisObj.format.toLowerCase() === 'any' && thisObj.getFormat() !== 'rgba') {
-				thisObj._currentFormat = 'rgba';
+			if (thisObj.format.toLowerCase() === 'any' && thisObj.getCurrentFormat() !== 'rgba') {
+				thisObj.setCurrentFormat('rgba');
 			}
 		}
 
@@ -1605,7 +1613,7 @@ var jsc = {
 		this.showOnClick = true; // whether to show the picker when user clicks its target element
 		this.hideOnLeave = true; // whether to automatically hide the picker when user leaves its target element (e.g. upon clicking the document)
 		this.palette = []; // colors to be displayed in the palette, specified as an array or a string with space-separated color values (in any supported format)
-		this.paletteSize = 18; // size of each color sample in the palette (px)
+		this.paletteSize = 16; // size of each color sample in the palette (px)
 		this.paletteSpacing = 4; // distance between color samples in the palette (in px)
 		this.hideOnPaletteClick = false; // when set to true, clicking the palette will hide the color picker
 		this.sliderSize = 16; // px
@@ -1893,11 +1901,10 @@ var jsc = {
 				return false; // could not parse
 			}
 			if (this.format.toLowerCase() === 'any') {
-				this._currentFormat = color.format; // adapt format
-				if (this.getFormat() !== 'rgba') {
+				this.setCurrentFormat(color.format); // adapt format
+				if (this.getCurrentFormat() !== 'rgba') {
 					color.rgba[3] = 1.0; // when switching to a format that doesn't support alpha, set full opacity
 				}
-				this.redraw(); // to show/hide the alpha slider according to current format
 			}
 			this.fromRGBA(
 				color.rgba[0],
@@ -1912,7 +1919,7 @@ var jsc = {
 
 		this.toString = function (format) {
 			if (format === undefined) {
-				format = this.getFormat(); // format not specified -> use the current format
+				format = this.getCurrentFormat(); // format not specified -> use the current format
 			}
 			switch (format.toLowerCase()) {
 				case 'hex': return this.toHEXString(); break;
@@ -1999,8 +2006,13 @@ var jsc = {
 		};
 
 
-		this.getFormat = function () {
+		this.getCurrentFormat = function () {
 			return this._currentFormat;
+		};
+
+
+		this.setCurrentFormat = function (format) {
+			this._currentFormat = format.toLowerCase();
 		};
 
 
@@ -2008,7 +2020,7 @@ var jsc = {
 			if (this.alphaChannel === 'auto') {
 				return (
 					this.format.toLowerCase() === 'any' || // format can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
-					this.getFormat() === 'rgba' || // the current format supports alpha channel
+					this.getCurrentFormat() === 'rgba' || // the current format supports alpha channel
 					this.alpha !== undefined || // initial alpha value is set, so we're working with alpha channel
 					this.alphaElement !== undefined // the alpha value is redirected, so we're working with alpha channel
 				);
@@ -2039,7 +2051,7 @@ var jsc = {
 			if (!(flags & jsc.flags.leaveValue) && this.valueElement) {
 				var value = this.toString();
 
-				if (this.getFormat() === 'hex') {
+				if (this.getCurrentFormat() === 'hex') {
 					if (!this.uppercase) { value = value.toLowerCase(); }
 					if (!this.hash) { value = value.replace(/^#/, ''); }
 				}
