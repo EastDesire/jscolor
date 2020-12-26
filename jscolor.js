@@ -1301,8 +1301,8 @@ var jsc = {
 			jsc.releaseTarget();
 
 			// Always trigger changes AFTER detaching outstanding mouse handlers,
-			// in case some color change occured in user-defined onChange/onInput handler
-			// would intrude into current mouse events
+			// in case some color change that occured in user-defined onChange/onInput handler
+			// intruded into current mouse events
 			thisObj.trigger('input');
 			thisObj.trigger('change');
 		};
@@ -1323,6 +1323,10 @@ var jsc = {
 		}
 
 		thisObj.fromRGBA.apply(thisObj, color.rgba);
+
+		// TODO: test
+		thisObj.trigger('input');
+		thisObj.trigger('change');
 
 		if (thisObj.hideOnPaletteClick) {
 			thisObj.hide();
