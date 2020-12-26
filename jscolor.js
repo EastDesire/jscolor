@@ -2612,16 +2612,17 @@ var jsc = {
 			p.pal.style.position = 'absolute';
 			p.pal.style.left = THIS.padding + 'px';
 			p.pal.style.top = (2 * THIS.controlBorderWidth + 2 * THIS.padding + THIS.height) + 'px';
-			p.pal.style.width = pickerDims.contentW + 'px'; // TODO
-			p.pal.style.height = '20px'; // TODO
-			p.pal.style.backgroundColor = '#EEE'; // TODO
+
+			// palette's color samples
+
+			p.pal.innerHTML = '';
 
 			var sampleSize = THIS.paletteSize + 2 * THIS.controlBorderWidth;
+			var chessboard = jsc.genColorPreviewCanvas('rgba(0,0,0,0)');
 
-			console.log(pickerDims.palette); // TODO
-			p.pal.innerHTML = '';
+			var si = 0; // sample index
 			for (var r = 0; r < pickerDims.palette.rows; r++) {
-				for (var c = 0; c < pickerDims.palette.cols; c++) {
+				for (var c = 0; c < pickerDims.palette.cols && si < THIS._palette.length; c++, si++) {
 					var sc = jsc.createEl('div'); // sample color
 					sc.style.width = THIS.paletteSize + 'px';
 					sc.style.height = THIS.paletteSize + 'px';
@@ -2629,7 +2630,12 @@ var jsc = {
 					var sw = jsc.createEl('div'); // sample wrap
 					sw.style.display = 'block';
 					sw.style.position = 'absolute';
-					sw.style.left = (c * (sampleSize + THIS.paletteSpacing)) + 'px';
+					sw.style.backgroundImage = 'url(\'' + chessboard.canvas.toDataURL() + '\')';
+					sw.style.backgroundRepeat = 'repeat';
+					sw.style.left = (
+							pickerDims.palette.cols <= 1 ? 0 :
+							Math.round(c * ((pickerDims.contentW - sampleSize) / (pickerDims.palette.cols - 1)))
+						) + 'px';
 					sw.style.top = (r * (sampleSize + THIS.paletteSpacing)) + 'px';
 					sw.style.border = THIS.controlBorderWidth + 'px solid';
 					sw.style.borderColor = THIS.controlBorderColor;
