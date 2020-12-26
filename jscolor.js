@@ -1572,8 +1572,8 @@ var jsc = {
 		this.showOnClick = true; // whether to show the picker when user clicks its target element
 		this.hideOnLeave = true; // whether to automatically hide the picker when user leaves its target element (e.g. upon clicking the document)
 		this.palette = []; // colors to be displayed in the palette, specified as an array or a string with space-separated color values (in any supported format)
-		this.paletteSize = 10; // size of each color sample in the palette (px)
-		this.paletteSpacing = 4; // minimum distance between color samples in the palette (in px)
+		this.paletteSize = 16; // size of each color sample in the palette (px)
+		this.paletteSpacing = 5; // minimum(? TODO) distance between color samples in the palette (in px)
 		this.hideOnPaletteClick = true; // when set to true, clicking the palette will hide the color picker
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
@@ -2614,10 +2614,30 @@ var jsc = {
 			p.pal.style.top = (2 * THIS.controlBorderWidth + 2 * THIS.padding + THIS.height) + 'px';
 			p.pal.style.width = pickerDims.contentW + 'px'; // TODO
 			p.pal.style.height = '20px'; // TODO
-			p.pal.style.backgroundColor = '#C0F'; // TODO
+			p.pal.style.backgroundColor = '#EEE'; // TODO
 
-			p.btnT.innerHTML = '';
-			// TODO: add color samples
+			var sampleSize = THIS.paletteSize + 2 * THIS.controlBorderWidth;
+
+			console.log(pickerDims.palette); // TODO
+			p.pal.innerHTML = '';
+			for (var r = 0; r < pickerDims.palette.rows; r++) {
+				for (var c = 0; c < pickerDims.palette.cols; c++) {
+					var sc = jsc.createEl('div'); // sample color
+					sc.style.width = THIS.paletteSize + 'px';
+					sc.style.height = THIS.paletteSize + 'px';
+
+					var sw = jsc.createEl('div'); // sample wrap
+					sw.style.display = 'block';
+					sw.style.position = 'absolute';
+					sw.style.left = (c * (sampleSize + THIS.paletteSpacing)) + 'px';
+					sw.style.top = (r * (sampleSize + THIS.paletteSpacing)) + 'px';
+					sw.style.border = THIS.controlBorderWidth + 'px solid';
+					sw.style.borderColor = THIS.controlBorderColor;
+					sw.style.cursor = 'pointer';
+					sw.appendChild(sc);
+					p.pal.appendChild(sw);
+				}
+			}
 
 
 			// the Close button
