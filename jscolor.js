@@ -569,6 +569,34 @@ var jsc = {
 	},
 
 
+	hexColor : function (r, g, b) {
+		return '#' + (
+			('0' + Math.round(r).toString(16)).substr(-2) +
+			('0' + Math.round(g).toString(16)).substr(-2) +
+			('0' + Math.round(b).toString(16)).substr(-2)
+		).toUpperCase();
+	},
+
+
+	rgbColor : function (r, g, b) {
+		return 'rgb(' +
+			Math.round(r) + ',' +
+			Math.round(g) + ',' +
+			Math.round(b) +
+		')';
+	},
+
+
+	rgbaColor : function (r, g, b, a) {
+		return 'rgba(' +
+			Math.round(r) + ',' +
+			Math.round(g) + ',' +
+			Math.round(b) + ',' +
+			(Math.round((a===undefined || a===null ? 1 : a) * 100) / 100) +
+		')';
+	},
+
+
 	linearGradient : (function () {
 
 		function getFuncName () {
@@ -1572,9 +1600,9 @@ var jsc = {
 		this.showOnClick = true; // whether to show the picker when user clicks its target element
 		this.hideOnLeave = true; // whether to automatically hide the picker when user leaves its target element (e.g. upon clicking the document)
 		this.palette = []; // colors to be displayed in the palette, specified as an array or a string with space-separated color values (in any supported format)
-		this.paletteSize = 16; // size of each color sample in the palette (px)
-		this.paletteSpacing = 5; // minimum(? TODO) distance between color samples in the palette (in px)
-		this.hideOnPaletteClick = true; // when set to true, clicking the palette will hide the color picker
+		this.paletteSize = 18; // size of each color sample in the palette (px)
+		this.paletteSpacing = 4; // distance between color samples in the palette (in px)
+		this.hideOnPaletteClick = false; // when set to true, clicking the palette will hide the color picker
 		this.sliderSize = 16; // px
 		this.crossSize = 8; // px
 		this.closeButton = false; // whether to display the Close button
@@ -1891,30 +1919,30 @@ var jsc = {
 
 
 		this.toHEXString = function () {
-			return '#' + (
-				('0' + Math.round(this.channels.r).toString(16)).substr(-2) +
-				('0' + Math.round(this.channels.g).toString(16)).substr(-2) +
-				('0' + Math.round(this.channels.b).toString(16)).substr(-2)
-			).toUpperCase();
+			return jsc.hexColor(
+				this.channels.r,
+				this.channels.g,
+				this.channels.b
+			);
 		};
 
 
 		this.toRGBString = function () {
-			return ('rgb(' +
-				Math.round(this.channels.r) + ',' +
-				Math.round(this.channels.g) + ',' +
-				Math.round(this.channels.b) +
-			')');
+			return jsc.rgbColor(
+				this.channels.r,
+				this.channels.g,
+				this.channels.b
+			);
 		};
 
 
 		this.toRGBAString = function () {
-			return ('rgba(' +
-				Math.round(this.channels.r) + ',' +
-				Math.round(this.channels.g) + ',' +
-				Math.round(this.channels.b) + ',' +
-				(Math.round(this.channels.a * 100) / 100) +
-			')');
+			return jsc.rgbaColor(
+				this.channels.r,
+				this.channels.g,
+				this.channels.b,
+				this.channels.a
+			);
 		};
 
 
@@ -2624,9 +2652,13 @@ var jsc = {
 			var si = 0; // sample index
 			for (var r = 0; r < pickerDims.palette.rows; r++) {
 				for (var c = 0; c < pickerDims.palette.cols && si < THIS._palette.length; c++, si++) {
+					var sampleColor = THIS._palette[si];
+					var sampleCssColor = jsc.rgbaColor.apply(null, sampleColor.rgba);
+
 					var sc = jsc.createEl('div'); // sample color
 					sc.style.width = THIS.paletteSize + 'px';
 					sc.style.height = THIS.paletteSize + 'px';
+					sc.style.backgroundColor = sampleCssColor;
 
 					var sw = jsc.createEl('div'); // sample wrap
 					sw.className = 'jscolor-palette-sample';
@@ -2636,7 +2668,7 @@ var jsc = {
 					sw.style.backgroundRepeat = 'repeat';
 					sw.style.left = (
 							pickerDims.palette.cols <= 1 ? 0 :
-							Math.round(c * ((pickerDims.contentW - sampleSize) / (pickerDims.palette.cols - 1)))
+							Math.round(10 * (c * ((pickerDims.contentW - sampleSize) / (pickerDims.palette.cols - 1)))) / 10
 						) + 'px';
 					sw.style.top = (r * (sampleSize + THIS.paletteSpacing)) + 'px';
 					sw.style.border = THIS.controlBorderWidth + 'px solid';
