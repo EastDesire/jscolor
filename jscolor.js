@@ -1081,8 +1081,8 @@ var jsc = {
 			rows = Math.ceil(sampleCount / cols);
 
 			// color sample's dimensions (includes border)
-			cellW = Math.floor((width - ((cols - 1) * thisObj.paletteSpacing)) / cols);
-			cellH = cellW;
+			cellW = Math.max(1, Math.floor((width - ((cols - 1) * thisObj.paletteSpacing)) / cols));
+			cellH = thisObj.paletteHeight ? Math.min(thisObj.paletteHeight, cellW) : cellW;
 		}
 
 		if (rows) {
@@ -1331,7 +1331,6 @@ var jsc = {
 
 		thisObj.fromRGBA.apply(thisObj, color.rgba);
 
-		// TODO: test
 		thisObj.trigger('input');
 		thisObj.trigger('change');
 
@@ -1625,6 +1624,7 @@ var jsc = {
 		this.hideOnLeave = true; // whether to automatically hide the picker when user leaves its target element (e.g. upon clicking the document)
 		this.palette = []; // colors to be displayed in the palette, specified as an array or a string of space separated color values (in any supported format)
 		this.paletteCols = 10; // number of columns in the palette
+		this.paletteHeight = 16; // maximum height of a row in the palette
 		this.paletteSpacing = 4; // distance between color samples in the palette (in px)
 		this.hideOnPaletteClick = false; // when set to true, clicking the palette will hide the color picker
 		this.sliderSize = 16; // px
@@ -2691,8 +2691,6 @@ var jsc = {
 					sw.className = 'jscolor-palette-sample';
 					sw.style.display = 'block';
 					sw.style.position = 'absolute';
-					sw.style.backgroundImage = 'url(\'' + chessboard.canvas.toDataURL() + '\')';
-					sw.style.backgroundRepeat = 'repeat';
 					sw.style.left = (
 							pickerDims.palette.cols <= 1 ? 0 :
 							Math.round(10 * (c * ((pickerDims.contentW - pickerDims.palette.cellW) / (pickerDims.palette.cols - 1)))) / 10
@@ -2701,6 +2699,11 @@ var jsc = {
 					sw.style.border = THIS.controlBorderWidth + 'px solid';
 					sw.style.borderColor = THIS.controlBorderColor;
 					sw.style.cursor = 'pointer';
+					if (sampleColor.rgba[3] !== null && sampleColor.rgba[3] < 1.0) { // only create chessboard background if the sample has transparency
+						sw.style.backgroundImage = 'url(\'' + chessboard.canvas.toDataURL() + '\')';
+						sw.style.backgroundRepeat = 'repeat';
+						sw.style.backgroundPosition = 'center center';
+					}
 					jsc.setData(sw, {
 						instance: THIS,
 						control: 'palette-sample',
