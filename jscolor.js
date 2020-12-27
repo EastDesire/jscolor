@@ -834,7 +834,7 @@ var jsc = {
 	parsePaletteValue : function (mixed) {
 		var vals = [];
 
-		if (typeof mixed === 'string') { // input is space-separated color values
+		if (typeof mixed === 'string') { // input is a string of space separated color values
 			// rgb() and rgba() may contain spaces too, so let's find all color values by regex
 			mixed.replace(/#[0-9A-F]{3}([0-9A-F]{3})?|rgba?\(([^)]*)\)/ig, function (val) {
 				vals.push(val);
@@ -1072,25 +1072,35 @@ var jsc = {
 	},
 
 
-	getPaletteDims : function (thisObj, maxW) {
-		var cols = 0, rows = 0, height = 0;
+	getPaletteDims : function (thisObj, width) {
+		var cols = 0, rows = 0, cellW = 0, cellH = 0, height = 0;
+		var sampleCount = thisObj._palette ? thisObj._palette.length : 0;
 
-		if (thisObj._palette && thisObj._palette.length) {
-			var sampleSize = thisObj.paletteSize + 2 * thisObj.controlBorderWidth;
-			cols = Math.floor((maxW + thisObj.paletteSpacing) / (sampleSize + thisObj.paletteSpacing));
-			rows = Math.ceil(thisObj._palette.length / cols);
+		if (sampleCount) {
+			// TODO: remove
+			//var sampleSize = thisObj.paletteSize + 2 * thisObj.controlBorderWidth;
+			//cols = Math.floor((maxW + thisObj.paletteSpacing) / (sampleSize + thisObj.paletteSpacing));
+			cols = thisObj.paletteCols;
+			rows = Math.ceil(sampleCount / cols);
+
+			// color sample's dimensions (includes border)
+			cellW = Math.floor((width - ((cols - 1) * thisObj.paletteSpacing)) / cols);
+			cellH = cellW;
 		}
 
 		if (rows) {
 			height =
-				rows * (thisObj.paletteSize + 2 * thisObj.controlBorderWidth) +
+				rows * cellH +
 				(rows - 1) * thisObj.paletteSpacing;
 		}
 
 		return {
-			height: height,
 			cols: cols,
 			rows: rows,
+			cellW: cellW,
+			cellH: cellH,
+			width: width,
+			height: height,
 		};
 	},
 
@@ -1616,8 +1626,8 @@ var jsc = {
 		this.smartPosition = true; // automatically change picker position when there is not enough space for it
 		this.showOnClick = true; // whether to show the picker when user clicks its target element
 		this.hideOnLeave = true; // whether to automatically hide the picker when user leaves its target element (e.g. upon clicking the document)
-		this.palette = []; // colors to be displayed in the palette, specified as an array or a string with space-separated color values (in any supported format)
-		this.paletteSize = 16; // size of each color sample in the palette (px)
+		this.palette = []; // colors to be displayed in the palette, specified as an array or a string of space separated color values (in any supported format)
+		this.paletteCols = 10; // number of columns in the palette
 		this.paletteSpacing = 4; // distance between color samples in the palette (in px)
 		this.hideOnPaletteClick = false; // when set to true, clicking the palette will hide the color picker
 		this.sliderSize = 16; // px
@@ -2667,21 +2677,20 @@ var jsc = {
 
 			p.pal.innerHTML = '';
 
-			var sampleSize = THIS.paletteSize + 2 * THIS.controlBorderWidth;
 			var chessboard = jsc.genColorPreviewCanvas('rgba(0,0,0,0)');
 
-			var si = 0; // sample index
+			var si = 0; // color sample's index
 			for (var r = 0; r < pickerDims.palette.rows; r++) {
 				for (var c = 0; c < pickerDims.palette.cols && si < THIS._palette.length; c++, si++) {
 					var sampleColor = THIS._palette[si];
 					var sampleCssColor = jsc.rgbaColor.apply(null, sampleColor.rgba);
 
-					var sc = jsc.createEl('div'); // sample color
-					sc.style.width = THIS.paletteSize + 'px';
-					sc.style.height = THIS.paletteSize + 'px';
+					var sc = jsc.createEl('div'); // color sample's color
+					sc.style.width = (pickerDims.palette.cellW - 2 * THIS.controlBorderWidth) + 'px';
+					sc.style.height = (pickerDims.palette.cellH - 2 * THIS.controlBorderWidth) + 'px';
 					sc.style.backgroundColor = sampleCssColor;
 
-					var sw = jsc.createEl('div'); // sample wrap
+					var sw = jsc.createEl('div'); // color sample's wrap
 					sw.className = 'jscolor-palette-sample';
 					sw.style.display = 'block';
 					sw.style.position = 'absolute';
@@ -2689,9 +2698,9 @@ var jsc = {
 					sw.style.backgroundRepeat = 'repeat';
 					sw.style.left = (
 							pickerDims.palette.cols <= 1 ? 0 :
-							Math.round(10 * (c * ((pickerDims.contentW - sampleSize) / (pickerDims.palette.cols - 1)))) / 10
+							Math.round(10 * (c * ((pickerDims.contentW - pickerDims.palette.cellW) / (pickerDims.palette.cols - 1)))) / 10
 						) + 'px';
-					sw.style.top = (r * (sampleSize + THIS.paletteSpacing)) + 'px';
+					sw.style.top = (r * (pickerDims.palette.cellH + THIS.paletteSpacing)) + 'px';
 					sw.style.border = THIS.controlBorderWidth + 'px solid';
 					sw.style.borderColor = THIS.controlBorderColor;
 					sw.style.cursor = 'pointer';
@@ -3231,9 +3240,9 @@ jsc.pub.presets['dark'] = {
 	buttonColor: 'rgba(240,240,240,1)',
 };
 
-jsc.pub.presets['small'] = { width:101, height:101, padding:10, sliderSize:14 };
-jsc.pub.presets['medium'] = { width:181, height:101, padding:12, sliderSize:16 }; // default size
-jsc.pub.presets['large'] = { width:271, height:151, padding:12, sliderSize:24 };
+jsc.pub.presets['small'] = { width:101, height:101, padding:10, sliderSize:14, paletteCols:8 };
+jsc.pub.presets['medium'] = { width:181, height:101, padding:12, sliderSize:16, paletteCols:10 }; // default size
+jsc.pub.presets['large'] = { width:271, height:151, padding:12, sliderSize:24, paletteCols:12 };
 
 jsc.pub.presets['thin'] = { borderWidth:1, controlBorderWidth:1, pointerBorderWidth:1 }; // default thickness
 jsc.pub.presets['thick'] = { borderWidth:2, controlBorderWidth:2, pointerBorderWidth:2 };
