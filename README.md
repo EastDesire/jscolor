@@ -25,7 +25,7 @@ jscolor.presets.default = {
 	height: 151,
 	position: 'right',
 	previewPosition: 'right',
-	backgroundColor: 'rgba(51,51,51,1)', controlBorderColor: 'rgba(153,153,153,1)', buttonColor: 'rgba(240,240,240,1)',
+	backgroundColor: 'rgba(51,51,51,1)', controlBorderColor: 'rgba(153,153,153,1)',
 	paletteCols: 12,
 	hideOnPaletteClick: true,
 	palette: [
