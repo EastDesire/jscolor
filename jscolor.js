@@ -1077,9 +1077,6 @@ var jsc = {
 		var sampleCount = thisObj._palette ? thisObj._palette.length : 0;
 
 		if (sampleCount) {
-			// TODO: remove
-			//var sampleSize = thisObj.paletteSize + 2 * thisObj.controlBorderWidth;
-			//cols = Math.floor((maxW + thisObj.paletteSpacing) / (sampleSize + thisObj.paletteSpacing));
 			cols = thisObj.paletteCols;
 			rows = Math.ceil(sampleCount / cols);
 
