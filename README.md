@@ -39,7 +39,7 @@ jscolor.presets.default = {
 
 
 
-[<img src="https://jscolor.com/hosted/gui/jscolor-2.2.4.png" alt="Screenshots of jscolor">](https://jscolor.com/examples)
+[<img src="https://jscolor.com/hosted/gui/jscolor-2.4.1.png" alt="Screenshots of jscolor">](https://jscolor.com/examples)
 
 
 
