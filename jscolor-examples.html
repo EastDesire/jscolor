@@ -23,6 +23,27 @@
 
 
 
+	<script>
+	// Here we can adjust defaults for all color pickers on page:
+	jscolor.presets.default = {
+		//width: 271,
+		//height: 151,
+		//position: 'right',
+		//previewPosition: 'right',
+		//backgroundColor: 'rgba(51,51,51,1)', controlBorderColor: 'rgba(153,153,153,1)', buttonColor: 'rgba(240,240,240,1)',
+		//paletteCols: 12,
+		//hideOnPaletteClick: true,
+		palette: [
+			'#000000', '#7d7d7d', '#870014', '#ec1c23', '#ff7e26', '#fef100', '#22b14b', '#00a1e7', '#3f47cc', '#a349a4',
+			'#ffffff', '#c3c3c3', '#b87957', '#feaec9', '#ffc80d', '#eee3af', '#b5e61d', '#99d9ea', '#7092be', '#c8bfe7',
+		],
+	}
+	</script>
+
+
+
+
+
 	<h2>Example 1 - RGBA</h2>
 
 	Color: <input value="rgba(40,170,255,0.5)" data-jscolor="">
@@ -106,25 +127,16 @@
 
 
 
-	<h2>Example 7 - Custom theme</h2>
+	<h2>Example 7 - Customized picker</h2>
 
-	<input value="rgba(255,160,0,0.5)" data-jscolor="{
+	<input value="rgba(255,160,0,1.0)" data-jscolor="{
 		position: 'right', width: 181, height: 181,
+		palette: '#fff #fcd #fdc #ffc #dfc #dff #cdf #dcf #ccc', paletteCols: 9, paletteHeight: 25,
 		padding: 10, sliderSize: 25, borderRadius: 5,
-		borderWidth: 1, controlBorderWidth: 1, pointerBorderWidth: 2,
-		borderColor: '#000', controlBorderColor: '#CCC', backgroundColor: '#333'
+		borderWidth: 0, controlBorderWidth: 1, pointerBorderWidth: 2,
+		borderColor: '#000', controlBorderColor: '#AAA', backgroundColor: '#F3F3F3',
+		shadowColor: 'rgba(0,0,0,.4)'
 	}">
-
-	<!-- HINT: To set defaults for all pickers, use variable jscolor.presets.default
-	<script>
-	jscolor.presets.default = {
-		position: 'right', width: 181, height: 181,
-		padding: 10, sliderSize: 25, borderRadius: 5,
-		borderWidth: 1, controlBorderWidth: 1, pointerBorderWidth: 2,
-		borderColor: '#000', controlBorderColor: '#CCC', backgroundColor: '#333'
-	};
-	</script>
-	-->
 
 
 
