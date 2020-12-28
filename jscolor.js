@@ -3321,7 +3321,7 @@ jsc.pub.install = function (rootNode) {
 };
 
 
-// Calls a function as soon as jscolor is initialized (or immediately, if it already is)
+// Registers function to be called as soon as jscolor is initialized (or immediately, if it already is).
 //
 jsc.pub.ready = function (func) {
 	if (typeof func !== 'function') {
