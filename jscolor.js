@@ -1488,11 +1488,13 @@ var jsc = {
 			ctx.fillStyle = sqColor1;
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-			for (var y = 0; y < canvas.height; y += sqSize * 2) {
-				// light gray squares
-				ctx.fillStyle = sqColor2;
-				ctx.fillRect(0, y, sqSize, sqSize);
-				ctx.fillRect(sqSize, y + sqSize, sqSize, sqSize);
+			if (sqSize > 0) { // to avoid infinite loop
+				for (var y = 0; y < canvas.height; y += sqSize * 2) {
+					// light gray squares
+					ctx.fillStyle = sqColor2;
+					ctx.fillRect(0, y, sqSize, sqSize);
+					ctx.fillRect(sqSize, y + sqSize, sqSize, sqSize);
+				}
 			}
 
 			var grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
