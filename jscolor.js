@@ -1329,8 +1329,8 @@ var jsc = {
 
 		// when format is flexible, use the original format of this color sample
 		if (thisObj.format.toLowerCase() === 'any') {
-			thisObj.setCurrentFormat(color.format); // adapt format
-			if (thisObj.getCurrentFormat() !== 'rgba') {
+			thisObj._setFormat(color.format); // adapt format
+			if (thisObj.getFormat() !== 'rgba') {
 				color.rgba[3] = 1.0; // when switching to a format that doesn't support alpha, set full opacity
 			}
 		}
@@ -1380,8 +1380,8 @@ var jsc = {
 
 		if (yVal < 1.0) {
 			// if format is flexible and the current format doesn't support alpha, switch to a suitable one
-			if (thisObj.format.toLowerCase() === 'any' && thisObj.getCurrentFormat() !== 'rgba') {
-				thisObj.setCurrentFormat('rgba');
+			if (thisObj.format.toLowerCase() === 'any' && thisObj.getFormat() !== 'rgba') {
+				thisObj._setFormat('rgba');
 			}
 		}
 
@@ -1920,8 +1920,8 @@ var jsc = {
 				return false; // could not parse
 			}
 			if (this.format.toLowerCase() === 'any') {
-				this.setCurrentFormat(color.format); // adapt format
-				if (this.getCurrentFormat() !== 'rgba') {
+				this._setFormat(color.format); // adapt format
+				if (this.getFormat() !== 'rgba') {
 					color.rgba[3] = 1.0; // when switching to a format that doesn't support alpha, set full opacity
 				}
 			}
@@ -1938,7 +1938,7 @@ var jsc = {
 
 		this.toString = function (format) {
 			if (format === undefined) {
-				format = this.getCurrentFormat(); // format not specified -> use the current format
+				format = this.getFormat(); // format not specified -> use the current format
 			}
 			switch (format.toLowerCase()) {
 				case 'hex': return this.toHEXString(); break;
@@ -2025,12 +2025,12 @@ var jsc = {
 		};
 
 
-		this.getCurrentFormat = function () {
+		this.getFormat = function () {
 			return this._currentFormat;
 		};
 
 
-		this.setCurrentFormat = function (format) {
+		this._setFormat = function (format) {
 			this._currentFormat = format.toLowerCase();
 		};
 
@@ -2039,7 +2039,7 @@ var jsc = {
 			if (this.alphaChannel === 'auto') {
 				return (
 					this.format.toLowerCase() === 'any' || // format can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
-					this.getCurrentFormat() === 'rgba' || // the current format supports alpha channel
+					this.getFormat() === 'rgba' || // the current format supports alpha channel
 					this.alpha !== undefined || // initial alpha value is set, so we're working with alpha channel
 					this.alphaElement !== undefined // the alpha value is redirected, so we're working with alpha channel
 				);
@@ -2072,7 +2072,7 @@ var jsc = {
 			jsc.setDataAttr(this.targetElement, 'current-color', colorStr);
 
 			if (!(flags & jsc.flags.leaveValue) && this.valueElement) {
-				if (this.getCurrentFormat() === 'hex') {
+				if (this.getFormat() === 'hex') {
 					if (!this.uppercase) { colorStr = colorStr.toLowerCase(); }
 					if (!this.hash) { colorStr = colorStr.replace(/^#/, ''); }
 				}
