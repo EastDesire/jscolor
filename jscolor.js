@@ -1078,7 +1078,7 @@ var jsc = {
 
 		if (sampleCount) {
 			cols = thisObj.paletteCols;
-			rows = Math.ceil(sampleCount / cols);
+			rows = cols > 0 ? Math.ceil(sampleCount / cols) : 0;
 
 			// color sample's dimensions (includes border)
 			cellW = Math.max(1, Math.floor((width - ((cols - 1) * thisObj.paletteSpacing)) / cols));
