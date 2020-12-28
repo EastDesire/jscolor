@@ -47,7 +47,7 @@ var jsc = {
 
 	instances : [], // created instances of jscolor
 
-	triggerQueue : [], // events waiting to be triggered after init
+	readyQueue : [], // functions waiting to be called after init
 
 
 	register : function () {
@@ -3278,10 +3278,10 @@ jsc.pub.init = function () {
 
 	jsc.initialized = true;
 
-	// trigger events waiting in the queue
-	while (jsc.triggerQueue.length) {
-		var ev = jsc.triggerQueue.shift();
-		jsc.triggerGlobal(ev);
+	// call functions waiting in the queue
+	while (jsc.readyQueue.length) {
+		var func = jsc.readyQueue.shift();
+		func();
 	}
 };
 
@@ -3314,16 +3314,37 @@ jsc.pub.install = function (rootNode) {
 };
 
 
+// Calls a function as soon as jscolor is initialized (or immediately, if it already is)
+//
+jsc.pub.ready = function (func) {
+	if (typeof func !== 'function') {
+		console.warn('Passed value is not a function');
+		return false;
+	}
+
+	if (jsc.initialized) {
+		func();
+	} else {
+		jsc.readyQueue.push(func);
+	}
+	return true;
+};
+
+
 // Triggers given input event(s) (e.g. 'input' or 'change') on all color pickers.
 //
 // It is possible to specify multiple events separated with a space.
 // If called before jscolor is initialized, then the events will be triggered after initialization.
 //
 jsc.pub.trigger = function (eventNames) {
-	if (jsc.initialized) {
+	var triggerNow = function () {
 		jsc.triggerGlobal(eventNames);
+	};
+
+	if (jsc.initialized) {
+		triggerNow();
 	} else {
-		jsc.triggerQueue.push(eventNames);
+		jsc.pub.ready(triggerNow);
 	}
 };
 
