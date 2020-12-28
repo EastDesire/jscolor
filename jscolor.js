@@ -343,6 +343,12 @@ var jsc = {
 	},
 
 
+	setDataAttr : function (el, name, value) {
+		var attrName = 'data-' + name;
+		el.setAttribute(attrName, value);
+	},
+
+
 	_attachedGroupEvents : {},
 
 
@@ -2060,21 +2066,22 @@ var jsc = {
 
 
 		this.exposeColor = function (flags) {
+			var colorStr = this.toString();
+
+			// reflect current color in data- attribute
+			jsc.setDataAttr(this.targetElement, 'current-color', colorStr);
 
 			if (!(flags & jsc.flags.leaveValue) && this.valueElement) {
-				var value = this.toString();
-
 				if (this.getCurrentFormat() === 'hex') {
-					if (!this.uppercase) { value = value.toLowerCase(); }
-					if (!this.hash) { value = value.replace(/^#/, ''); }
+					if (!this.uppercase) { colorStr = colorStr.toLowerCase(); }
+					if (!this.hash) { colorStr = colorStr.replace(/^#/, ''); }
 				}
-
-				this.setValueElementValue(value);
+				this.setValueElementValue(colorStr);
 			}
 
 			if (!(flags & jsc.flags.leaveAlpha) && this.alphaElement) {
-				var value = Math.round(this.channels.a * 100) / 100;
-				this.setAlphaElementValue(value);
+				var alphaVal = Math.round(this.channels.a * 100) / 100;
+				this.setAlphaElementValue(alphaVal);
 			}
 
 			if (!(flags & jsc.flags.leavePreview) && this.previewElement) {
