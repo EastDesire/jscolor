@@ -1,6 +1,6 @@
 {
   "name": "@eastdesire/jscolor",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "Simple web color picker with opacity channel and palette. Supports CSS colors such as RGBA and HEX.",
   "main": "jscolor.js",
   "scripts": {
