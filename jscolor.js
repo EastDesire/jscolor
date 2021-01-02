@@ -864,6 +864,17 @@ var jsc = {
 	},
 
 
+	containsTranparentColor : function (colors) {
+		for (var i = 0; i < colors.length; i++) {
+			var a = colors[i].rgba[3];
+			if (a !== null && a < 1.0) {
+				return true;
+			}
+		}
+		return false;
+	},
+
+
 	// Canvas scaling for retina displays
 	//
 	// adapted from https://www.html5rocks.com/en/tutorials/canvas/hidpi/
@@ -1335,6 +1346,13 @@ var jsc = {
 			}
 		}
 
+		// if this color doesn't specify alpha, use alpha of 1.0 (if applicable)
+		if (color.rgba[3] === null) {
+			if (thisObj.paletteSetsAlpha === true || (thisObj.paletteSetsAlpha === 'auto' && thisObj._paletteHasTransparency)) {
+				color.rgba[3] = 1.0;
+			}
+		}
+
 		thisObj.fromRGBA.apply(thisObj, color.rgba);
 
 		thisObj.trigger('input');
@@ -1559,6 +1577,7 @@ var jsc = {
 		mode: ['hsv', 'hvs', 'hs', 'hv'],
 		position: ['left', 'right', 'top', 'bottom'],
 		alphaChannel: ['auto', true, false],
+		paletteSetsAlpha: ['auto', true, false],
 	},
 
 
@@ -1632,6 +1651,7 @@ var jsc = {
 		this.hideOnLeave = true; // whether to automatically hide the picker when user leaves its target element (e.g. upon clicking the document)
 		this.palette = []; // colors to be displayed in the palette, specified as an array or a string of space separated color values (in any supported format)
 		this.paletteCols = 10; // number of columns in the palette
+		this.paletteSetsAlpha = 'auto'; // 'auto' | true | false - if true, palette colors that don't specify alpha will set alpha to 1.0
 		this.paletteHeight = 16; // maximum height (px) of a row in the palette
 		this.paletteSpacing = 4; // distance (px) between color samples in the palette
 		this.hideOnPaletteClick = false; // when set to true, clicking the palette will also hide the color picker
@@ -2264,6 +2284,7 @@ var jsc = {
 		this.set__palette = function (val) {
 			this.palette = val;
 			this._palette = jsc.parsePaletteValue(val);
+			this._paletteHasTransparency = jsc.containsTranparentColor(this._palette);
 		};
 
 
