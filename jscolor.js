@@ -980,60 +980,62 @@ var jsc = {
 
 	redrawPosition : function () {
 
-		if (jsc.picker && jsc.picker.owner) {
-			var thisObj = jsc.picker.owner;
-
-			var tp, vp;
-
-			if (thisObj.fixed) {
-				// Fixed elements are positioned relative to viewport,
-				// therefore we can ignore the scroll offset
-				tp = jsc.getElementPos(thisObj.targetElement, true); // target pos
-				vp = [0, 0]; // view pos
-			} else {
-				tp = jsc.getElementPos(thisObj.targetElement); // target pos
-				vp = jsc.getViewPos(); // view pos
-			}
-
-			var ts = jsc.getElementSize(thisObj.targetElement); // target size
-			var vs = jsc.getViewSize(); // view size
-			var pd = jsc.getPickerDims(thisObj);
-			var ps = [pd.borderW, pd.borderH]; // picker outer size
-			var a, b, c;
-			switch (thisObj.position.toLowerCase()) {
-				case 'left': a=1; b=0; c=-1; break;
-				case 'right':a=1; b=0; c=1; break;
-				case 'top':  a=0; b=1; c=-1; break;
-				default:     a=0; b=1; c=1; break;
-			}
-			var l = (ts[b]+ps[b])/2;
-
-			// compute picker position
-			if (!thisObj.smartPosition) {
-				var pp = [
-					tp[a],
-					tp[b]+ts[b]-l+l*c
-				];
-			} else {
-				var pp = [
-					-vp[a]+tp[a]+ps[a] > vs[a] ?
-						(-vp[a]+tp[a]+ts[a]/2 > vs[a]/2 && tp[a]+ts[a]-ps[a] >= 0 ? tp[a]+ts[a]-ps[a] : tp[a]) :
-						tp[a],
-					-vp[b]+tp[b]+ts[b]+ps[b]-l+l*c > vs[b] ?
-						(-vp[b]+tp[b]+ts[b]/2 > vs[b]/2 && tp[b]+ts[b]-l-l*c >= 0 ? tp[b]+ts[b]-l-l*c : tp[b]+ts[b]-l+l*c) :
-						(tp[b]+ts[b]-l+l*c >= 0 ? tp[b]+ts[b]-l+l*c : tp[b]+ts[b]-l-l*c)
-				];
-			}
-
-			var x = pp[a];
-			var y = pp[b];
-			var positionValue = thisObj.fixed ? 'fixed' : 'absolute';
-			var contractShadow =
-				(pp[0] + ps[0] > tp[0] || pp[0] < tp[0] + ts[0]) &&
-				(pp[1] + ps[1] < tp[1] + ts[1]);
-
-			jsc._drawPosition(thisObj, x, y, positionValue, contractShadow);
+		if (!jsc.picker || !jsc.picker.owner) {
+			return; // picker is not shown
 		}
+
+		var thisObj = jsc.picker.owner;
+
+		var tp, vp;
+
+		if (thisObj.fixed) {
+			// Fixed elements are positioned relative to viewport,
+			// therefore we can ignore the scroll offset
+			tp = jsc.getElementPos(thisObj.targetElement, true); // target pos
+			vp = [0, 0]; // view pos
+		} else {
+			tp = jsc.getElementPos(thisObj.targetElement); // target pos
+			vp = jsc.getViewPos(); // view pos
+		}
+
+		var ts = jsc.getElementSize(thisObj.targetElement); // target size
+		var vs = jsc.getViewSize(); // view size
+		var pd = jsc.getPickerDims(thisObj);
+		var ps = [pd.borderW, pd.borderH]; // picker outer size
+		var a, b, c;
+		switch (thisObj.position.toLowerCase()) {
+			case 'left': a=1; b=0; c=-1; break;
+			case 'right':a=1; b=0; c=1; break;
+			case 'top':  a=0; b=1; c=-1; break;
+			default:     a=0; b=1; c=1; break;
+		}
+		var l = (ts[b]+ps[b])/2;
+
+		// compute picker position
+		if (!thisObj.smartPosition) {
+			var pp = [
+				tp[a],
+				tp[b]+ts[b]-l+l*c
+			];
+		} else {
+			var pp = [
+				-vp[a]+tp[a]+ps[a] > vs[a] ?
+					(-vp[a]+tp[a]+ts[a]/2 > vs[a]/2 && tp[a]+ts[a]-ps[a] >= 0 ? tp[a]+ts[a]-ps[a] : tp[a]) :
+					tp[a],
+				-vp[b]+tp[b]+ts[b]+ps[b]-l+l*c > vs[b] ?
+					(-vp[b]+tp[b]+ts[b]/2 > vs[b]/2 && tp[b]+ts[b]-l-l*c >= 0 ? tp[b]+ts[b]-l-l*c : tp[b]+ts[b]-l+l*c) :
+					(tp[b]+ts[b]-l+l*c >= 0 ? tp[b]+ts[b]-l+l*c : tp[b]+ts[b]-l-l*c)
+			];
+		}
+
+		var x = pp[a];
+		var y = pp[b];
+		var positionValue = thisObj.fixed ? 'fixed' : 'absolute';
+		var contractShadow =
+			(pp[0] + ps[0] > tp[0] || pp[0] < tp[0] + ts[0]) &&
+			(pp[1] + ps[1] < tp[1] + ts[1]);
+
+		jsc._drawPosition(thisObj, x, y, positionValue, contractShadow);
 	},
 
 
@@ -1205,6 +1207,11 @@ var jsc = {
 
 
 	onWindowResize : function (e) {
+		jsc.redrawPosition();
+	},
+
+
+	onWindowScroll : function (e) {
 		jsc.redrawPosition();
 	},
 
@@ -3300,6 +3307,7 @@ jsc.pub.init = function () {
 	window.document.addEventListener('mousedown', jsc.onDocumentMouseDown, false);
 	window.document.addEventListener('keyup', jsc.onDocumentKeyUp, false);
 	window.addEventListener('resize', jsc.onWindowResize, false);
+	window.addEventListener('scroll', jsc.onWindowScroll, false);
 
 	// install jscolor on current DOM
 	jsc.pub.install();
