@@ -11,7 +11,7 @@ It aims to stay super easy both for developers to install and for web users to u
 ```html
 <script src="jscolor.js"></script>
 
-Color: <input value="rgba(40,170,255,0.5)" data-jscolor="">
+Color: <input value="rgba(40,170,255,0.5)" data-jscolor="{}">
 ```
 
 
