@@ -62,7 +62,7 @@ Documentation can be found at https://jscolor.com/docs/
 
 
 * **No framework needed** \
-  jscolor.js is a completely self-sufficient JavaScript library consisting of only one file.
+  jscolor.js is a completely self-sufficient JavaScript library consisting of only one file of plain JavaScript.
   It doesn't need any frameworks (jQuery, Dojo, MooTools etc.) But it can certainly coexist alongside them.
 
 
