@@ -589,7 +589,7 @@ var jsc = {
 			('0' + Math.round(r).toString(16)).substr(-2) +
 			('0' + Math.round(g).toString(16)).substr(-2) +
 			('0' + Math.round(b).toString(16)).substr(-2) +
-			('0' + Math.round(a).toString(16)).substr(-2)
+			('0' + Math.round(a * 255).toString(16)).substr(-2)
 		).toUpperCase();
 	},
 
@@ -799,7 +799,7 @@ var jsc = {
 					parseInt(m[1].substr(0,2),16),
 					parseInt(m[1].substr(2,2),16),
 					parseInt(m[1].substr(4,2),16),
-					parseInt(m[1].substr(6,2),16)
+					parseInt(m[1].substr(6,2),16) / 255
 				];
 
 			} else if (m[1].length === 6) {
@@ -1442,8 +1442,9 @@ var jsc = {
 
 		if (yVal < 1.0) {
 			// if format is flexible and the current format doesn't support alpha, switch to a suitable one
-			if (thisObj.format.toLowerCase() === 'any' && !jsc.isAlphaFormat(thisObj.getFormat())) {
-				thisObj._setFormat('rgba'); // TODO: switch to 'hexa' if current format is HEX
+			var fmt = thisObj.getFormat();
+			if (thisObj.format.toLowerCase() === 'any' && !jsc.isAlphaFormat(fmt)) {
+				thisObj._setFormat('rgba'); // TODO: when #rrggbbaa is supported in all major browsers, switch to 'hexa' if current format is 'hex'
 			}
 		}
 
