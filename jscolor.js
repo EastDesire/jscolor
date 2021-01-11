@@ -1444,7 +1444,7 @@ var jsc = {
 			// if format is flexible and the current format doesn't support alpha, switch to a suitable one
 			var fmt = thisObj.getFormat();
 			if (thisObj.format.toLowerCase() === 'any' && !jsc.isAlphaFormat(fmt)) {
-				thisObj._setFormat('rgba'); // TODO: when #rrggbbaa is supported in all major browsers, switch to 'hexa' if current format is 'hex'
+				thisObj._setFormat(fmt === 'hex' ? 'hexa' : 'rgba');
 			}
 		}
 
