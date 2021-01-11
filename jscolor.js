@@ -584,6 +584,16 @@ var jsc = {
 	},
 
 
+	hexaColor : function (r, g, b, a) {
+		return '#' + (
+			('0' + Math.round(r).toString(16)).substr(-2) +
+			('0' + Math.round(g).toString(16)).substr(-2) +
+			('0' + Math.round(b).toString(16)).substr(-2) +
+			('0' + Math.round(a).toString(16)).substr(-2)
+		).toUpperCase();
+	},
+
+
 	rgbColor : function (r, g, b) {
 		return 'rgb(' +
 			Math.round(r) + ',' +
@@ -774,45 +784,62 @@ var jsc = {
 	parseColorString : function (str) {
 		var ret = {
 			rgba: null,
-			format: null // 'hex' | 'rgb' | 'rgba'
+			format: null // 'hex' | 'hexa' | 'rgb' | 'rgba'
 		};
 
 		var m;
-		if (m = str.match(/^\W*([0-9A-F]{3}([0-9A-F]{3})?)\W*$/i)) {
+
+		if (m = str.match(/^\W*([0-9A-F]{3,8})\W*$/i)) {
 			// HEX notation
 
-			ret.format = 'hex';
+			if (m[1].length === 8) {
+				// 8-char notation (= with alpha)
+				ret.format = 'hexa';
+				ret.rgba = [
+					parseInt(m[1].substr(0,2),16),
+					parseInt(m[1].substr(2,2),16),
+					parseInt(m[1].substr(4,2),16),
+					parseInt(m[1].substr(6,2),16)
+				];
 
-			if (m[1].length === 6) {
+			} else if (m[1].length === 6) {
 				// 6-char notation
+				ret.format = 'hex';
 				ret.rgba = [
 					parseInt(m[1].substr(0,2),16),
 					parseInt(m[1].substr(2,2),16),
 					parseInt(m[1].substr(4,2),16),
 					null
 				];
-			} else {
+
+			} else if (m[1].length === 3) {
 				// 3-char notation
+				ret.format = 'hex';
 				ret.rgba = [
 					parseInt(m[1].charAt(0) + m[1].charAt(0),16),
 					parseInt(m[1].charAt(1) + m[1].charAt(1),16),
 					parseInt(m[1].charAt(2) + m[1].charAt(2),16),
 					null
 				];
-			}
-			return ret;
 
-		} else if (m = str.match(/^\W*rgba?\(([^)]*)\)\W*$/i)) {
+			} else {
+				return false;
+			}
+
+			return ret;
+		}
+
+		if (m = str.match(/^\W*rgba?\(([^)]*)\)\W*$/i)) {
 			// rgb(...) or rgba(...) notation
 
-			var params = m[1].split(',');
+			var par = m[1].split(',');
 			var re = /^\s*(\d+|\d*\.\d+|\d+\.\d*)\s*$/;
 			var mR, mG, mB, mA;
 			if (
-				params.length >= 3 &&
-				(mR = params[0].match(re)) &&
-				(mG = params[1].match(re)) &&
-				(mB = params[2].match(re))
+				par.length >= 3 &&
+				(mR = par[0].match(re)) &&
+				(mG = par[1].match(re)) &&
+				(mB = par[2].match(re))
 			) {
 				ret.format = 'rgb';
 				ret.rgba = [
@@ -823,8 +850,8 @@ var jsc = {
 				];
 
 				if (
-					params.length >= 4 &&
-					(mA = params[3].match(re))
+					par.length >= 4 &&
+					(mA = par[3].match(re))
 				) {
 					ret.format = 'rgba';
 					ret.rgba[3] = parseFloat(mA[1]) || 0;
@@ -870,6 +897,16 @@ var jsc = {
 			if (a !== null && a < 1.0) {
 				return true;
 			}
+		}
+		return false;
+	},
+
+
+	isAlphaFormat : function (format) {
+		switch (format.toLowerCase()) {
+		case 'hexa':
+		case 'rgba':
+			return true;
 		}
 		return false;
 	},
@@ -1348,7 +1385,7 @@ var jsc = {
 		// when format is flexible, use the original format of this color sample
 		if (thisObj.format.toLowerCase() === 'any') {
 			thisObj._setFormat(color.format); // adapt format
-			if (thisObj.getFormat() !== 'rgba') {
+			if (!jsc.isAlphaFormat(thisObj.getFormat())) {
 				color.rgba[3] = 1.0; // when switching to a format that doesn't support alpha, set full opacity
 			}
 		}
@@ -1405,8 +1442,8 @@ var jsc = {
 
 		if (yVal < 1.0) {
 			// if format is flexible and the current format doesn't support alpha, switch to a suitable one
-			if (thisObj.format.toLowerCase() === 'any' && thisObj.getFormat() !== 'rgba') {
-				thisObj._setFormat('rgba');
+			if (thisObj.format.toLowerCase() === 'any' && !jsc.isAlphaFormat(thisObj.getFormat())) {
+				thisObj._setFormat('rgba'); // TODO: switch to 'hexa' if current format is HEX
 			}
 		}
 
@@ -1579,7 +1616,7 @@ var jsc = {
 
 
 	enumOpts : {
-		format: ['auto', 'any', 'hex', 'rgb', 'rgba'],
+		format: ['auto', 'any', 'hex', 'hexa', 'rgb', 'rgba'],
 		previewPosition: ['left', 'right'],
 		mode: ['hsv', 'hvs', 'hs', 'hv'],
 		position: ['left', 'right', 'top', 'bottom'],
@@ -1630,7 +1667,7 @@ var jsc = {
 
 		// General options
 		//
-		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'rgb' | 'rgba' - Format of the input/output value
+		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'hexa' | 'rgb' | 'rgba' - Format of the input/output value
 		this.value = undefined; // INITIAL color value in any supported format. To change it later, use method fromString(), fromHSVA(), fromRGBA() or channel()
 		this.alpha = undefined; // INITIAL alpha value. To change it later, call method channel('A', <value>)
 		this.onChange = undefined; // called when color changes. Value can be either a function or a string with JS code.
@@ -1948,7 +1985,7 @@ var jsc = {
 			}
 			if (this.format.toLowerCase() === 'any') {
 				this._setFormat(color.format); // adapt format
-				if (this.getFormat() !== 'rgba') {
+				if (!jsc.isAlphaFormat(this.getFormat())) {
 					color.rgba[3] = 1.0; // when switching to a format that doesn't support alpha, set full opacity
 				}
 			}
@@ -1969,6 +2006,7 @@ var jsc = {
 			}
 			switch (format.toLowerCase()) {
 				case 'hex': return this.toHEXString(); break;
+				case 'hexa': return this.toHEXAString(); break;
 				case 'rgb': return this.toRGBString(); break;
 				case 'rgba': return this.toRGBAString(); break;
 			}
@@ -1981,6 +2019,16 @@ var jsc = {
 				this.channels.r,
 				this.channels.g,
 				this.channels.b
+			);
+		};
+
+
+		this.toHEXAString = function () {
+			return jsc.hexaColor(
+				this.channels.r,
+				this.channels.g,
+				this.channels.b,
+				this.channels.a
 			);
 		};
 
@@ -2066,7 +2114,7 @@ var jsc = {
 			if (this.alphaChannel === 'auto') {
 				return (
 					this.format.toLowerCase() === 'any' || // format can change on the fly (e.g. from hex to rgba), so let's consider the alpha channel enabled
-					this.getFormat() === 'rgba' || // the current format supports alpha channel
+					jsc.isAlphaFormat(this.getFormat()) || // the current format supports alpha channel
 					this.alpha !== undefined || // initial alpha value is set, so we're working with alpha channel
 					this.alphaElement !== undefined // the alpha value is redirected, so we're working with alpha channel
 				);
