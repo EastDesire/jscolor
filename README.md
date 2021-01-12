@@ -1,9 +1,11 @@
 # jscolor - JavaScript Color picker with Opacity (alpha)
 
-**jscolor.js** is a web color picker with palette and opacity (alpha channel).
-Supports CSS colors such as rgba() and hex, including #rrggbbaa notation.
+**jscolor.js** is a web color picker with [opacity (alpha channel) and customizable palette](https://jscolor.com/examples/).
 
-It aims to stay super easy both for developers to install and for web users to use.
+- Single file of plain JS with **no dependencies**
+- Supports CSS colors such as **rgba()** and **hex**, including **#rrggbbaa** notation.
+- [Download](https://jscolor.com/release/latest.zip) includes minified **jscolor.min.js**
+- Mobile friendly
 
 
 
@@ -14,6 +16,8 @@ It aims to stay super easy both for developers to install and for web users to u
 
 Color: <input value="#3399FF80" data-jscolor="{}">
 ```
+
+[Run example >](https://jscolor.com/#installation)
 
 
 
@@ -44,19 +48,16 @@ jscolor.presets.default = {
 
 
 
-[<img src="https://jscolor.com/hosted/gui/jscolor-2.4.1.png" alt="Screenshots of jscolor">](https://jscolor.com/examples)
+[<img src="https://jscolor.com/hosted/gui/jscolor-2.4.5.png" alt="Screenshots of jscolor">](https://jscolor.com/examples/)
 
 
 
-## Usage examples
+## Links
 
-See https://jscolor.com/examples/
-
-
-
-## Documentation
-
-Documentation can be found at https://jscolor.com/docs/
+- [Online Configurator tool](https://jscolor.com/configure/)
+- [Sandbox](https://jscolor.com/sandbox/)
+- [Examples](https://jscolor.com/examples/)
+- [Download](https://jscolor.com/download/) including minified **jscolor.min.js**
 
 
 
@@ -64,7 +65,7 @@ Documentation can be found at https://jscolor.com/docs/
 
 
 * **No framework needed** \
-  jscolor.js is a completely self-sufficient JavaScript library consisting of only one file of plain JavaScript.
+  jscolor.js is a completely self-sufficient JavaScript library consisting of only one file of vanilla JavaScript.
   It doesn't need any frameworks (jQuery, Dojo, MooTools etc.) But it can certainly coexist alongside them.
 
 
