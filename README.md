@@ -1,6 +1,6 @@
 # jscolor - JavaScript Color picker with Opacity (alpha)
 
-**jscolor.js** is a **HEX** and **RGBA** color picker with palette and opacity (alpha channel).
+**jscolor.js** is a web color picker with palette and opacity (alpha channel).
 Supports CSS colors such as rgba() and hex, including #rrggbbaa notation.
 
 It aims to stay super easy both for developers to install and for web users to use.
@@ -17,10 +17,11 @@ Color: <input value="#3399FF80" data-jscolor="{}">
 
 
 
-## Adjusting defaults & Palette (swatch)
+## Configuration & Custom palette (swatch)
 
 ```html
 <script>
+// These options apply to all color pickers on the page
 jscolor.presets.default = {
 	width: 201,
 	height: 81,
