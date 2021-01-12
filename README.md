@@ -48,6 +48,8 @@ jscolor.presets.default = {
 
 
 
+## Screenshot
+
 [<img src="https://jscolor.com/hosted/gui/jscolor-2.4.5.png" alt="Screenshots of jscolor">](https://jscolor.com/examples/)
 
 
