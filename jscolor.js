@@ -2143,12 +2143,13 @@ var jsc = {
 
 		this.exposeColor = function (flags) {
 			var colorStr = this.toString();
+			var fmt = this.getFormat();
 
 			// reflect current color in data- attribute
 			jsc.setDataAttr(this.targetElement, 'current-color', colorStr);
 
 			if (!(flags & jsc.flags.leaveValue) && this.valueElement) {
-				if (this.getFormat() === 'hex') {
+				if (fmt === 'hex' || fmt === 'hexa') {
 					if (!this.uppercase) { colorStr = colorStr.toLowerCase(); }
 					if (!this.hash) { colorStr = colorStr.replace(/^#/, ''); }
 				}
