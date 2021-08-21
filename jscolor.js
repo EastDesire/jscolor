@@ -1671,6 +1671,7 @@ var jsc = {
 		this.format = 'auto'; // 'auto' | 'any' | 'hex' | 'hexa' | 'rgb' | 'rgba' - Format of the input/output value
 		this.value = undefined; // INITIAL color value in any supported format. To change it later, use method fromString(), fromHSVA(), fromRGBA() or channel()
 		this.alpha = undefined; // INITIAL alpha value. To change it later, call method channel('A', <value>)
+		this.random = false; // whether to randomize the initial color. Either true | false, or an array of ranges: [minV, maxV, minS, maxS, minH, maxH, minA, maxA]
 		this.onChange = undefined; // called when color changes. Value can be either a function or a string with JS code.
 		this.onInput = undefined; // called repeatedly as the color is being changed, e.g. while dragging a slider. Value can be either a function or a string with JS code.
 		this.valueElement = undefined; // element that will be used to display and input the color value
@@ -1998,6 +1999,25 @@ var jsc = {
 				flags
 			);
 			return true;
+		};
+
+
+		this.randomize = function (minV, maxV, minS, maxS, minH, maxH, minA, maxA) {
+			if (minV === undefined) { minV = 0; }
+			if (maxV === undefined) { maxV = 100; }
+			if (minS === undefined) { minS = 0; }
+			if (maxS === undefined) { maxS = 100; }
+			if (minH === undefined) { minH = 0; }
+			if (maxH === undefined) { maxH = 359; }
+			if (minA === undefined) { minA = 1; }
+			if (maxA === undefined) { maxA = 1; }
+
+			this.fromHSVA(
+				minH + Math.floor(Math.random() * (maxH - minH + 1)),
+				minS + Math.floor(Math.random() * (maxS - minS + 1)),
+				minV + Math.floor(Math.random() * (maxV - minV + 1)),
+				((100 * minA) + Math.floor(Math.random() * (100 * (maxA - minA) + 1))) / 100
+			);
 		};
 
 
@@ -3277,10 +3297,15 @@ var jsc = {
 		// let's also parse and expose the initial alpha value, if any
 		//
 		// Note: If the initial color value contains alpha value in it (e.g. in rgba format),
-		// this will overwrite it. So we should only process alpha input if there was any initial
+		// this will overwrite it. So we should only process alpha input if there was initial
 		// alpha explicitly set, otherwise we could needlessly lose initial value's alpha
 		if (initAlpha !== undefined) {
 			this.processAlphaInput(initAlpha);
+		}
+
+		if (this.random) {
+			// randomize the initial color value
+			this.randomize.apply(this, Array.isArray(this.random) ? this.random : []);
 		}
 
 	}
