@@ -378,24 +378,6 @@ var jsc = {
 	},
 
 
-	captureTarget : function (target) {
-		// IE
-		if (target.setCapture) {
-			jsc._capturedTarget = target;
-			jsc._capturedTarget.setCapture();
-		}
-	},
-
-
-	releaseTarget : function () {
-		// IE
-		if (jsc._capturedTarget) {
-			jsc._capturedTarget.releaseCapture();
-			jsc._capturedTarget = null;
-		}
-	},
-
-
 	triggerEvent : function (el, eventName, bubbles, cancelable) {
 		if (!el) {
 			return;
@@ -1231,7 +1213,6 @@ var jsc = {
 
 
 	_pointerOrigin : null,
-	_capturedTarget : null,
 
 
 	onDocumentKeyUp : function (e) {
@@ -1296,7 +1277,6 @@ var jsc = {
 		var thisObj = jsc.getData(target, 'instance');
 
 		jsc.preventDefault(e);
-		jsc.captureTarget(target);
 
 		var registerDragEvents = function (doc, offset) {
 			jsc.attachGroupEvent('drag', doc, jsc._pointerMoveEvent[pointerType],
@@ -1366,7 +1346,6 @@ var jsc = {
 		return function (e) {
 			var thisObj = jsc.getData(target, 'instance');
 			jsc.detachGroupEvents('drag');
-			jsc.releaseTarget();
 
 			// Always trigger changes AFTER detaching outstanding mouse handlers,
 			// in case some color change that occured in user-defined onChange/onInput handler
