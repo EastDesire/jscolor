@@ -559,19 +559,19 @@ var jsc = {
 
 	hexColor : function (r, g, b) {
 		return '#' + (
-			('0' + Math.round(r).toString(16)).substr(-2) +
-			('0' + Math.round(g).toString(16)).substr(-2) +
-			('0' + Math.round(b).toString(16)).substr(-2)
+			('0' + Math.round(r).toString(16)).slice(-2) +
+			('0' + Math.round(g).toString(16)).slice(-2) +
+			('0' + Math.round(b).toString(16)).slice(-2)
 		).toUpperCase();
 	},
 
 
 	hexaColor : function (r, g, b, a) {
 		return '#' + (
-			('0' + Math.round(r).toString(16)).substr(-2) +
-			('0' + Math.round(g).toString(16)).substr(-2) +
-			('0' + Math.round(b).toString(16)).substr(-2) +
-			('0' + Math.round(a * 255).toString(16)).substr(-2)
+			('0' + Math.round(r).toString(16)).slice(-2) +
+			('0' + Math.round(g).toString(16)).slice(-2) +
+			('0' + Math.round(b).toString(16)).slice(-2) +
+			('0' + Math.round(a * 255).toString(16)).slice(-2)
 		).toUpperCase();
 	},
 
@@ -778,19 +778,19 @@ var jsc = {
 				// 8-char notation (= with alpha)
 				ret.format = 'hexa';
 				ret.rgba = [
-					parseInt(m[1].substr(0,2),16),
-					parseInt(m[1].substr(2,2),16),
-					parseInt(m[1].substr(4,2),16),
-					parseInt(m[1].substr(6,2),16) / 255
+					parseInt(m[1].slice(0,2),16),
+					parseInt(m[1].slice(2,4),16),
+					parseInt(m[1].slice(4,6),16),
+					parseInt(m[1].slice(6,8),16) / 255
 				];
 
 			} else if (m[1].length === 6) {
 				// 6-char notation
 				ret.format = 'hex';
 				ret.rgba = [
-					parseInt(m[1].substr(0,2),16),
-					parseInt(m[1].substr(2,2),16),
-					parseInt(m[1].substr(4,2),16),
+					parseInt(m[1].slice(0,2),16),
+					parseInt(m[1].slice(2,4),16),
+					parseInt(m[1].slice(4,6),16),
 					null
 				];
 
