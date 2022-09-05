@@ -557,6 +557,35 @@ var jsc = {
 	},
 
 
+	appendCss : function (css) {
+		var head = document.querySelector('head');
+		var style = document.createElement('style');
+		style.innerText = css;
+		head.appendChild(style);
+	},
+
+
+	appendDefaultCss : function (css) {
+		jsc.appendCss(
+			[
+				'.jscolor-wrap, .jscolor-wrap div, .jscolor-wrap canvas { ' +
+				'position:static; display:block; visibility:visible; overflow:visible; margin:0; padding:0; ' +
+				'border:none; border-radius:0; outline:none; z-index:auto; float:none; ' +
+				'width:auto; height:auto; left:auto; right:auto; top:auto; bottom:auto; min-width:0; min-height:0; max-width:none; max-height:none; ' +
+				'background:none; clip:auto; opacity:1; transform:none; box-shadow:none; box-sizing:content-box; ' +
+				'}',
+				'.jscolor-wrap { clear:both; }',
+				'.jscolor-wrap .jscolor-picker { position:relative; }',
+				'.jscolor-wrap .jscolor-shadow { position:absolute; left:0; top:0; width:100%; height:100%; }',
+				'.jscolor-wrap .jscolor-border { position:relative; }',
+				'.jscolor-wrap .jscolor-palette { position:absolute; }',
+				'.jscolor-wrap .jscolor-palette-sw { position:absolute; display:block; cursor:pointer; }',
+				'.jscolor-wrap .jscolor-btn { position:absolute; overflow:hidden; white-space:nowrap; font:13px sans-serif; text-align:center; cursor:pointer; }',
+			].join('\n')
+		);
+	},
+
+
 	hexColor : function (r, g, b) {
 		return '#' + (
 			('0' + Math.round(r).toString(16)).slice(-2) +
@@ -851,7 +880,7 @@ var jsc = {
 
 		if (typeof mixed === 'string') { // input is a string of space separated color values
 			// rgb() and rgba() may contain spaces too, so let's find all color values by regex
-			mixed.replace(/#[0-9A-F]{3}([0-9A-F]{3})?|rgba?\(([^)]*)\)/ig, function (val) {
+			mixed.replace(/#[0-9A-F]{3}\b|#[0-9A-F]{6}([0-9A-F]{2})?\b|rgba?\(([^)]*)\)/ig, function (val) {
 				vals.push(val);
 			});
 		} else if (Array.isArray(mixed)) { // input is an array of color values
@@ -2477,7 +2506,7 @@ var jsc = {
 					asldPtrOB : jsc.createEl('div'), // slider pointer outer border
 					pal : jsc.createEl('div'), // palette
 					btn : jsc.createEl('div'),
-					btnT : jsc.createEl('span'), // text
+					btnT : jsc.createEl('div'), // text
 				};
 
 				jsc.picker.pad.appendChild(jsc.picker.padCanvas.elm);
@@ -2534,8 +2563,7 @@ var jsc = {
 			var padCursor = 'crosshair';
 
 			// wrap
-			p.wrap.className = 'jscolor-picker-wrap';
-			p.wrap.style.clear = 'both';
+			p.wrap.className = 'jscolor-wrap';
 			p.wrap.style.width = pickerDims.borderW + 'px';
 			p.wrap.style.height = pickerDims.borderH + 'px';
 			p.wrap.style.zIndex = THIS.zIndex;
@@ -2544,20 +2572,13 @@ var jsc = {
 			p.box.className = 'jscolor-picker';
 			p.box.style.width = pickerDims.paddedW + 'px';
 			p.box.style.height = pickerDims.paddedH + 'px';
-			p.box.style.position = 'relative';
 
 			// picker shadow
-			p.boxS.className = 'jscolor-picker-shadow';
-			p.boxS.style.position = 'absolute';
-			p.boxS.style.left = '0';
-			p.boxS.style.top = '0';
-			p.boxS.style.width = '100%';
-			p.boxS.style.height = '100%';
+			p.boxS.className = 'jscolor-shadow';
 			jsc.setBorderRadius(p.boxS, borderRadius + 'px');
 
 			// picker border
-			p.boxB.className = 'jscolor-picker-border';
-			p.boxB.style.position = 'relative';
+			p.boxB.className = 'jscolor-border';
 			p.boxB.style.border = THIS.borderWidth + 'px solid';
 			p.boxB.style.borderColor = THIS.borderColor;
 			p.boxB.style.background = THIS.backgroundColor;
@@ -2761,7 +2782,6 @@ var jsc = {
 			// palette
 			p.pal.className = 'jscolor-palette';
 			p.pal.style.display = pickerDims.palette.rows ? 'block' : 'none';
-			p.pal.style.position = 'absolute';
 			p.pal.style.left = THIS.padding + 'px';
 			p.pal.style.top = (2 * THIS.controlBorderWidth + 2 * THIS.padding + THIS.height) + 'px';
 
@@ -2783,17 +2803,15 @@ var jsc = {
 					sc.style.backgroundColor = sampleCssColor;
 
 					var sw = jsc.createEl('div'); // color sample's wrap
-					sw.className = 'jscolor-palette-sample';
-					sw.style.display = 'block';
-					sw.style.position = 'absolute';
-					sw.style.left = (
+					sw.className = 'jscolor-palette-sw';
+					sw.style.left =
+						(
 							pickerDims.palette.cols <= 1 ? 0 :
 							Math.round(10 * (c * ((pickerDims.contentW - pickerDims.palette.cellW) / (pickerDims.palette.cols - 1)))) / 10
 						) + 'px';
 					sw.style.top = (r * (pickerDims.palette.cellH + THIS.paletteSpacing)) + 'px';
 					sw.style.border = THIS.controlBorderWidth + 'px solid';
 					sw.style.borderColor = THIS.controlBorderColor;
-					sw.style.cursor = 'pointer';
 					if (sampleColor.rgba[3] !== null && sampleColor.rgba[3] < 1.0) { // only create chessboard background if the sample has transparency
 						sw.style.backgroundImage = 'url(\'' + chessboard.canvas.toDataURL() + '\')';
 						sw.style.backgroundRepeat = 'repeat';
@@ -2801,9 +2819,9 @@ var jsc = {
 					}
 					jsc.setData(sw, {
 						instance: THIS,
-						control: 'palette-sample',
+						control: 'palette-sw',
 						color: sampleColor,
-					})
+					});
 					sw.addEventListener('click', jsc.onPaletteSampleClick, false);
 					sw.appendChild(sc);
 					p.pal.appendChild(sw);
@@ -2818,28 +2836,22 @@ var jsc = {
 				p.btn.style.borderColor = outsetColor;
 			}
 			var btnPadding = 15; // px
-			p.btn.className = 'jscolor-btn-close';
+			p.btn.className = 'jscolor-btn jscolor-btn-close';
 			p.btn.style.display = THIS.closeButton ? 'block' : 'none';
-			p.btn.style.position = 'absolute';
 			p.btn.style.left = THIS.padding + 'px';
 			p.btn.style.bottom = THIS.padding + 'px';
 			p.btn.style.padding = '0 ' + btnPadding + 'px';
 			p.btn.style.maxWidth = (pickerDims.contentW - 2 * THIS.controlBorderWidth - 2 * btnPadding) + 'px';
-			p.btn.style.overflow = 'hidden';
 			p.btn.style.height = THIS.buttonHeight + 'px';
-			p.btn.style.whiteSpace = 'nowrap';
 			p.btn.style.border = THIS.controlBorderWidth + 'px solid';
 			setBtnBorder();
 			p.btn.style.color = THIS.buttonColor;
-			p.btn.style.font = '12px sans-serif';
-			p.btn.style.textAlign = 'center';
-			p.btn.style.cursor = 'pointer';
 			p.btn.onmousedown = function () {
 				THIS.hide();
 			};
+			p.btnT.style.display = 'inline';
 			p.btnT.style.lineHeight = THIS.buttonHeight + 'px';
-			p.btnT.innerHTML = '';
-			p.btnT.appendChild(window.document.createTextNode(THIS.closeText));
+			p.btnT.innerText = THIS.closeText;
 
 			// reposition the pointers
 			redrawPad();
@@ -3367,6 +3379,9 @@ jsc.pub.init = function () {
 	window.document.addEventListener('keyup', jsc.onDocumentKeyUp, false);
 	window.addEventListener('resize', jsc.onWindowResize, false);
 	window.addEventListener('scroll', jsc.onWindowScroll, false);
+
+	// append default CSS to HEAD
+	jsc.appendDefaultCss();
 
 	// install jscolor on current DOM
 	jsc.pub.install();
