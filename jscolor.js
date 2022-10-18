@@ -1100,8 +1100,14 @@ var jsc = {
 		var vShadow = contractShadow ? 0 : thisObj.shadowBlur; // px
 
 		jsc.picker.wrap.style.position = positionValue;
-		jsc.picker.wrap.style.left = x + 'px';
-		jsc.picker.wrap.style.top = y + 'px';
+
+		if ( // To avoid unnecessary repositioning during scroll
+			Math.round(parseFloat(jsc.picker.wrap.style.left)) !== Math.round(x) ||
+			Math.round(parseFloat(jsc.picker.wrap.style.top)) !== Math.round(y)
+		) {
+			jsc.picker.wrap.style.left = x + 'px';
+			jsc.picker.wrap.style.top = y + 'px';
+		}
 
 		jsc.setBoxShadow(
 			jsc.picker.boxS,
