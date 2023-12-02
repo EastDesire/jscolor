@@ -52,7 +52,11 @@ var jsc = {
 
 	register : function () {
 		if (typeof window !== 'undefined' && window.document) {
-			window.document.addEventListener('DOMContentLoaded', jsc.pub.init, false);
+			if (window.document.readyState !== 'loading') {
+		    		jsc.pub.init();
+			} else {
+		    		window.document.addEventListener('DOMContentLoaded', jsc.pub.init, false);
+			}
 		}
 	},
 
