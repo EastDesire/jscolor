@@ -53,9 +53,9 @@ var jsc = {
 	register : function () {
 		if (typeof window !== 'undefined' && window.document) {
 			if (window.document.readyState !== 'loading') {
-		    		jsc.pub.init();
+				jsc.pub.init();
 			} else {
-		    		window.document.addEventListener('DOMContentLoaded', jsc.pub.init, false);
+				window.document.addEventListener('DOMContentLoaded', jsc.pub.init, false);
 			}
 		}
 	},
